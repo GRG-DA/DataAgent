@@ -1,4 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+/* The webfonts are vendored (website/vendor/fonts/) and loaded ONCE per page
+   via <link href="css/fonts.css">. They used to be pulled from
+   fonts.googleapis.com, which sent every visitor's IP address to a third
+   party on every page view - a poor fit for a product whose own site says
+   "no telemetry" - and left an offline visitor with no typography at all.
+   Do not add an @import here: fonts.css is already linked by every page,
+   and a second @import would fetch the same files twice. */
 
 /* ═══════════════════════════════════════════════════════════════════
    DataAgent Website — MetaMask-Caliber Design Layer  (v3)

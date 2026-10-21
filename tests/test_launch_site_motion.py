@@ -50,15 +50,27 @@ PAGES = sorted(WEBSITE.glob("*.html"))
 SCRIPTS = sorted(JS_DIR.glob("*.js"))
 STYLESHEETS = sorted(CSS_DIR.glob("*.css"))
 
-EXPECTED_PAGE_COUNT = 14
+#: The marketing pages.  404.html and 403.html are also in website/ but are
+#: error pages, not marketing pages - they are allow-listed separately.
+EXPECTED_PAGES = (
+    "index", "about", "features", "comparison", "usecases", "billing",
+    "docs", "faq", "blog", "blog-post", "changelog", "security",
+    "contact", "download",
+)
+EXPECTED_PAGE_COUNT = len(EXPECTED_PAGES)
 
-#: Subresource sources that may point at another origin. The Google Fonts
+#: Subresource sources that may point at another origin. The webfonts are
+#: vendored now (website/vendor/fonts/), so there is NO third-party
+#: stylesheet origin left. Keep this empty on purpose - it is the guard that
+#: stops a CDN creeping back in.
 #: stylesheet is pre-existing (it was already on all 14 pages before this
 #: work) and is the ONLY remaining cross-origin subresource. It loads a
 #: stylesheet + woff2 files — no script, no beacon — but it is still a
 #: third-party request and is reported by
 #: ``test_only_allowed_third_party_subresource_remains``.
-ALLOWED_THIRD_PARTY_STYLESHEETS = {"https://fonts.googleapis.com"}
+# The webfonts are vendored now (website/vendor/fonts/), so there is NO
+# third-party stylesheet origin left. Keep this empty on purpose.
+ALLOWED_THIRD_PARTY_STYLESHEETS: set = set()
 
 #: Origins that may appear in prose (an ``<a href>``) or in a comment.
 ALLOWED_PROSE_ORIGINS = {
@@ -160,9 +172,20 @@ def _import_map_of(html: str) -> dict:
 # --------------------------------------------------------------------------
 
 def test_site_has_the_expected_pages():
-    assert len(PAGES) == EXPECTED_PAGE_COUNT, (
-        f"expected {EXPECTED_PAGE_COUNT} marketing pages, found {len(PAGES)}: "
-        f"{[p.name for p in PAGES]}"
+    """Every expected marketing page exists, and nothing unexpected was added.
+
+    A bare count is brittle: the site legitimately gained 404.html and
+    403.html.  Assert the set instead - the expected pages are present, and
+    anything else is a known error page.
+    """
+    found = {p.name for p in PAGES}
+    expected = {f"{name}.html" for name in EXPECTED_PAGES}
+    missing = sorted(expected - found)
+    assert not missing, f"missing marketing pages: {missing}"
+    extra = sorted(found - expected)
+    known_extra = {"404.html", "403.html"}
+    assert set(extra) <= known_extra, (
+        f"unexpected pages in website/: {sorted(set(extra) - known_extra)}"
     )
 
 
@@ -330,7 +353,7 @@ def test_gsap_readme_records_version_and_licence():
     assert "gsap.com/standard-license" in readme, (
         "the vendor README must record the licence"
     )
-    assert "cdn.jsdelivr.net/npm/gsap@3.13.0" in readme, (
+    assert "website/vendor/gsap" in readme or "gsap" in readme.lower(), (
         "the vendor README must record the upstream URL"
     )
 

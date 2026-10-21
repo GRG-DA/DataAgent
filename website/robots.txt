@@ -1,0 +1,40 @@
+# DataAgent marketing site - robots.txt
+#
+# ─────────────────────────────────────────────────────────────────────────────
+#  ONE VALUE TO CHANGE WHEN THE SITE IS DEPLOYED
+#
+#  The domain below (dataagent.example) is a PLACEHOLDER. The .example TLD is
+#  reserved by RFC 2606, so it can never resolve to a real host - it is here
+#  so nobody publishes a sitemap that points at a domain they do not own.
+#
+#  When the site is deployed, replace the placeholder domain in BOTH files:
+#      website/robots.txt    -> the "Sitemap:" line below
+#      website/sitemap.xml   -> every <loc> (and the xmlns:schema in the header)
+#
+#  The site URL is NOT derived from window.DATAAGENT_REPO_URL in
+#  website/js/main.js: that constant is the GitHub repository that publishes
+#  the Windows releases, not the web host. Two different things.
+# ─────────────────────────────────────────────────────────────────────────────
+
+User-agent: *
+Allow: /
+
+# The app renders the legal pages from ROUTES (/legal/privacy.html and
+# friends) and fills them in from config/legal.yaml. A crawler that reaches
+# an unrendered template must not index it, so the whole route is off-limits.
+Disallow: /legal/
+
+# Share links carry a token and a per-view payload. There is nothing there
+# for a search engine and a lot for a scraper.
+Disallow: /share/
+
+# The sign-in surface is not content. Indexing it is pointless and it drags
+# credential pages into search results.
+Disallow: /auth/
+
+# website/static/ does not exist in the static site, but the APP mounts its
+# SPA at /static/. If the marketing site is ever served from the same
+# origin, keep the directory out of the index.
+Disallow: /static/
+
+Sitemap: https://dataagent.example/sitemap.xml

@@ -1,0 +1,123 @@
+# Netlify configuration for the DataAgent marketing site.
+#
+# The site is a static, no-build-step directory of HTML: there is nothing to
+# compile and nothing to bundle. The publish directory is this folder.
+#
+# The same header set is declared in _headers and vercel.json. Keep the three
+# in sync - tests/test_launch_site_launch_readiness.py asserts that the three
+# sets are IDENTICAL, so that a host change cannot silently drop one.
+
+[build]
+  publish = "."
+  command = ""
+
+# ── Security headers ───────────────────────────────────────────────────────
+# The site loads only its own files.
+#
+# 'unsafe-inline' is still needed for script-src: the pages carry inline
+# <script> blocks (the Three.js import map, a few small bootstraps). The goal
+# is to remove them and to drop 'unsafe-inline' from this policy - until then
+# it stays, because a policy without it breaks the site.
+#
+# https://checkout.razorpay.com is the ONE documented exception: the pricing
+# page injects Razorpay's hosted checkout script when a buyer clicks Buy on a
+# deployment that has a billing server configured. It is a user-initiated
+# payment hand-off, not a page-view beacon, and it is the only third-party
+# script the site is allowed to load. Remove it if the deployment uses the
+# same-origin Payment Link fallback instead.
+#
+# connect-src is 'self' on purpose: the billing server has no CORS
+# middleware, so in a real deployment it MUST share the site's domain.
+[[headers]]
+  for = "/*"
+
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), interest-cohort=()"
+# `same-origin-allow-popups`, NOT `same-origin`: the SPA opens the Google
+# OAuth popup with window.open() and the callback posts back through
+# window.opener. `same-origin` severs the opener and forces sign-in onto a
+# weaker polling fallback. See web/js/auth.js::_waitForGoogleResult.
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Cross-Origin-Resource-Policy = "same-origin"
+
+# ── Clean URLs ────────────────────────────────────────────────────────────
+# status = 200 is a REWRITE, not a redirect: the visitor keeps the clean URL
+# (/download) and the host serves /download.html. A 301/302 would put the
+# .html in the address bar and change the canonical URL of the page.
+[[redirects]]
+  from = "/features"
+  to = "/features.html"
+  status = 200
+
+[[redirects]]
+  from = "/download"
+  to = "/download.html"
+  status = 200
+
+[[redirects]]
+  from = "/docs"
+  to = "/docs.html"
+  status = 200
+
+[[redirects]]
+  from = "/pricing"
+  to = "/billing.html"
+  status = 200
+
+[[redirects]]
+  from = "/faq"
+  to = "/faq.html"
+  status = 200
+
+[[redirects]]
+  from = "/comparison"
+  to = "/comparison.html"
+  status = 200
+
+[[redirects]]
+  from = "/usecases"
+  to = "/usecases.html"
+  status = 200
+
+[[redirects]]
+  from = "/security"
+  to = "/security.html"
+  status = 200
+
+[[redirects]]
+  from = "/about"
+  to = "/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/contact"
+  to = "/contact.html"
+  status = 200
+
+[[redirects]]
+  from = "/blog"
+  to = "/blog.html"
+  status = 200
+
+[[redirects]]
+  from = "/blog-post"
+  to = "/blog-post.html"
+  status = 200
+
+[[redirects]]
+  from = "/changelog"
+  to = "/changelog.html"
+  status = 200
+
+# ── The error page ────────────────────────────────────────────────────────
+# Netlify serves 404.html automatically for any path that matches no file.
+# The explicit rule below additionally makes /404 itself resolvable.
+[[redirects]]
+  from = "/404"
+  to = "/404.html"
+  status = 200

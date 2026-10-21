@@ -1,0 +1,258 @@
+{
+  "BricolageGrotesque-600-latin-ext.woff2": {
+    "bytes": 18668,
+    "family": "Bricolage Grotesque",
+    "sha256": "e808f16b56f84dc7933e498cc8a41d4a5cd853adc6eef154584baa5de1008b15",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawDVXplDs.woff2",
+    "weight": 600
+  },
+  "BricolageGrotesque-600-latin.woff2": {
+    "bytes": 41344,
+    "family": "Bricolage Grotesque",
+    "sha256": "a97804dc9fbe5fc972a08018c5eda4dab7ef2346f64c57e61419d05e6de4ea1c",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawA1Xp.woff2",
+    "weight": 600
+  },
+  "BricolageGrotesque-700-latin-ext.woff2": {
+    "bytes": 18668,
+    "family": "Bricolage Grotesque",
+    "sha256": "e808f16b56f84dc7933e498cc8a41d4a5cd853adc6eef154584baa5de1008b15",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawDVXplDs.woff2",
+    "weight": 700
+  },
+  "BricolageGrotesque-700-latin.woff2": {
+    "bytes": 41344,
+    "family": "Bricolage Grotesque",
+    "sha256": "a97804dc9fbe5fc972a08018c5eda4dab7ef2346f64c57e61419d05e6de4ea1c",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawA1Xp.woff2",
+    "weight": 700
+  },
+  "BricolageGrotesque-800-latin-ext.woff2": {
+    "bytes": 18668,
+    "family": "Bricolage Grotesque",
+    "sha256": "e808f16b56f84dc7933e498cc8a41d4a5cd853adc6eef154584baa5de1008b15",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawDVXplDs.woff2",
+    "weight": 800
+  },
+  "BricolageGrotesque-800-latin.woff2": {
+    "bytes": 41344,
+    "family": "Bricolage Grotesque",
+    "sha256": "a97804dc9fbe5fc972a08018c5eda4dab7ef2346f64c57e61419d05e6de4ea1c",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9H6as8bTXq_nANBjzKo3IeZx8z6up5BeSl5jBNz_19PpbpMXuECpwUxJBOm_OJWiawA1Xp.woff2",
+    "weight": 800
+  },
+  "Inter-400-latin-ext.woff2": {
+    "bytes": 85068,
+    "family": "Inter",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "weight": 400
+  },
+  "Inter-400-latin.woff2": {
+    "bytes": 48256,
+    "family": "Inter",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "weight": 400
+  },
+  "Inter-500-latin-ext.woff2": {
+    "bytes": 85068,
+    "family": "Inter",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "weight": 500
+  },
+  "Inter-500-latin.woff2": {
+    "bytes": 48256,
+    "family": "Inter",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "weight": 500
+  },
+  "Inter-600-latin-ext.woff2": {
+    "bytes": 85068,
+    "family": "Inter",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "weight": 600
+  },
+  "Inter-600-latin.woff2": {
+    "bytes": 48256,
+    "family": "Inter",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "weight": 600
+  },
+  "Inter-700-latin-ext.woff2": {
+    "bytes": 85068,
+    "family": "Inter",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "weight": 700
+  },
+  "Inter-700-latin.woff2": {
+    "bytes": 48256,
+    "family": "Inter",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "weight": 700
+  },
+  "Inter-800-latin-ext.woff2": {
+    "bytes": 85068,
+    "family": "Inter",
+    "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+    "weight": 800
+  },
+  "Inter-800-latin.woff2": {
+    "bytes": 48256,
+    "family": "Inter",
+    "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+    "weight": 800
+  },
+  "JetBrainsMono-400-latin-ext.woff2": {
+    "bytes": 11624,
+    "family": "JetBrains Mono",
+    "sha256": "db5ff4db83e580426280e9337a58dc57d3a83784a1b03ad80914651594441d52",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2",
+    "weight": 400
+  },
+  "JetBrainsMono-400-latin.woff2": {
+    "bytes": 31432,
+    "family": "JetBrains Mono",
+    "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2",
+    "weight": 400
+  },
+  "JetBrainsMono-500-latin-ext.woff2": {
+    "bytes": 11624,
+    "family": "JetBrains Mono",
+    "sha256": "db5ff4db83e580426280e9337a58dc57d3a83784a1b03ad80914651594441d52",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2",
+    "weight": 500
+  },
+  "JetBrainsMono-500-latin.woff2": {
+    "bytes": 31432,
+    "family": "JetBrains Mono",
+    "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2",
+    "weight": 500
+  },
+  "JetBrainsMono-600-latin-ext.woff2": {
+    "bytes": 11624,
+    "family": "JetBrains Mono",
+    "sha256": "db5ff4db83e580426280e9337a58dc57d3a83784a1b03ad80914651594441d52",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwhsk.woff2",
+    "weight": 600
+  },
+  "JetBrainsMono-600-latin.woff2": {
+    "bytes": 31432,
+    "family": "JetBrains Mono",
+    "sha256": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2",
+    "weight": 600
+  },
+  "PlusJakartaSans-400-latin-ext.woff2": {
+    "bytes": 21728,
+    "family": "Plus Jakarta Sans",
+    "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2",
+    "weight": 400
+  },
+  "PlusJakartaSans-400-latin.woff2": {
+    "bytes": 27348,
+    "family": "Plus Jakarta Sans",
+    "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+    "weight": 400
+  },
+  "PlusJakartaSans-500-latin-ext.woff2": {
+    "bytes": 21728,
+    "family": "Plus Jakarta Sans",
+    "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2",
+    "weight": 500
+  },
+  "PlusJakartaSans-500-latin.woff2": {
+    "bytes": 27348,
+    "family": "Plus Jakarta Sans",
+    "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+    "weight": 500
+  },
+  "PlusJakartaSans-600-latin-ext.woff2": {
+    "bytes": 21728,
+    "family": "Plus Jakarta Sans",
+    "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2",
+    "weight": 600
+  },
+  "PlusJakartaSans-600-latin.woff2": {
+    "bytes": 27348,
+    "family": "Plus Jakarta Sans",
+    "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+    "weight": 600
+  },
+  "PlusJakartaSans-700-latin-ext.woff2": {
+    "bytes": 21728,
+    "family": "Plus Jakarta Sans",
+    "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2",
+    "weight": 700
+  },
+  "PlusJakartaSans-700-latin.woff2": {
+    "bytes": 27348,
+    "family": "Plus Jakarta Sans",
+    "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+    "weight": 700
+  },
+  "PlusJakartaSans-800-latin-ext.woff2": {
+    "bytes": 21728,
+    "family": "Plus Jakarta Sans",
+    "sha256": "38e3b8fd8045048eb311d90170a4429ed2c8f405852dc3d91b5af8452758703f",
+    "subset": "latin-ext",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko40yyygA.woff2",
+    "weight": 800
+  },
+  "PlusJakartaSans-800-latin.woff2": {
+    "bytes": 27348,
+    "family": "Plus Jakarta Sans",
+    "sha256": "153fc85b70298beeb1d61a5f723331649e7f23bb77302a66e61cb3e2fbdb5e79",
+    "subset": "latin",
+    "upstream": "https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yw.woff2",
+    "weight": 800
+  }
+}

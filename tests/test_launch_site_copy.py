@@ -572,10 +572,12 @@ def test_no_all_caps_heading_that_is_not_an_acronym():
 #: The only external origins the site is allowed to talk to. Both are
 #: pre-existing: GSAP is loaded from jsDelivr and the web fonts from Google.
 #: Anything else — a tracker, an analytics beacon, a new CDN — fails here.
+# The site loads NO third-party script and NO third-party font any more:
+# GSAP and the four webfont families are vendored under website/vendor/.
+# The only external origin left is Razorpay's checkout, injected by
+# website/js/billing.js on a click (see ADR-013).
 ALLOWED_EXTERNAL_ORIGINS = {
-    "cdn.jsdelivr.net",  # GSAP 3.13.0 (ScrollTrigger / SplitText)
-    "fonts.googleapis.com",  # Inter + JetBrains Mono
-    "fonts.gstatic.com",  # the font files themselves
+    "checkout.razorpay.com",  # the payment hand-off, on click only
 }
 
 #: Hostnames that would mean the site started tracking its visitors.
