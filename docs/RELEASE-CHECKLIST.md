@@ -28,6 +28,14 @@ be automated and must be performed by a human on a clean machine.
 
 ## 2. Gate — build
 
+> **Do not run the test suite while the build is running.** `scripts/build_windows.ps1`
+> backs up the hand-maintained `DataAgent.spec`, lets PyInstaller regenerate it, and restores
+> it afterwards. While the build is in flight, `DataAgent.spec` is the GENERATED one — it has
+> no `DATAAENT_CODESIGN_IDENTITY` hook and a relative `version=`/`icon=` path — so
+> `tests/test_packaging.py` and `tests/test_exe_release.py` fail, and a `git add -A` in that
+> window would commit the generated spec. **After a build, run `git diff --stat DataAgent.spec`
+> and confirm it is empty** before committing anything.
+
 | # | Check | Command | Pass |
 |---|---|---|---|
 | 2.1 | Clean tree before building | `git clean -xdn` | review the list; nothing surprising |
@@ -37,9 +45,10 @@ be automated and must be performed by a human on a clean machine.
 | 2.5 | `dist\DataAgent.exe` (onefile, web) exists | `Test-Path dist\DataAgent.exe` | true |
 | 2.6 | `dist\DataAgentShell\DataAgentShell.exe` (onedir, desktop) exists | `Test-Path dist\DataAgentShell\DataAgentShell.exe` | true |
 | 2.7 | `dist\SHA256SUMS.txt` generated | `Test-Path dist\SHA256SUMS.txt` | true |
-| 2.8 | No credential state bundled | `python scripts\build_secure_zip.py --check-only` (or the equivalent) | no `users.json`, no `.env`, no `.jwt_secret`, no `.grant_key` in the bundle |
-| 2.9 | No private key material in `dist/` | `Get-ChildItem dist -Recurse -Filter *.pem` | only `cacert.pem` |
-| 2.10 | Installed size is honest | compare the number stated in `website/download.html` with the real installer size | they match |
+| 2.8 | The hand-maintained spec was restored | `git diff --stat DataAgent.spec` | **empty** |
+| 2.9 | No credential state bundled | `python scripts\build_secure_zip.py --check-only` (or the equivalent) | no `users.json`, no `.env`, no `.jwt_secret`, no `.grant_key` in the bundle |
+| 2.10 | No private key material in `dist/` | `Get-ChildItem dist -Recurse -Filter *.pem` | only `cacert.pem` |
+| 2.11 | Installed size is honest | compare the number stated in `website/download.html` with the real installer size | they match (currently **~175 MB**) |
 
 ## 3. Gate — code signing (**blocking**)
 
