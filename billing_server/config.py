@@ -1,0 +1,84 @@
+"""Billing server configuration.
+
+All payment/license secrets live ONLY here (env vars on the billing host).
+The DataAgent app holds no payment material — just the Ed25519 PUBLIC key
+(baked via keygen_app/baked_public_key.py).
+"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+# ── Razorpay (test: rzp_test_…, live: rzp_live_…) ────────────────────
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+
+# ── Razorpay Subscriptions (auto-renewing monthly Pro) ───────────────
+# The monthly plan is created once in the Razorpay dashboard/API and its id
+# is pasted here (scripts/razorpay_create_plan.py prints one to copy).
+RAZORPAY_PLAN_ID_PRO = os.environ.get("RAZORPAY_PLAN_ID_PRO", "").strip()
+# Cycles per subscription; Razorpay caps total_count at 100, and 100 monthly
+# charges (≈8 years) is "until cancelled" for every practical purpose.
+SUBSCRIPTION_TOTAL_COUNT = 100
+
+# ── License signing (Ed25519 PEM). Shared format with keygen_app. ────
+# LICENSE_PRIVATE_KEY takes base64(PEM); LICENSE_PRIVATE_KEY_PATH a file.
+LICENSE_PRIVATE_KEY = os.environ.get("LICENSE_PRIVATE_KEY", "")
+LICENSE_PRIVATE_KEY_PATH = os.environ.get(
+    "LICENSE_PRIVATE_KEY_PATH",
+    str(Path(__file__).parent / "keys" / "ed25519_private.pem"),
+)
+
+# ── Entitlement read API: clients sign requests with this secret ─────
+ENTITLEMENTS_SYNC_SECRET = os.environ.get("ENTITLEMENTS_SYNC_SECRET", "")
+
+# ── Key delivery email (Resend; free tier). Empty disables sending —
+#    the key is still shown on the success page. ─────────────────────
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM = os.environ.get("BILLING_EMAIL_FROM", "DataAgent <billing@yourdomain.com>")
+
+# ── Support/admin view token (GET /admin/registry). Empty disables the
+#    view entirely — fail-closed; the endpoint never serves without it. ─
+ADMIN_TOKEN = os.environ.get("BILLING_ADMIN_TOKEN", "")
+
+# ── Store ────────────────────────────────────────────────────────────
+DB_PATH = os.environ.get("BILLING_DB_PATH", str(Path(__file__).parent / "billing.sqlite3"))
+
+# Hosted store (Turso/libSQL). Empty TURSO_DATABASE_URL = local SQLite above.
+TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "").strip()
+TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
+
+# ── Pricing (paise; mirrors website/js/billing.js) ───────────────────
+# Pro bills as an auto-renewing monthly Razorpay subscription (no one-time
+# orders); lifetime stays a one-time order.
+PLANS = {
+    "pro": {"amount": 49900, "currency": "INR", "cycle": "MONTHLY", "days": 31,
+            "subscription": True, "label": "DataAgent Pro — monthly, auto-renews"},
+    "lifetime": {"amount": 1000000, "currency": "INR", "cycle": "ONETIME",
+                 "days": None, "subscription": False,
+                 "label": "DataAgent Lifetime"},
+}
+
+
+class ConfigError(RuntimeError):
+    pass
+
+
+def require_ready(*, order: bool = False, webhook: bool = False, sign: bool = False, sync: bool = False) -> None:
+    """Fail-closed guards: raise a clear error if required secrets are missing."""
+    missing = []
+    if order and (not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET):
+        missing.append("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
+    if webhook and not RAZORPAY_WEBHOOK_SECRET:
+        missing.append("RAZORPAY_WEBHOOK_SECRET")
+    if sign:
+        from billing_server.keymint import load_private_key
+        try:
+            load_private_key()
+        except FileNotFoundError as exc:
+            raise ConfigError(str(exc)) from exc
+    if sync and not ENTITLEMENTS_SYNC_SECRET:
+        missing.append("ENTITLEMENTS_SYNC_SECRET")
+    if missing:
+        raise ConfigError("Missing billing configuration: " + ", ".join(missing))

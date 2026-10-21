@@ -1,0 +1,139 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link [ref=f1e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f1e6]:
+        - link " Home" [ref=f1e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f1e8]: 
+          - generic [ref=f1e9]: Home
+        - button " Data " [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e12]: 
+          - generic [ref=f1e13]: Data
+          - generic [ref=f1e14]: 
+        - button " Analyze " [ref=f1e16] [cursor=pointer]:
+          - generic [ref=f1e17]: 
+          - generic [ref=f1e18]: Analyze
+          - generic [ref=f1e19]: 
+        - button " Tools " [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: 
+          - generic [ref=f1e23]: Tools
+          - generic [ref=f1e24]: 
+        - link " Excel" [ref=f1e25] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f1e26]: 
+          - generic [ref=f1e27]: Excel
+        - link " Settings" [ref=f1e28] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f1e29]: 
+          - generic [ref=f1e30]: Settings
+      - generic [ref=f1e31]:
+        - text:  
+        - button "" [ref=f1e35]
+        - generic [ref=f1e37]:
+          - button "V" [ref=f1e38] [cursor=pointer]
+          - text:     
+        - button "" [ref=f1e40]
+        - text: 
+  - text:            
+  - main [ref=f1e42]:
+    - generic [ref=f1e573]:
+      - generic [ref=f1e574]:
+        - generic [ref=f1e575]: 
+        - heading "Export Data" [level=2] [ref=f1e578]
+      - generic [ref=f1e579]:
+        - heading "📊 Dashboard Report Export" [level=3] [ref=f1e580]
+        - paragraph [ref=f1e581]: Export a saved dashboard as a designed Power BI report or PowerPoint deck — matching your in-app dashboard (KPI cards, charts, tables).
+        - generic [ref=f1e582]:
+          - generic [ref=f1e583]: Select Dashboard
+          - combobox [ref=f1e584] [cursor=pointer]:
+            - option "Choose a dashboard..." [selected]
+            - option "Verify Dash"
+            - option "Widget Verify"
+            - option "Widget Verify"
+            - option "Verify Dash"
+            - option "smoke-test"
+        - generic [ref=f1e585]:
+          - button " Power BI Report (.pbix) Designed report with KPI cards + charts" [ref=f1e586]:
+            - generic [ref=f1e587]: 
+            - generic [ref=f1e588]: Power BI Report (.pbix)
+            - generic [ref=f1e589]: Designed report with KPI cards + charts
+          - button " PowerPoint Deck (.pptx) Designed slides with chart images" [ref=f1e590]:
+            - generic [ref=f1e591]: 
+            - generic [ref=f1e592]: PowerPoint Deck (.pptx)
+            - generic [ref=f1e593]: Designed slides with chart images
+      - generic [ref=f1e594]:
+        - heading "📦 Data Export" [level=3] [ref=f1e595]
+        - generic [ref=f1e596]:
+          - generic [ref=f1e597]: Select Table
+          - combobox [ref=f1e598] [cursor=pointer]:
+            - option "Choose a table..."
+            - option "key_redemptions (1 rows)"
+            - option "ppc_ads (29 rows)"
+            - option "premium_settings (2 rows)"
+            - option "smoke_sales (8 rows)"
+            - option "verify_orders (8 rows)" [selected]
+        - generic [ref=f1e599]:
+          - button " CSV" [active] [ref=f1e600]:
+            - generic [ref=f1e601]: 
+            - text: CSV
+          - button " Parquet" [ref=f1e602]:
+            - generic [ref=f1e603]: 
+            - text: Parquet
+          - button " Excel" [ref=f1e604]:
+            - generic [ref=f1e605]: 
+            - text: Excel
+          - button " Markdown" [ref=f1e606]:
+            - generic [ref=f1e607]: 
+            - text: Markdown
+          - button " HTML Report" [ref=f1e608]:
+            - generic [ref=f1e609]: 
+            - text: HTML Report
+          - button " PowerPoint" [ref=f1e610]:
+            - generic [ref=f1e611]: 
+            - text: PowerPoint
+          - button " PDF Report" [ref=f1e612]:
+            - generic [ref=f1e613]: 
+            - text: PDF Report
+          - button " ZIP All" [ref=f1e614]:
+            - generic [ref=f1e615]: 
+            - text: ZIP All
+          - button " Copy as MD" [ref=f1e616]:
+            - generic [ref=f1e617]: 
+            - text: Copy as MD
+      - generic [ref=f1e618]:
+        - heading "📊 BI Tool Export" [level=3] [ref=f1e619]
+        - paragraph [ref=f1e620]: Export data formatted for popular BI tools
+        - generic [ref=f1e621]:
+          - button " Power BI CSV import" [ref=f1e622]:
+            - generic [ref=f1e623]: 
+            - generic [ref=f1e624]: Power BI
+            - generic [ref=f1e625]: CSV import
+          - button " Tableau Data extract" [ref=f1e626]:
+            - generic [ref=f1e627]: 
+            - generic [ref=f1e628]: Tableau
+            - generic [ref=f1e629]: Data extract
+          - button " Looker LookML config" [ref=f1e630]:
+            - generic [ref=f1e631]: 
+            - generic [ref=f1e632]: Looker
+            - generic [ref=f1e633]: LookML config
+      - generic [ref=f1e634]:
+        - heading "📄 Report Generation" [level=3] [ref=f1e635]
+        - generic [ref=f1e636]:
+          - generic [ref=f1e637]: Table for Report
+          - combobox [ref=f1e638] [cursor=pointer]:
+            - option "Choose a table..." [selected]
+            - option "key_redemptions"
+            - option "ppc_ads"
+            - option "premium_settings"
+            - option "smoke_sales"
+            - option "verify_orders"
+        - button " Generate Executive Report" [ref=f1e639]:
+          - generic [ref=f1e640]: 
+          - text: Generate Executive Report
+      - generic [ref=f1e641]:
+        - heading "📋 Schema Documentation" [level=3] [ref=f1e642]
+        - button " Download Schema Doc (Markdown)" [ref=f1e643]:
+          - generic [ref=f1e644]: 
+          - text: Download Schema Doc (Markdown)

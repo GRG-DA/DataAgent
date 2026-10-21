@@ -1,0 +1,251 @@
+{
+  "source_pbix": "1779157119779Power BI Retail Store Sales Dashboard — State Revenue, Category Mix, Payment Mode & Profit by Sub-Category (Free PBIX).pbix",
+  "visual_type": "barChart",
+  "visualContainer_keys_data_visual": [
+    "x",
+    "y",
+    "z",
+    "width",
+    "height",
+    "config",
+    "filters",
+    "tabOrder",
+    "query",
+    "dataTransforms"
+  ],
+  "visualContainer_keys_textbox": [
+    "x",
+    "y",
+    "z",
+    "width",
+    "height",
+    "config",
+    "filters"
+  ],
+  "query": {
+    "top": [
+      "Commands"
+    ],
+    "command_keys": [
+      "Query",
+      "Binding",
+      "ExecutionMetricsKind"
+    ],
+    "SemanticQueryDataShapeCommand_keys": [
+      "Query",
+      "Binding",
+      "ExecutionMetricsKind"
+    ],
+    "Query_keys": [
+      "Version",
+      "From",
+      "Select",
+      "Where",
+      "OrderBy"
+    ],
+    "From_entry": {
+      "Name": "d",
+      "Entity": "Details",
+      "Type": 0
+    },
+    "Column_select": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Source": "d"
+          }
+        },
+        "Property": "Sub-Category"
+      },
+      "Name": "Details.Sub-Category",
+      "NativeReferenceName": "Sub-Category"
+    },
+    "Aggregation_select": {
+      "Aggregation": {
+        "Expression": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "Profit"
+          }
+        },
+        "Function": 0
+      },
+      "Name": "Sum(Details.Profit)",
+      "NativeReferenceName": "Sum of Profit"
+    },
+    "Binding": {
+      "Primary": {
+        "Groupings": [
+          {
+            "Projections": [
+              0,
+              1
+            ]
+          }
+        ]
+      },
+      "DataReduction": {
+        "DataVolume": 4,
+        "Primary": {
+          "Window": {
+            "Count": 1000
+          }
+        }
+      },
+      "Version": 1
+    },
+    "ExecutionMetricsKind": 1
+  },
+  "dataTransforms": {
+    "top_keys": [
+      "objects",
+      "projectionOrdering",
+      "projectionActiveItems",
+      "queryMetadata",
+      "visualElements",
+      "selects"
+    ],
+    "projectionOrdering": {
+      "Category": [
+        0
+      ],
+      "Y": [
+        1
+      ]
+    },
+    "projectionActiveItems": {
+      "Category": [
+        {
+          "queryRef": "Details.Sub-Category",
+          "suppressConcat": false
+        }
+      ]
+    },
+    "queryMetadata_Select": [
+      {
+        "Restatement": "Sub-Category",
+        "Name": "Details.Sub-Category",
+        "Type": 2048
+      },
+      {
+        "Restatement": "Sum of Profit",
+        "Name": "Sum(Details.Profit)",
+        "Type": 3,
+        "Format": "0"
+      }
+    ],
+    "visualElements": [
+      {
+        "DataRoles": [
+          {
+            "Name": "Category",
+            "Projection": 0,
+            "isActive": true
+          },
+          {
+            "Name": "Y",
+            "Projection": 1,
+            "isActive": false
+          }
+        ]
+      }
+    ],
+    "selects_entry": {
+      "displayName": "Sub-Category",
+      "queryName": "Details.Sub-Category",
+      "roles": {
+        "Category": true
+      },
+      "type": {
+        "category": null,
+        "underlyingType": 1
+      },
+      "expr": {
+        "Column": {
+          "Expression": {
+            "SourceRef": {
+              "Entity": "Details"
+            }
+          },
+          "Property": "Sub-Category"
+        }
+      }
+    }
+  },
+  "slicer_visual": {
+    "query_Binding": {
+      "Primary": {
+        "Groupings": [
+          {
+            "Projections": [
+              0
+            ]
+          }
+        ]
+      },
+      "DataReduction": {
+        "DataVolume": 3,
+        "Primary": {
+          "Window": {}
+        }
+      },
+      "IncludeEmptyGroups": true,
+      "Version": 1
+    },
+    "query_Select": [
+      {
+        "HierarchyLevel": {
+          "Expression": {
+            "Hierarchy": {
+              "Expression": {
+                "PropertyVariationSource": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Source": "o"
+                    }
+                  },
+                  "Name": "Variation",
+                  "Property": "Order Date"
+                }
+              },
+              "Hierarchy": "Date Hierarchy"
+            }
+          },
+          "Level": "Quarter"
+        },
+        "Name": "Orders.Order Date.Variation.Date Hierarchy.Quarter",
+        "NativeReferenceName": "Order Date Quarter"
+      }
+    ],
+    "dataTransforms_top_keys": [
+      "objects",
+      "projectionOrdering",
+      "projectionActiveItems",
+      "queryMetadata",
+      "visualElements",
+      "selects"
+    ],
+    "queryMetadata_Select": [
+      {
+        "Restatement": "Quarter",
+        "Name": "Orders.Order Date.Variation.Date Hierarchy.Quarter",
+        "Type": 2048
+      }
+    ],
+    "visualElements": [
+      {
+        "DataRoles": [
+          {
+            "Name": "Values",
+            "Projection": 0,
+            "isActive": true
+          }
+        ]
+      }
+    ]
+  }
+}

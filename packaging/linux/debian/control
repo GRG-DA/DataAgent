@@ -1,0 +1,15 @@
+Package: dataagent
+Version: 1.0.0
+Section: science
+Priority: optional
+Architecture: amd64
+Maintainer: DataAgent <support@dataagent.local>
+Depends: bash, coreutils, curl, gpg, libgtk-3-0, gir1.2-webkit2-4.1
+Recommends: cloudflare-warp
+Description: LLM Data Analytics Agent with Cloudflare WARP support
+ Installs the DataAgent desktop shell and web app with compiled binaries,
+ plus the opencode CLI and the Cloudflare WARP client so the Data Agent AI's
+ egress-IP rotation works out of the box.
+ .
+ Launch the DataAgent shell from the desktop menu; for headless servers run:
+     sudo systemctl enable --now dataagent

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security &amp; Privacy — DataAgent</title>
+  <meta name="description" content="How DataAgent handles your data: local-first by default, parameterized SQL, secrets outside git, no telemetry.">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="calm">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">Security</div>
+      <h1>Your data, your <span class="gradient-text">machine</span></h1>
+      <p>Local-first by default, boring by design. Here is exactly where your data goes — and where it never goes.</p>
+    </div>
+
+    <section class="section" style="padding-top: 0;">
+      <div class="flow animate-on-scroll" style="margin-bottom: 12px;">
+        <div class="flow-node">Your files<small>CSV, Excel, Parquet, PBIX — picked locally</small></div>
+        <div class="flow-sep">&#8594;</div>
+        <div class="flow-node">DuckDB warehouse<small>One file on disk; read-only for analysis</small></div>
+        <div class="flow-sep">&#8594;</div>
+        <div class="flow-node">Your LLM<small>Local (Ollama) or a provider you chose</small></div>
+        <div class="flow-sep">&#8594;</div>
+        <div class="flow-node locked">Nowhere else<small>No telemetry, no background sync</small></div>
+      </div>
+      <p class="section-subtitle animate-on-scroll" style="text-align:center; margin-bottom: 56px;">The entire data path, start to finish.</p>
+
+      <div class="grid-3">
+        <div class="card animate-on-scroll animate-delay-1">
+          <div class="card-icon green">&#128274;</div>
+          <div class="card-title">Local-first by default</div>
+          <p class="card-text">The warehouse is a DuckDB file on your disk. The web UI, API, and ETL run as one process on your machine. Nothing is uploaded unless you configure an external LLM provider yourself.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-2">
+          <div class="card-icon purple">&#129333;</div>
+          <div class="card-title">Auth &amp; sessions</div>
+          <p class="card-text">JWT-based authentication with bcrypt-hashed passwords. Signing keys live in a gitignored key file — never in the repo, never in logs, never in model context.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-3">
+          <div class="card-icon blue">&#128269;</div>
+          <div class="card-title">Safe SQL by construction</div>
+          <p class="card-text">All queries are parameterized; user input never gets concatenated into SQL. Every generated query runs against a read-only connection, so the assistant can explore but not mutate.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-1">
+          <div class="card-icon amber">&#128737;&#65039;</div>
+          <div class="card-title">Input validation at the boundary</div>
+          <p class="card-text">Every API endpoint validates payloads with schemas before business logic runs. File uploads are checked for size and type. Error responses stay generic; details stay in server logs.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-2">
+          <div class="card-icon pink">&#128203;</div>
+          <div class="card-title">Secrets hygiene</div>
+          <p class="card-text">Credentials, JWT material, and OAuth state live in gitignored runtime files. Redaction rules keep them out of chat, logs, and any context sent to a model.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-3">
+          <div class="card-icon green">&#128737;</div>
+          <div class="card-title">Single-writer warehouse</div>
+          <p class="card-text">Analysis opens the warehouse read-only; ETL writes go through one dedicated process. Fewer writers means fewer corruption risks and a clear audit trail for every write.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section band band-navy" style="border-radius: 36px;">
+      <div class="container" style="max-width: 960px;">
+        <div class="section-header">
+          <div class="section-badge">The promises</div>
+          <h2 class="section-title" style="color: #FFF;">What we <span class="gradient-text">never</span> do</h2>
+        </div>
+        <div class="grid-2">
+          <ul class="check-list ink">
+            <li>Ship telemetry or phone-home analytics</li>
+            <li>Send your rows to a model provider you didn't configure</li>
+            <li>Store your warehouse in someone else's cloud</li>
+            <li>Log credentials, tokens, or signing keys</li>
+          </ul>
+          <ul class="check-list ink">
+            <li>Ship third-party code inside the signed build without review</li>
+            <li>Run writes from multiple processes at once</li>
+            <li>Require a cloud connection to open your own data</li>
+            <li>Hide the SQL behind the answer</li>
+          </ul>
+        </div>
+        <div class="inline-cta" style="background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.25);">
+          <p style="color: #FFF;">Found a vulnerability? We take reports seriously.</p>
+          <a href="contact.html" class="btn btn-primary">Report securely</a>
+          <a href="docs.html#security" class="btn btn-on-dark">Read the docs</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container" style="max-width: 960px;">
+        <div class="section-header">
+          <div class="section-badge">Full disclosure</div>
+          <h2 class="section-title">Every place DataAgent talks to the network</h2>
+          <p class="section-lead" style="text-align:left;">
+            We would rather you hear this from us than find it. Below is the complete
+            list of outbound connections the app can make, what triggers each one,
+            and what data — if any — is included.
+          </p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">Every install</div>
+            <ul class="check-list">
+              <li><strong>Update check</strong> — one HTTPS GET to <code>api.github.com</code> on launch to compare the installed version against the latest release. Sends your IP address and a User-Agent string. No data, no identifiers, no telemetry.</li>
+              <li><strong>Your LLM provider</strong> — the prompt and whatever schema context the question needs, sent to whichever provider you configured. With a local Ollama model, this never leaves the machine.</li>
+              <li><strong>Cloud provider sign-in</strong> — only if you use Google login or a cloud LLM provider.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">Paid features only</div>
+            <ul class="check-list">
+              <li><strong>Entitlement service</strong> — the billing server is asked whether your plan is current. Sends your email address and a signed request; returns a signed plan assertion.</li>
+              <li><strong>IP rotation proxy pool</strong> — the <em>IP rotation</em> feature routes LLM traffic through third-party public proxies. Your prompts may transit machines you do not control. This is the one feature where a third party can see traffic, and it is off unless you enable it.</li>
+              <li><strong>Cloud vision model</strong> — the <em>recreate from image</em> feature sends a screenshot of the dashboard you asked to recreate to a cloud model. There is no local model for this yet.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-title">What is never sent</div>
+          <p class="card-text">
+            No telemetry, no analytics, no crash reporting, no product usage tracking, no
+            advertising identifiers, and no server-side copy of your data. Your warehouse
+            is a single file on your disk. There is no code path in this application that
+            uploads it anywhere.
+          </p>
+        </div>
+        <div class="inline-cta">
+          <p>Want the machine-readable version, or to run a check of your own?</p>
+          <a href="docs.html#security" class="btn btn-primary">Read the security docs</a>
+          <a href="download.html" class="btn btn-secondary">Download and inspect the source</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

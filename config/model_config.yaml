@@ -1,0 +1,237 @@
+# LLM Configuration — Multi-Provider
+# ====================================
+# Set the default provider and configure the models you want to use.
+# At minimum, set one provider's model name.
+# API keys can be set here, in .env (LLM_OPENAI_KEY / LLM_ANTHROPIC_KEY /
+# LLM_OPENROUTER_KEY / LLM_GROQ_KEY / LLM_GEMINI_KEY / LLM_XAI_KEY /
+# LLM_DEEPSEEK_KEY), or live from the web Settings page (persisted to
+# config/llm_runtime.json — that file wins over everything else).
+#
+# default_provider options: ollama | lmstudio | openai | openrouter | anthropic
+#                          | groq | gemini | xai | deepseek | opencode
+
+# Default provider to use when routing rules don't apply
+default_provider: "ollama"  # ollama | lmstudio | openai | openrouter | anthropic | groq | gemini | xai | deepseek | opencode
+
+# ─── Provider: Ollama (local, privacy-first) ─────────────────────
+# Install: https://ollama.ai | Then: ollama pull <model>
+ollama:
+  base_url: "http://localhost:11434"
+  executable_path: "C:\\Users\\GANESH GR\\AppData\\Local\\Programs\\Ollama\\ollama.exe"
+  model_name: "qwen2.5:7b"    # Fits 4GB VRAM (RTX 5050 Laptop)
+  timeout: 120
+  keep_alive: "5m"
+  options:
+    temperature: 0.1           # Low temp = more accurate SQL
+    top_p: 0.95
+    num_ctx: 32768             # Larger context for complex queries
+    num_predict: 16384
+  # Recommended models (install via: ollama pull <name>):
+  #   qwen2.5:7b    - Lightweight, decent SQL
+  #   qwen2.5:14b   - Best balance (RECOMMENDED)
+  #   qwen2.5:32b   - Best accuracy, needs 24GB+ VRAM
+  #   llama3.1:8b   - Good all-rounder
+  #   codellama:13b - Code-focused
+
+# ─── Provider: OpenAI-compatible (LOCAL llama.cpp server) ──────
+# This is the active local backend. Start it with: ./scripts/start_llamacpp.sh
+# llama-server exposes /v1/chat/completions + /v1/models at port 8080.
+openai:
+  api_key: "sk-local"           # dummy key — required by agent/llm_client.py registration
+  base_url: "http://localhost:8080/v1"
+  model: ""                    # Qwen2.5-Coder-7B-Instruct Q4_K_M, CPU-only
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Available models:
+  #   gpt-4o-mini   - Fast, cheap, good SQL (~$0.15/1M tokens)
+  #   gpt-4o        - Best accuracy (~$2.50/1M tokens)
+  #   gpt-4-turbo   - Legacy, still good
+
+# ─── Provider: LM Studio (LOCAL OpenAI-compatible server) ──────
+# Start LM Studio → Developer tab → "Start Server" (default port 1234).
+# No API key needed. Load a model in the LM Studio GUI first, then set it here.
+lmstudio:
+  base_url: "http://localhost:1234/v1"
+  model: ""                    # e.g. "qwen2.5-coder-7b-instruct" (must be loaded in LM Studio)
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+
+# ─── Provider: OpenRouter (cloud aggregator — one key, many models) ──
+# Get key: https://openrouter.ai/keys
+# Models: https://openrouter.ai/models (use "vendor/model-name" format)
+openrouter:
+  api_key: ""                  # or set LLM_OPENROUTER_KEY in .env
+  base_url: "https://openrouter.ai/api/v1"
+  model: ""                    # e.g. "openai/gpt-4o-mini", "anthropic/claude-sonnet-4"
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+
+# ─── Provider: Anthropic (Claude Sonnet, Opus) ───────────────────
+# Get key: https://console.anthropic.com/settings/keys
+# Set env: LLM_ANTHROPIC_KEY=sk-ant-...
+anthropic:
+  api_key: ""                   # or set LLM_ANTHROPIC_KEY in .env
+  base_url: "https://api.anthropic.com/v1"
+  model: "claude-sonnet-4-20250514"  # Best: claude-sonnet-4-20250514
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Available models:
+  #   claude-sonnet-4-20250514  - Best for SQL & analysis (RECOMMENDED)
+  #   claude-haiku-4-20250414   - Fast, cheap, still good
+  #   claude-opus-4-20250514    - Most powerful, most expensive
+
+# ─── Provider: Groq (fastest inference, free tier) ──────────────
+# Get key: https://console.groq.com/keys  |  Set env: LLM_GROQ_KEY
+groq:
+  api_key: ""                   # or set LLM_GROQ_KEY in .env
+  base_url: "https://api.groq.com/openai/v1"
+  model: ""                     # e.g. "llama-3.3-70b-versatile", "qwen/qwen3-32b"
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Models (2025 lineup):
+  #   llama-3.3-70b-versatile  - Strong generalist (RECOMMENDED)
+  #   qwen/qwen3-32b           - Great for SQL/code, fast
+  #   groq-mixtral-8x7b-32768  - Older but high context (32k)
+
+# ─── Provider: Google Gemini (2.5 family) ───────────────────────
+# Two ways to use it:
+#   1. API key: https://aistudio.google.com/apikey  (env: LLM_GEMINI_KEY)
+#   2. "Sign in with Google" from the web Settings page — the app runs a
+#      PKCE OAuth flow against your own OAuth client (needs config/settings.yaml
+#      `google:` block; see the comment at the bottom of that file).
+# Note: key and OAuth are independent — keyless Gemini works via OAuth because
+# GeminAI endpoints accept a Google access token as Bearer.
+gemini:
+  api_key: ""                   # or set LLM_GEMINI_KEY in .env
+  base_url: "https://generativelanguage.googleapis.com/v1beta/openai"
+  model: ""                     # e.g. "gemini-2.5-flash", "gemini-2.5-pro"
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Available models:
+  #   gemini-2.5-flash  - Fast, cheap, generous free tier (RECOMMENDED)
+  #   gemini-2.5-pro    - Deep reasoning, best accuracy
+  #   gemini-2.5-flash-lite - Cheapest, lightest
+
+# ─── Provider: xAI Grok ──────────────────────────────────────────
+# Get key: https://console.x.ai/  |  Set env: LLM_XAI_KEY
+xai:
+  api_key: ""                   # or set LLM_XAI_KEY in .env
+  base_url: "https://api.x.ai/v1"
+  model: ""                     # e.g. "grok-3", "grok-3-mini"
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Available models:
+  #   grok-3       - Flagship, strong reasoning
+  #   grok-3-mini  - Fast + cheap (RECOMMENDED for SQL)
+
+# ─── Provider: DeepSeek ──────────────────────────────────────────
+# Get key: https://platform.deepseek.com/api_keys  |  Set env: LLM_DEEPSEEK_KEY
+deepseek:
+  api_key: ""                   # or set LLM_DEEPSEEK_KEY in .env
+  base_url: "https://api.deepseek.com/v1"
+  model: ""                     # e.g. "deepseek-chat"
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+  # Available models:
+  #   deepseek-chat   - V3.x, excellent code/SQL (RECOMMENDED)
+  #   deepseek-reasoner - R1-style, slow but great at hard analysis
+
+# ─── Provider: OpenCode Free (opencode.ai/zen/v1 — NO API key) ──
+# Anonymous public free tier — no key, no signup. Only the free model set
+# works: big-pickle, deepseek-v4-flash-free, mimo-v2.6-flash-free, mimo-v2.5-free, hy3-free,
+# nemotron-3-ultra-free, north-mini-code-free (or any id ending in "-free").
+# Premium models (e.g. claude-sonnet-4) need an opencode API key and are
+# rejected with a clear error.
+#
+# The free tier is rate-limited per egress IP. When the quota is exhausted
+# (HTTP 429), the app automatically rotates to the next proxy in `proxies`
+# (round-robin + cooldown honoring the upstream reset hint). Leave `proxies`
+# empty to use the host's own IP directly.
+opencode:
+  base_url: "https://opencode.ai/zen/v1"
+  # Optional: route through an opencode server's session API instead of the
+  # zen endpoint directly. Lets the app use opencode "by URL" without a local
+  # opencode CLI install (important for packaged .exe builds). Set to e.g.
+  # "http://localhost:3000" when you run `opencode serve` on the host.
+  #
+  # NOTE: the zen endpoint (base_url) rejects direct calls with HTTP 403
+  # FreeTierError ("can only be used from within OpenCode") — the free tier
+  # only works through the opencode server's session API. So server_url is
+  # REQUIRED for the opencode free tier; leave it empty only if you have a
+  # paid opencode API key.
+  server_url: "http://127.0.0.1:3000"
+  # Auto-start the opencode server on first AI use when server_url is set but
+  # not answering. The CLI binary is resolved from the bundled .exe copy, an
+  # existing install, or downloaded automatically. Host/port for the spawned
+  # server (loopback only).
+  server_auto_start: true
+  server_hostname: "127.0.0.1"
+  server_port: 3000
+  model: "big-pickle"            # free model (or any "-free" id)
+  proxies: []                    # e.g. ["http://127.0.0.1:7890", "socks5://127.0.0.1:1080"]
+  options:
+    temperature: 0.1
+    max_tokens: 4096
+
+# ─── Smart Routing ───────────────────────────────────────────────
+# Route specific query types to the best provider for that task.
+# If a provider has no API key, falls back to default_provider.
+# All rules point at the local llama.cpp server ("openai" = OpenAI-compatible).
+routing:
+  # Complex SQL (joins, CTEs, window functions) → local coder model
+  - pattern: "complex_sql"
+    provider: "openai"
+    keywords: ["join", "window", "lag", "lead", "rank", "cte", "complex", "advanced", "pivot", "union"]
+
+  # Quick visualizations → local coder model
+  - pattern: "quick_chart"
+    provider: "openai"
+    keywords: ["chart", "plot", "graph", "show me", "quick", "simple", "bar", "line", "pie"]
+
+  # Statistical analysis → local coder model
+  - pattern: "statistical"
+    provider: "openai"
+    keywords: ["test", "p-value", "regression", "correlation", "anova", "significance", "distribution", "median", "percentile"]
+
+  # Data cleaning → local coder model
+  - pattern: "data_cleaning"
+    provider: "openai"
+    keywords: ["clean", "fix", "null", "missing", "duplicate", "outlier", "normalize", "transform"]
+
+  # Narrative/summary → local coder model
+  - pattern: "narrative"
+    provider: "openai"
+    keywords: ["summary", "explain", "why", "insight", "recommend", "suggest", "report"]
+
+# ─── Agent Behavior ──────────────────────────────────────────────
+agent:
+  max_iterations: 10
+  max_tokens_per_step: 4096
+  enable_streaming: true
+  system_prompt: |
+    You are an expert Data Analyst agent running with access to a DuckDB warehouse.
+    Your role is to help users analyze their data by:
+    1. Understanding their business questions
+    2. Planning analytical steps (SQL queries, pandas operations, visualizations)
+    3. Executing those steps using available tools
+    4. Providing clear narrative explanations and actionable insights
+
+    Available tools:
+    - sql_tool: Execute SQL queries against DuckDB warehouse
+    - pandas_tool: Perform pandas operations on DataFrames
+    - viz_tool: Create visualizations (bar, line, scatter, heatmap, etc.)
+
+    Rules:
+    - Always verify your SQL results before presenting answers
+    - If a query returns 0 rows, check table/column names and retry
+    - Round numbers to reasonable precision (2 decimal places for currency)
+    - Always plan your approach first, then execute step by step
+    - Provide clear explanations of your findings with actionable recommendations

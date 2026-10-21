@@ -1,0 +1,68 @@
+{
+  "mcpServers": {
+    "grok": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "grok-cli-mcp"]
+    },
+    "laya": {
+      "type": "local",
+      "command": ".venv-laya/Scripts/python.exe",
+      "args": ["-m", "laya.mcp.server"],
+      "env": {
+        "LAYA_PRELOAD": "1",
+        "LAYA_MODELS": "english,multilingual"
+      }
+    },
+    "duckdb": {
+      "type": "local",
+      "command": ".venv-mcp/Scripts/python.exe",
+      "args": ["mcp_servers/duckdb_mcp_server.py"],
+      "env": {
+        "DATAAGENT_DB_PATH": "data/curated/warehouse.duckdb"
+      }
+    },
+    "memory": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "filesystem": {
+      "type": "local",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "data",
+        "docs",
+        "config",
+        "outputs"
+      ]
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "playwright": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "fetch": {
+      "type": "local",
+      "command": "C:/Users/GANESH GR/AppData/Local/hermes/bin/uvx.exe",
+      "args": ["mcp-server-fetch"]
+    }
+  }
+}

@@ -1,0 +1,102 @@
+- generic [active] [ref=f44e1]:
+  - banner [ref=f44e2]:
+    - generic [ref=f44e3]:
+      - link [ref=f44e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f44e6]:
+        - link " Home" [ref=f44e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f44e8]: 
+          - generic [ref=f44e9]: Home
+        - button " Data " [ref=f44e11] [cursor=pointer]:
+          - generic [ref=f44e12]: 
+          - generic [ref=f44e13]: Data
+          - generic [ref=f44e14]: 
+        - button " Analyze " [ref=f44e16] [cursor=pointer]:
+          - generic [ref=f44e17]: 
+          - generic [ref=f44e18]: Analyze
+          - generic [ref=f44e19]: 
+        - button " Tools " [ref=f44e21] [cursor=pointer]:
+          - generic [ref=f44e22]: 
+          - generic [ref=f44e23]: Tools
+          - generic [ref=f44e24]: 
+        - link " Excel" [ref=f44e25] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f44e26]: 
+          - generic [ref=f44e27]: Excel
+        - link " Settings" [ref=f44e28] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f44e29]: 
+          - generic [ref=f44e30]: Settings
+      - generic [ref=f44e31]:
+        - text:  
+        - button "" [ref=f44e35]
+        - generic [ref=f44e37]:
+          - button "V" [ref=f44e38] [cursor=pointer]
+          - text:     
+        - button "" [ref=f44e40]
+        - text: 
+  - text:             
+  - main [ref=f44e42]:
+    - generic [ref=f44e44]:
+      - generic [ref=f44e45]:
+        - generic [ref=f44e46]:
+          - generic [ref=f44e47]: 
+          - heading "SQL Explorer" [level=2] [ref=f44e50]
+        - generic [ref=f44e51]:
+          - combobox "Quick table reference" [ref=f44e52] [cursor=pointer]:
+            - option "Table schema..." [selected]
+            - option "DateTable_ppc_ads_date"
+            - option "key_redemptions"
+            - option "ppc_ads"
+            - option "premium_settings"
+            - option "smoke_sales"
+            - option "vc_paste"
+            - option "vc_sales_loaded"
+            - option "verify_orders"
+          - button " History" [ref=f44e53]:
+            - generic [ref=f44e54]: 
+            - text: History
+      - generic [ref=f44e55]:
+        - generic [ref=f44e56] [cursor=pointer]:
+          - heading " Visual Query Builder" [level=3] [ref=f44e57]:
+            - generic [ref=f44e58]: 
+            - text: Visual Query Builder
+          - generic [ref=f44e59]: 
+        - text:    
+      - generic [ref=f44e60]:
+        - generic [ref=f44e61]:
+          - generic [ref=f44e62]:
+            - generic [ref=f44e63]:
+              - generic [ref=f44e64]:
+                - generic [ref=f44e65]: 
+                - text: SQL Editor [Ctrl+Enter to run]
+              - generic [ref=f44e66]:
+                - button " Format" [ref=f44e67]:
+                  - generic [ref=f44e68]: 
+                  - text: Format
+                - button " Clear" [ref=f44e69]:
+                  - generic [ref=f44e70]: 
+                  - text: Clear
+            - code [ref=f44e72]:
+              - generic [ref=f44e73]:
+                - generic [ref=f44e76]: "1"
+                - generic [ref=f44e79]: SELECT source, SUM(spend) AS total_spend, COUNT(*) AS n FROM ppc_ads GROUP BY source ORDER BY total_spend DESCSELECT * FROM DateTable_ppc_ads_date LIMIT 100
+                - generic:   
+                - textbox "Editor content;Press Alt+F1 for Accessibility Options." [ref=f44e86]: SELECT source, SUM(spend) AS total_spend, COUNT(*) AS n FROM ppc_ads GROUP BY source ORDER BY total_spend DESCSELECT * FROM DateTable_ppc_ads_date LIMIT 100
+                - text:      
+            - generic [ref=f44e88]:
+              - button " Execute" [ref=f44e89]:
+                - generic [ref=f44e90]: 
+                - text: Execute
+              - button " Save" [ref=f44e91]:
+                - generic [ref=f44e92]: 
+                - text: Save
+          - generic [ref=f44e93]:
+            - heading "Results" [level=3] [ref=f44e95]
+            - paragraph [ref=f44e97]: Execute a query to see results.
+            - text: 
+        - text:  
+  - generic [ref=f44e98]:
+    - alert
+    - alert

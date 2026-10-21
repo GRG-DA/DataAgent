@@ -1,0 +1,32 @@
+# DuckDB Warehouse Configuration
+
+duckdb:
+  database_path: "data/curated/warehouse.duckdb"
+  read_only: false
+  config:
+    threads: 4
+    memory_limit: "2GB"
+    max_memory: "4GB"
+
+# Schema configuration
+schema:
+  default_schema: "analytics"
+  create_schema_if_not_exists: true
+  tables:
+    - name: "sales"
+      schema: "analytics"
+      primary_key: "order_id"
+    - name: "customers"
+      schema: "analytics"
+      primary_key: "customer_id"
+    - name: "products"
+      schema: "analytics"
+      primary_key: "product_id"
+    - name: "orders"
+      schema: "analytics"
+      primary_key: "order_id"
+
+# Staging area for temporary tables
+staging:
+  schema: "staging"
+  cleanup_on_startup: true

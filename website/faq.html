@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — DataAgent</title>
+  <meta name="description" content="Frequently asked questions about DataAgent — setup, pricing, privacy, LLM providers, and how the local warehouse works.">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="calm">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">FAQ</div>
+      <h1>Questions, <span class="gradient-text">answered</span></h1>
+      <p>The things people ask before installing — setup, pricing, privacy, and how it all fits together.</p>
+    </div>
+
+    <section class="section" style="padding-top: 0;">
+      <div class="faq-group">
+        <h2 class="faq-group-title">Getting started</h2>
+        <div class="faq-list">
+          <details class="faq-item animate-on-scroll">
+            <summary>What do I need to run DataAgent?</summary>
+            <div class="faq-a">A Windows PC and one download. Grab <strong>DataAgent-Setup.exe</strong>, double-click it, and launch the app from the Start Menu &mdash; Python, the backend, and all dependencies are bundled inside the executable. Nothing else to install first, and no developer tools involved. There is also a portable <code class="code-inline">DataAgent.exe</code> if you would rather not install anything at all.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Does it run on macOS or Linux?</summary>
+            <div class="faq-a">The packaged download is Windows-only today (Windows 10/11, 64-bit). The project is open source, so the same stack can be run from source on macOS or Linux if you are comfortable with a Python environment. The <a href="download.html">download page</a> lists exactly what the Windows build needs.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Do I need my own LLM API key?</summary>
+            <div class="faq-a">No key is required to install. For AI answers you choose a provider: a fully local model via Ollama (free, offline), or a hosted provider such as OpenAI, Anthropic, or Gemini with your own key. Ten providers are supported and you can switch at any time in the config.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>What data sources can I connect?</summary>
+            <div class="faq-a">Files upload directly — CSV, Excel, Parquet — and are ingested into the local DuckDB warehouse. Database connections are configured through <code class="code-inline">db_connections.json</code>. Dashboards can be imported from and exported to Power BI (PBIX).</div>
+          </details>
+        </div>
+      </div>
+
+      <div class="faq-group">
+        <h2 class="faq-group-title">Pricing</h2>
+        <div class="faq-list">
+          <details class="faq-item animate-on-scroll">
+            <summary>Is DataAgent really free?</summary>
+            <div class="faq-a">Yes. The core product is free and open source — download it, read the code, self-host it. Paid plans (Pro at $6/mo &#8776;&#8377;499, Lifetime at $120 &#8776;&#8377;10,000) exist for teams that want support and premium features; checkout happens on Razorpay's secure payment page or our separate billing site. Self-host it with Docker and you get the full product — every feature — free forever, with no account and no card. Your hosted LLM provider (if you choose one) bills you directly.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>What do paid plans add?</summary>
+            <div class="faq-a">Higher entitlements — unlimited AI queries, advanced analytics, and Power BI export — plus priority support. The free tier is designed to cover real work, not a demo. Compare the plans on the <a href="billing.html">pricing page</a>.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Where does checkout happen?</summary>
+            <div class="faq-a">On Razorpay's hosted payment page (UPI, cards, netbanking) via a payment link on the <a href="billing.html">pricing page</a> — or on our separate billing site, depending on configuration. The app itself never handles card data. See <a href="contact.html">contact us</a> for invoices or team licenses.</div>
+          </details>
+        </div>
+      </div>
+
+      <div class="faq-group">
+        <h2 class="faq-group-title">Privacy &amp; security</h2>
+        <div class="faq-list">
+          <details class="faq-item animate-on-scroll">
+            <summary>Does my data leave my machine?</summary>
+            <div class="faq-a">No telemetry, no analytics, no crash reporting, no background sync &mdash; ever. The warehouse is a local DuckDB file and the app runs on your machine. Outbound traffic goes to three places, and only these: the LLM provider <em>you</em> configure (choose Ollama for a fully offline setup); GitHub, for the update check; and, for Pro users only, the feature-ticket and entitlement service plus the proxy pool used by the IP-rotation feature. Details on the <a href="security.html">security page</a>.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>How is access controlled?</summary>
+            <div class="faq-a">JWT-based authentication with hashed passwords (and optional Google sign-in). Secrets and signing keys live in gitignored files, are redacted from logs, and never enter model context.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Can the AI modify or delete my data?</summary>
+            <div class="faq-a">No. Analysis opens the warehouse read-only and all SQL is parameterized. Writes happen only through explicit, user-triggered ETL runs handled by a single dedicated process.</div>
+          </details>
+        </div>
+      </div>
+
+      <div class="faq-group">
+        <h2 class="faq-group-title">Technical</h2>
+        <div class="faq-list">
+          <details class="faq-item animate-on-scroll">
+            <summary>Why DuckDB instead of a cloud warehouse?</summary>
+            <div class="faq-a">Because it's embedded: no server to run, no cluster to pay for, and the whole warehouse is one file you control. It's an analytical engine fast enough for real workloads while keeping the data local — exactly the trade-off local-first requires.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Does it work offline?</summary>
+            <div class="faq-a">Yes. The app installs with no setup &mdash; the runtime, the UI, the warehouse and ETL all ship inside the installer. For AI chat you additionally need a local model via Ollama: the app can install Ollama for you in one click from Settings, and it then downloads a model once (roughly 4.7&nbsp;GB for the recommended qwen2.5:7b). SQL, Excel, dashboards and exports work with no model at all. After that, the network is only needed to pull a model or to call a hosted LLM provider.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Is there an API?</summary>
+            <div class="faq-a">Yes — the same FastAPI backend powers the UI, with REST endpoints for chat, SQL, data management, auth, and export. See the <a href="docs.html#api">API reference</a> in the docs.</div>
+          </details>
+        </div>
+      </div>
+
+      <div class="inline-cta animate-on-scroll">
+        <p>Still have a question?</p>
+        <a href="contact.html" class="btn btn-primary">Ask us directly</a>
+        <a href="docs.html" class="btn btn-secondary">Browse the docs</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

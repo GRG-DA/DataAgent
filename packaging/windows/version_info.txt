@@ -1,0 +1,36 @@
+# UTF-8
+#
+# PyInstaller version resource for the DataAgent Windows exes.
+# Keep FileVersion/ProductVersion in sync with config/settings.yaml
+# (app.version) and installers/DataAgent-Setup.iss (MyAppVersion) —
+# tests/test_packaging.py enforces this.
+# NOTE: shared by both DataAgent.exe and DataAgentShell.exe, so
+# OriginalFilename names the web exe; cosmetic only.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 0, 0, 0),
+    prodvers=(1, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [StringStruct(u'CompanyName', u'DataAgent'),
+           StringStruct(u'FileDescription', u'DataAgent — local-first AI data analyst'),
+           StringStruct(u'FileVersion', u'1.0.0'),
+           StringStruct(u'InternalName', u'DataAgent'),
+           StringStruct(u'LegalCopyright', u'Copyright (C) 2026 GANESH GR'),
+           StringStruct(u'OriginalFilename', u'DataAgent.exe'),
+           StringStruct(u'ProductName', u'DataAgent'),
+           StringStruct(u'ProductVersion', u'1.0.0')])
+      ]),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)

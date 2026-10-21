@@ -1,0 +1,971 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DataAgent — PREMIUM DARK LAYER  (v1)
+   Loads AFTER style.css + pro.css and re-skins the whole site:
+   deep-space surfaces · glass panels · aurora ambience · WebGL stage
+   Motion primitives for js/fx-core.js + js/fx-webgl.js
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Tokens ─────────────────────────────────────────────────── */
+:root {
+  /* Core palette */
+  --px-void:        #04030b;
+  --px-deep:        #07061400;
+  --px-base:        #070613;
+  --px-surface:     #0d0b1d;
+  --px-surface-2:   #141029;
+  --px-glass:       rgba(255, 255, 255, 0.045);
+  --px-glass-2:     rgba(255, 255, 255, 0.072);
+  --px-glass-3:     rgba(255, 255, 255, 0.1);
+  --px-line:        rgba(255, 255, 255, 0.09);
+  --px-line-2:      rgba(255, 255, 255, 0.18);
+  --px-line-glow:   rgba(167, 139, 250, 0.35);
+
+  --px-violet:      #8b5cf6;
+  --px-violet-hi:   #a78bfa;
+  --px-indigo:      #6366f1;
+  --px-cyan:        #22d3ee;
+  --px-green:       #34d399;
+  --px-orange:      #ff8a3d;
+  --px-pink:        #f472b6;
+
+  --px-text:        #f5f3ff;
+  --px-text-2:      #b4adcd;
+  --px-text-3:      #7e7799;
+
+  --px-grad-hot:    linear-gradient(115deg, #a78bfa 0%, #f472b6 46%, #ff8a3d 100%);
+  --px-grad-cool:   linear-gradient(115deg, #22d3ee 0%, #8b5cf6 60%, #f472b6 100%);
+  --px-grad-btn:    linear-gradient(120deg, #7c3aed 0%, #a855f7 45%, #f472b6 100%);
+
+  --px-shadow-sm:   0 2px 8px -3px rgba(0, 0, 0, 0.6);
+  --px-shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.9), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
+  --px-shadow-lift: 0 40px 90px -40px rgba(139, 92, 246, 0.55), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  --px-glow-violet: 0 0 44px -8px rgba(139, 92, 246, 0.55);
+  --px-glow-cyan:   0 0 44px -8px rgba(34, 211, 238, 0.45);
+  --px-inset-top:   inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  --px-r-sm: 12px;
+  --px-r-md: 20px;
+  --px-r-lg: 28px;
+  --px-r-xl: 38px;
+
+  /* Remap the legacy palette → dark equivalents.
+     Every existing component recolours through these. */
+  --da-cream:        #070613;
+  --da-cream-2:      #0a0819;
+  --da-ink:          #05040f;
+  --da-ink-2:        #0b0a1c;
+  --da-navy:         #04030b;
+  --da-violet-band:  #0d0a1f;
+  --da-mint-band:    #08131c;
+  --da-peach-band:   #150c17;
+
+  --da-pale:         #f5f3ff;
+  --da-ink-text:     #f5f3ff;
+  --da-ink-2nd:      #b4adcd;
+  --da-ink-muted:    #7e7799;
+  --da-line:         rgba(255, 255, 255, 0.09);
+  --da-line-strong:  rgba(255, 255, 255, 0.18);
+
+  --da-violet:       #8b5cf6;
+  --da-violet-hi:    #a78bfa;
+  --da-orange:       #ff8a3d;
+  --da-orange-hi:    #ffa96b;
+  --da-cyan:         #22d3ee;
+  --da-green:        #34d399;
+  --da-pink:         #f472b6;
+
+  --primary:         #8b5cf6;
+  --primary-light:   #a78bfa;
+  --primary-dark:    #7c3aed;
+  --accent:          #22d3ee;
+  --accent-pink:     #f472b6;
+
+  --bg-deep:         #04030b;
+  --bg-main:         #070613;
+  --bg-surface:      rgba(255, 255, 255, 0.045);
+  --bg-card:         rgba(255, 255, 255, 0.045);
+  --bg-card-hover:   rgba(255, 255, 255, 0.075);
+  --border:          rgba(255, 255, 255, 0.09);
+  --border-light:    rgba(255, 255, 255, 0.18);
+  --text:            #f5f3ff;
+  --text-secondary:  #b4adcd;
+  --text-muted:      #7e7799;
+
+  --glow-primary: var(--px-glow-violet);
+  --glow-accent:  var(--px-glow-cyan);
+  --glow-strong:  var(--px-shadow-lift);
+  --shadow-card:  var(--px-shadow-card);
+  --shadow-lift:  var(--px-shadow-lift);
+
+  --radius:    999px;
+  --radius-lg: var(--px-r-lg);
+  --radius-sm: var(--px-r-sm);
+
+  --ease-out-organic:   cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-organic: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring:        cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur-med:  260ms;
+  --dur-slow: 380ms;
+
+  /* 3D + motion */
+  --px-persp: 1400px;
+  --px-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --px-ease-soft: cubic-bezier(0.4, 0.01, 0.2, 1);
+}
+
+/* ── 2. Base + ambience ────────────────────────────────────────── */
+html {
+  scrollbar-color: var(--px-violet) var(--px-void);
+  background: var(--px-void);
+}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--px-void); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--px-violet), var(--px-pink));
+  border-radius: 6px;
+  border: 2px solid var(--px-void);
+}
+
+body {
+  background: var(--px-void);
+  color: var(--px-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection { background: rgba(167, 139, 250, 0.35); color: #fff; }
+
+a { color: var(--px-violet-hi); }
+a:hover { color: var(--px-orange); }
+
+/* Layered aurora field — sits under the WebGL canvas */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.055) 1px, transparent 1px) !important;
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+}
+
+.bg-orbs { z-index: 0; }
+.bg-orbs::before,
+.bg-orbs::after { filter: blur(140px); opacity: 0.9; }
+.bg-orbs::before {
+  width: 820px; height: 820px;
+  background:
+    radial-gradient(closest-side, rgba(139, 92, 246, 0.5), transparent 72%),
+    radial-gradient(closest-side at 30% 70%, rgba(99, 102, 241, 0.35), transparent 70%);
+  animation: px-mesh-a 34s var(--ease-out-organic) infinite alternate !important;
+}
+.bg-orbs::after {
+  width: 700px; height: 700px;
+  background:
+    radial-gradient(closest-side, rgba(244, 114, 182, 0.32), transparent 72%),
+    radial-gradient(closest-side at 60% 40%, rgba(34, 211, 238, 0.28), transparent 70%);
+  animation: px-mesh-b 44s var(--ease-out-organic) infinite alternate !important;
+}
+@keyframes px-mesh-a {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-7%, 5%, 0) scale(1.12); }
+  100% { transform: translate3d(4%, -4%, 0) scale(0.96); }
+}
+@keyframes px-mesh-b {
+  0%   { transform: translate3d(0, 0, 0) scale(0.96); }
+  50%  { transform: translate3d(6%, -6%, 0) scale(1.1); }
+  100% { transform: translate3d(-4%, 3%, 0) scale(1.02); }
+}
+
+/* Film grain + vignette on top of everything but the UI */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+/* ── 3. WebGL stage ────────────────────────────────────────────── */
+/* Stacking: .main-content is z-index 1, so the stage and its scrim sit at 0
+   — above .bg-grid/.bg-orbs, below every band of content. */
+#fx-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s var(--px-ease-soft);
+  will-change: opacity;
+}
+#fx-canvas.is-live { opacity: 1; }
+
+/* Keep the CSS aurora atmospheric, never loud — the lattice is the star */
+.hero::before { opacity: 0.46 !important; }
+.bg-orbs::before, .bg-orbs::after { opacity: 0.42 !important; }
+
+/* Sections sit above the stage with translucent scrims so the 3D
+   world keeps glowing through as you scroll. */
+.band {
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(2px);
+}
+/* Translucent scrims keep the WebGL world visible as you scroll */
+.band-ink    { background: linear-gradient(180deg, rgba(5, 4, 15, 0.28), rgba(5, 4, 15, 0.1)) !important; color: var(--px-text); }
+.band-navy   { background: linear-gradient(180deg, rgba(4, 3, 11, 0.55), rgba(4, 3, 11, 0.8)) !important; color: var(--px-text); }
+.band-cream  { background: linear-gradient(180deg, rgba(7, 6, 19, 0.55), rgba(7, 6, 19, 0.68)) !important; color: var(--px-text); }
+.band-cream2 { background: linear-gradient(180deg, rgba(10, 8, 25, 0.6), rgba(10, 8, 25, 0.72)) !important; color: var(--px-text); }
+.band-violet {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(139, 92, 246, 0.2), transparent 62%),
+    linear-gradient(180deg, rgba(13, 10, 31, 0.52), rgba(13, 10, 31, 0.72)) !important;
+  color: var(--px-text);
+}
+.band-mint {
+  background:
+    radial-gradient(120% 90% at 88% 0%, rgba(34, 211, 238, 0.14), transparent 62%),
+    linear-gradient(180deg, rgba(8, 19, 28, 0.52), rgba(8, 19, 28, 0.72)) !important;
+  color: var(--px-text);
+}
+.band-peach {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 138, 61, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(21, 12, 23, 0.52), rgba(21, 12, 23, 0.72)) !important;
+  color: var(--px-text);
+}
+
+/* Readability scrim: sits above the WebGL stage, below the content, and
+   keeps copy crisp while the 3D world stays visible around it. */
+.fx-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(110% 80% at 20% 44%, rgba(5, 4, 15, 0.52) 0%, rgba(5, 4, 15, 0.24) 46%, transparent 76%),
+    linear-gradient(180deg, rgba(5, 4, 15, 0.48) 0%, rgba(5, 4, 15, 0.05) 30%, rgba(5, 4, 15, 0.18) 66%, rgba(5, 4, 15, 0.5) 100%);
+}
+
+/* ── 4. Typography ─────────────────────────────────────────────── */
+.display,
+.hero-title,
+.section-title,
+.page-header h1,
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.028em;
+  color: var(--px-text);
+}
+.display-xl { font-size: clamp(3.2rem, 9vw, 7.4rem); line-height: 0.94; }
+.display-lg { font-size: clamp(2.5rem, 5.6vw, 4.6rem); line-height: 0.98; }
+.section-subtitle, .page-header p, .hero-desc { color: var(--px-text-2); }
+
+.display-ink { color: var(--px-text) !important; }
+
+/* Quotes: the article markup carries an inline dark ink colour */
+blockquote {
+  color: var(--px-text) !important;
+  border-left-color: var(--px-violet-hi) !important;
+  background: linear-gradient(100deg, rgba(139, 92, 246, 0.14), rgba(255, 255, 255, 0.03)) !important;
+}
+
+/* Content headings and emphasis that pro.css points at dark ink */
+.docs-content h2, .docs-content h3, .docs-content h4,
+.docs-content strong, .docs-content li strong,
+.blog-content h2, .blog-content h3, .blog-content strong,
+.faq-group-title, .arch-card h4, .timeline-title, .timeline-summary,
+.contact-card h3, .check-list li, .learn-panel h3 {
+  color: var(--px-text) !important;
+}
+
+/* Superseded by the global .fx-progress bar at the top of the viewport */
+.read-progress { display: none !important; }
+
+/* Catch-all: body copy inside the page is always light on dark. Component
+   rules with higher specificity still win where they set their own colour. */
+.main-content p,
+.main-content li,
+.main-content dd,
+.main-content dt,
+.main-content label {
+  color: var(--px-text-2);
+}
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4 {
+  color: var(--px-text);
+}
+
+.gradient-text,
+.hero-title .accent {
+  background: var(--px-grad-hot);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% 100%;
+  animation: px-shift 9s ease-in-out infinite alternate;
+}
+@keyframes px-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.section-badge {
+  background: var(--px-glass) !important;
+  border: 1px solid var(--px-line) !important;
+  color: var(--px-text-2) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--px-inset-top);
+  border-radius: 999px;
+}
+.section-badge .dot,
+.hero-badge .dot {
+  background: var(--px-gradient, var(--px-green));
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.8);
+  animation: px-pulse 2.6s ease-in-out infinite;
+}
+@keyframes px-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* ── 5. Navigation ─────────────────────────────────────────────── */
+.navbar {
+  background: rgba(5, 4, 15, 0.55) !important;
+  border-bottom: 1px solid transparent;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  transition: background var(--dur-med) ease, border-color var(--dur-med) ease,
+              padding var(--dur-med) var(--px-ease), transform var(--dur-med) var(--px-ease);
+}
+.navbar.is-stuck {
+  background: rgba(5, 4, 15, 0.82) !important;
+  border-bottom-color: var(--px-line);
+  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.9);
+}
+.nav-links a {
+  color: var(--px-text-2);
+  position: relative;
+  transition: color var(--dur-fast) ease;
+}
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; bottom: 6px;
+  height: 1px;
+  background: var(--px-grad-hot);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 420ms var(--px-ease);
+}
+.nav-links a:hover::after,
+.nav-links a.active::after { transform: scaleX(1); }
+.nav-links a:hover, .nav-links a.active { color: var(--px-text); }
+
+.nav-logo-icon {
+  background: var(--px-grad-btn);
+  box-shadow: var(--px-glow-violet);
+  border-radius: 12px;
+}
+.nav-cta {
+  background: var(--px-glass-2) !important;
+  border: 1px solid var(--px-line-2) !important;
+  color: var(--px-text) !important;
+  border-radius: 999px !important;
+}
+.nav-cta:hover { box-shadow: var(--px-glow-violet); }
+
+/* ── 6. Buttons ────────────────────────────────────────────────── */
+.btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 999px;
+  border: 1px solid var(--px-line);
+  background: var(--px-glass);
+  color: var(--px-text);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--px-inset-top);
+  transition: transform 420ms var(--px-ease), box-shadow 420ms var(--px-ease),
+              border-color var(--dur-med) ease, background var(--dur-med) ease;
+}
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--px-grad-hot);
+  opacity: 0;
+  transition: opacity 420ms var(--px-ease);
+}
+.btn::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: skewX(-18deg);
+  opacity: 0;
+  transition: none;
+}
+.btn:hover::after { animation: px-sheen 900ms var(--px-ease) forwards; }
+@keyframes px-sheen {
+  0%   { left: -60%; opacity: 0.9; }
+  100% { left: 130%; opacity: 0; }
+}
+.btn:hover { transform: translateY(-2px); border-color: var(--px-line-2); }
+
+.btn-primary,
+.btn-on-dark {
+  background: var(--px-grad-btn) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 18px 40px -22px rgba(139, 92, 246, 0.95), var(--px-inset-top);
+}
+.btn-primary:hover,
+.btn-on-dark:hover {
+  box-shadow: 0 26px 60px -24px rgba(244, 114, 182, 0.9), var(--px-inset-top);
+}
+.btn-secondary,
+.btn-ghost {
+  background: var(--px-glass) !important;
+  border-color: var(--px-line-2) !important;
+  color: var(--px-text) !important;
+}
+.btn-secondary:hover,
+.btn-ghost:hover { background: var(--px-glass-2) !important; }
+.btn-icon { filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35)); }
+
+/* ── 7. Surfaces: cards, tiles, panels ─────────────────────────── */
+.card,
+.stat-panel,
+.plan-card,
+.contact-link-card,
+.tech-badge,
+.pill-tabs,
+.download-card,
+.highlight-box,
+.docs-sidebar,
+.comparison-wrapper,
+.form-input,
+.form-textarea,
+.key-input,
+.plan-badge,
+.arch-card,
+.learn-panel,
+.blog-card,
+.req-card,
+.faq-item,
+.rail-card,
+.showcase-col .card {
+  position: relative;
+  background: var(--px-glass) !important;
+  border: 1px solid var(--px-line) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--px-shadow-card), var(--px-inset-top) !important;
+  color: var(--px-text);
+  border-radius: var(--px-r-md);
+}
+
+.card:hover,
+.contact-link-card:hover,
+.plan-card:hover,
+.download-card:hover,
+.blog-card:hover,
+.req-card:hover,
+.faq-item:hover {
+  border-color: var(--px-line-glow) !important;
+  background: var(--px-glass-2) !important;
+}
+
+/* Gradient hairline border that lights up on hover */
+.card::after,
+.plan-card::after,
+.download-card::after,
+.blog-card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--px-grad-hot);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 520ms var(--px-ease);
+  pointer-events: none;
+}
+.card:hover::after,
+.plan-card:hover::after,
+.download-card:hover::after,
+.blog-card:hover::after { opacity: 1; }
+
+/* Pointer-tracked spotlight inside cards */
+.fx-spot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms var(--px-ease);
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%),
+              rgba(167, 139, 250, 0.16), transparent 68%);
+}
+.fx-spot:hover::before { opacity: 1; }
+
+/* ── 7b. Dark text normalisation ───────────────────────────────────
+   pro.css carries light-theme assumptions (coloured tiles + :has() icon
+   variants) that leave dark ink on dark glass. Everything that reads as
+   surface copy is normalised to the dark palette here. */
+.card, .card.tile-violet, .card.tile-ink, .card.tile-navy, .card.tile-pink,
+.card.tile-orange, .card.tile-cyan, .card.tile-mint, .card.tile-peach {
+  color: var(--px-text) !important;
+}
+.card-text,
+.rail-card .card-text,
+.card:has(.card-icon.purple) .card-text,
+.card:has(.card-icon.blue) .card-text,
+.card:has(.card-icon.green) .card-text,
+.card:has(.card-icon.pink) .card-text,
+.card:has(.card-icon.amber) .card-text,
+.card.tile-violet .card-text, .card.tile-ink .card-text, .card.tile-navy .card-text,
+.card.tile-pink .card-text, .card.tile-orange .card-text, .card.tile-cyan .card-text,
+.card.tile-mint .card-text, .card.tile-peach .card-text {
+  color: var(--px-text-2) !important;
+  opacity: 1 !important;
+}
+
+/* ── 7c. Auto-tile neutralisation ─────────────────────────────────
+   pro.css colours cards from their icon class with :has(...) rules at
+   specificity (0,3,0) + !important. These overrides match that weight and
+   load later, converting bright pastel tiles into accent-tinted glass. */
+.card:has(.card-icon),
+.card:has(.card-icon.purple),
+.card:has(.card-icon.blue),
+.card:has(.card-icon.green),
+.card:has(.card-icon.pink),
+.card:has(.card-icon.amber) {
+  background: var(--px-glass) !important;
+  border-color: var(--px-line) !important;
+  color: var(--px-text) !important;
+}
+.card:has(.card-icon.purple) { background: linear-gradient(160deg, rgba(139, 92, 246, 0.2), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card:has(.card-icon.blue)   { background: linear-gradient(160deg, rgba(34, 211, 238, 0.16), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card:has(.card-icon.green)  { background: linear-gradient(160deg, rgba(52, 211, 153, 0.16), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card:has(.card-icon.pink)   { background: linear-gradient(160deg, rgba(244, 114, 182, 0.18), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card:has(.card-icon.amber)  { background: linear-gradient(160deg, rgba(255, 138, 61, 0.18), rgba(255, 255, 255, 0.035) 70%) !important; }
+
+/* Explicit tile classes keep their colour story the same way */
+.card.card.tile-violet { background: linear-gradient(160deg, rgba(139, 92, 246, 0.22), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card.card.tile-pink   { background: linear-gradient(160deg, rgba(244, 114, 182, 0.2), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card.card.tile-mint   { background: linear-gradient(160deg, rgba(52, 211, 153, 0.18), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card.card.tile-cyan   { background: linear-gradient(160deg, rgba(34, 211, 238, 0.18), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card.card.tile-peach,
+.card.card.tile-orange { background: linear-gradient(160deg, rgba(255, 138, 61, 0.2), rgba(255, 255, 255, 0.035) 70%) !important; }
+.card.card.tile-ink,
+.card.card.tile-navy   { background: linear-gradient(160deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03) 70%) !important; }
+
+/* Headlines, icon chips and tags stay light on every variant */
+.card .card-title,
+.card:has(.card-icon) .card-title,
+.card:has(.card-icon.blue) .card-title,
+.card:has(.card-icon.green) .card-title,
+.card:has(.card-icon.amber) .card-title,
+.card.tile-violet .card-title, .card.tile-ink .card-title, .card.tile-navy .card-title,
+.card.tile-pink .card-title, .card.tile-orange .card-title, .card.tile-cyan .card-title,
+.card.tile-mint .card-title, .card.tile-peach .card-title {
+  color: var(--px-text) !important;
+}
+.card .card-icon,
+.card:has(.card-icon) .card-icon,
+.card.tile-violet .card-icon, .card.tile-ink .card-icon, .card.tile-navy .card-icon,
+.card.tile-pink .card-icon, .card.tile-orange .card-icon, .card.tile-cyan .card-icon,
+.card.tile-mint .card-icon, .card.tile-peach .card-icon {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: var(--px-text) !important;
+}
+.card .feature-tag,
+.card:has(.card-icon) .feature-tag,
+.card:has(.card-icon.blue) .feature-tag,
+.card:has(.card-icon.green) .feature-tag,
+.card:has(.card-icon.amber) .feature-tag,
+.card.tile-violet .feature-tag, .card.tile-ink .feature-tag, .card.tile-navy .feature-tag,
+.card.tile-pink .feature-tag, .card.tile-orange .feature-tag, .card.tile-cyan .feature-tag,
+.card.tile-mint .feature-tag, .card.tile-peach .feature-tag {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: var(--px-text) !important;
+}
+
+.card-title, .plan-name, .download-title { color: var(--px-text); }
+.card-text, .plan-features li, .faq-a, .req-value { color: var(--px-text-2); }
+.card-icon {
+  background: var(--px-glass-2) !important;
+  border: 1px solid var(--px-line) !important;
+  box-shadow: var(--px-inset-top);
+}
+
+.stat-panel { text-align: center; }
+.stat-panel span[data-count] {
+  background: var(--px-grad-cool);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: var(--font-display);
+  letter-spacing: -0.04em;
+}
+.stat-label { color: var(--px-text-3); }
+
+.highlight-box {
+  background:
+    linear-gradient(150deg, rgba(139, 92, 246, 0.14), rgba(255, 255, 255, 0.03) 60%) !important;
+  border-color: var(--px-line-2) !important;
+}
+.highlight-box h3 { color: var(--px-violet-hi); }
+
+.docs-sidebar { border-radius: var(--px-r-lg); }
+.docs-nav a { color: var(--px-text-2); }
+.docs-nav a.active,
+.docs-nav a:hover { color: var(--px-text); background: var(--px-glass-2); }
+
+.comparison-wrapper { border-radius: var(--px-r-lg); overflow: hidden; }
+.comparison-table thead { background: rgba(255, 255, 255, 0.05) !important; }
+.comparison-table th { color: var(--px-text-2) !important; }
+.comparison-table td { color: var(--px-text-2) !important; border-bottom-color: var(--px-line) !important; }
+.comparison-table td:first-child { color: var(--px-text) !important; }
+.comparison-table th.highlight {
+  color: var(--px-violet-hi) !important;
+  background: rgba(139, 92, 246, 0.16) !important;
+}
+.comparison-table td.highlight { background: rgba(139, 92, 246, 0.1) !important; }
+
+.form-input, .form-textarea, .key-input {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: var(--px-line) !important;
+  color: var(--px-text) !important;
+}
+.form-input:focus, .form-textarea:focus {
+  border-color: var(--px-violet-hi) !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16) !important;
+}
+.form-label { color: var(--px-text-2) !important; }
+.price-tag { color: var(--px-text-3) !important; }
+
+.code-block {
+  background: rgba(4, 3, 13, 0.72) !important;
+  border-color: var(--px-line) !important;
+  border-radius: var(--px-r-md) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 20px 50px -30px rgba(0, 0, 0, 1);
+  color: rgba(226, 220, 255, 0.86) !important;
+}
+.code-block .comment { color: rgba(180, 173, 205, 0.6) !important; }
+.code-block .string  { color: #6ee7b7 !important; }
+.code-block .command { color: #ffb27a !important; }
+.code-block .number  { color: #7dd3fc !important; }
+.code-block .keyword { color: #f0abfc !important; }
+.code-inline {
+  background: rgba(139, 92, 246, 0.16) !important;
+  border-color: rgba(167, 139, 250, 0.28) !important;
+  color: #ddd6fe !important;
+}
+
+/* ── 8. Hero: 3D stage ─────────────────────────────────────────── */
+.hero { min-height: min(100vh, 940px); display: flex; align-items: center; }
+.hero-grid { perspective: var(--px-persp); }
+.hero-badge { background: var(--px-glass) !important; border-color: var(--px-line) !important; }
+.hero-pills li {
+  background: var(--px-glass) !important;
+  border-color: var(--px-line) !important;
+  color: var(--px-text-2) !important;
+  backdrop-filter: blur(8px);
+}
+.hero-stage { transform-style: preserve-3d; }
+.hero-stage-glow {
+  background: radial-gradient(closest-side, rgba(139, 92, 246, 0.45), transparent 70%) !important;
+  filter: blur(60px);
+}
+.hero-stack { transform-style: preserve-3d; }
+.hero-panel {
+  background: rgba(12, 10, 30, 0.62) !important;
+  border: 1px solid var(--px-line-2) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 60px 120px -50px rgba(0, 0, 0, 1), var(--px-inset-top) !important;
+  transform-style: preserve-3d;
+}
+.hero-float {
+  background: rgba(14, 11, 32, 0.72) !important;
+  border: 1px solid var(--px-line-2) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: var(--px-shadow-card), var(--px-inset-top) !important;
+}
+.hf-value { color: var(--px-text); }
+.hf-label { color: var(--px-text-3); }
+.hp-bar em { color: var(--px-text-3); }
+.hp-bubble.user { background: var(--px-glass-2); color: var(--px-text); }
+.hp-bubble.ai {
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.32), rgba(244, 114, 182, 0.24));
+  color: var(--px-text);
+  border: 1px solid var(--px-line-2);
+}
+.hp-chart span { background: var(--px-grad-btn); box-shadow: 0 0 18px -4px rgba(139, 92, 246, 0.9); }
+
+/* ── 9. Marquee / rails / showcase ─────────────────────────────── */
+.marquee {
+  background: transparent !important;
+  border-top: 1px solid var(--px-line);
+  border-bottom: 1px solid var(--px-line);
+  backdrop-filter: blur(10px);
+}
+.marquee span { color: var(--px-text-2); }
+.marquee .vio { color: var(--px-violet-hi); }
+.marquee .alt { color: var(--px-orange); }
+.marquee-dot { background: var(--px-line-2); }
+
+.rail-card {
+  background: var(--px-glass) !important;
+  border-color: var(--px-line) !important;
+}
+.rail-num {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--px-line-2);
+  font-family: var(--font-display);
+}
+.tile-art svg { opacity: 0.7; }
+
+/* ── 10. Footer / CTA ──────────────────────────────────────────── */
+.footer {
+  background: linear-gradient(180deg, rgba(4, 3, 11, 0.6), rgba(4, 3, 11, 0.98)) !important;
+  border-top: 1px solid var(--px-line);
+}
+.footer-bottom { color: var(--px-text-3); border-top-color: var(--px-line); }
+.footer-col h4 { color: var(--px-text-3); }
+.footer-col a { color: var(--px-text-2); }
+.footer-col a:hover { color: var(--px-orange); }
+.footer-brand p { color: var(--px-text-3); }
+
+.cta-band {
+  background:
+    radial-gradient(80% 120% at 50% 0%, rgba(139, 92, 246, 0.28), transparent 68%),
+    linear-gradient(180deg, rgba(6, 5, 18, 0.8), rgba(6, 5, 18, 0.95)) !important;
+}
+.cta-sub { color: var(--px-text-2); }
+
+.toast {
+  background: rgba(12, 10, 30, 0.9) !important;
+  border: 1px solid var(--px-line-2) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--px-shadow-lift);
+  color: var(--px-text);
+}
+.scroll-top {
+  background: var(--px-glass-2) !important;
+  border: 1px solid var(--px-line-2) !important;
+  color: var(--px-text) !important;
+  backdrop-filter: blur(12px);
+}
+
+/* ── 11. Motion primitives (driven by fx-core.js) ──────────────── */
+/* The new engine owns scroll reveales — retire the legacy fade-up so the
+   two systems never animate the same element twice. */
+.animate-on-scroll,
+.animate-delay-1, .animate-delay-2, .animate-delay-3, .animate-delay-4 {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Existing hero markup supplies its own lines */
+.hero-title .line { display: block; }
+
+/* No-WebGL fallback keeps the aurora rich */
+body.fx-no-webgl .bg-orbs::before { opacity: 1; }
+body.fx-no-webgl .bg-orbs::after { opacity: 1; }
+
+html.fx-ready .fx-reveal {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 900ms var(--px-ease), transform 1050ms var(--px-ease);
+  transition-delay: var(--fx-delay, 0ms);
+  will-change: opacity, transform;
+}
+html.fx-ready .fx-reveal.is-in { opacity: 1; transform: none; }
+
+.fx-lines .fx-line { display: block; overflow: hidden; }
+html.fx-ready .fx-lines .fx-line > span {
+  display: block;
+  transform: translate3d(0, 105%, 0);
+  transition: transform 1100ms var(--px-ease);
+  transition-delay: var(--fx-delay, 0ms);
+}
+html.fx-ready .fx-lines.is-in .fx-line > span { transform: none; }
+
+html.fx-ready .fx-zoom { opacity: 0; transform: scale(1.06); transition: opacity 1s var(--px-ease), transform 1.4s var(--px-ease); }
+html.fx-ready .fx-zoom.is-in { opacity: 1; transform: none; }
+
+.fx-tilt { transform-style: preserve-3d; will-change: transform; }
+.fx-tilt-inner { transform: translateZ(28px); transform-style: preserve-3d; }
+.fx-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms var(--px-ease);
+  background: radial-gradient(320px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.13), transparent 62%);
+}
+.fx-tilt:hover .fx-glare { opacity: 1; }
+
+.fx-parallax { will-change: transform; }
+.fx-floaty { animation: px-floaty 7s ease-in-out infinite; }
+.fx-floaty[data-float="2"] { animation-duration: 9s; animation-delay: -2s; }
+.fx-floaty[data-float="3"] { animation-duration: 11s; animation-delay: -4s; }
+@keyframes px-floaty {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -12px, 0); }
+}
+
+/* Scroll progress */
+.fx-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--px-grad-hot);
+  z-index: 60;
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.75);
+  pointer-events: none;
+}
+
+/* Custom cursor */
+.fx-cursor, .fx-cursor-dot {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 9998;
+  pointer-events: none;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.fx-cursor {
+  width: 34px; height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 1px solid rgba(167, 139, 250, 0.7);
+  transition: opacity 300ms ease, width 300ms var(--px-ease), height 300ms var(--px-ease),
+              margin 300ms var(--px-ease), background 300ms var(--px-ease), border-color 300ms ease;
+}
+.fx-cursor-dot {
+  width: 6px; height: 6px;
+  margin: -3px 0 0 -3px;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+}
+body.fx-cursor-on .fx-cursor,
+body.fx-cursor-on .fx-cursor-dot { opacity: 1; }
+.fx-cursor.is-hover {
+  width: 62px; height: 62px;
+  margin: -31px 0 0 -31px;
+  background: rgba(167, 139, 250, 0.13);
+  border-color: rgba(244, 114, 182, 0.8);
+}
+.fx-cursor.is-down { background: rgba(255, 255, 255, 0.9); }
+
+/* Intro curtain + page transitions */
+.fx-preloader, .fx-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(90% 90% at 50% 40%, #0b0820 0%, #04030b 70%);
+}
+.fx-preloader { transition: opacity 700ms var(--px-ease), visibility 700ms; }
+.fx-preloader.is-done { opacity: 0; visibility: hidden; }
+.fx-preloader-mark {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  font-family: var(--font-display);
+  letter-spacing: 0.42em;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: var(--px-text-3);
+}
+.fx-preloader-orbit {
+  width: 74px; height: 74px;
+  border-radius: 50%;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-top-color: var(--px-pink);
+  animation: px-spin 1.1s linear infinite;
+  box-shadow: var(--px-glow-violet);
+}
+@keyframes px-spin { to { transform: rotate(360deg); } }
+
+.fx-transition {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 520ms var(--px-ease), visibility 520ms;
+}
+.fx-transition.is-active { opacity: 1; visibility: visible; }
+.fx-transition-bar {
+  width: min(420px, 62vw);
+  height: 2px;
+  background: var(--px-grad-hot);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: px-load 900ms var(--px-ease) infinite;
+}
+@keyframes px-load {
+  0%   { transform: scaleX(0); opacity: 1; }
+  70%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* Scroll-velocity skew (the "liquid scroll" feel) */
+.fx-skew { transition: transform 120ms linear; }
+
+/* ── 12. Accessibility & fallbacks ─────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html.fx-ready .fx-reveal,
+  html.fx-ready .fx-lines .fx-line > span,
+  html.fx-ready .fx-zoom { opacity: 1 !important; transform: none !important; }
+  .fx-floaty, .bg-orbs::before, .bg-orbs::after, .gradient-text,
+  .hero-title .accent, .section-badge .dot { animation: none !important; }
+  /* The canvas, cursor and progress bar are created by JS, which already
+     respects this preference — so they are not hidden again here. That way
+     ?fx=full can still demo the full experience. */
+}
+
+@media (hover: none), (pointer: coarse) {
+  .fx-cursor, .fx-cursor-dot { display: none; }
+}
+
+/* Editorial left alignment for the hero (the bands centre their headers) */
+.hero, .hero-grid, .hero-content, .hero-desc { text-align: left; }
+
+/* Keep the floating hero chips inside the frame instead of clipping */
+.hero-float-a { top: 5% !important; right: -4% !important; }
+.hero-float-b { bottom: 13% !important; left: -14% !important; }
+
+@media (max-width: 900px) {
+  body::after { opacity: 0.35; }
+  #fx-canvas { opacity: 0; }
+  #fx-canvas.is-live { opacity: 0.6; }
+  .band { backdrop-filter: none; }
+  .card, .stat-panel, .plan-card { backdrop-filter: blur(8px); }
+}

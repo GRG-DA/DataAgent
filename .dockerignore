@@ -1,0 +1,33 @@
+# Keep secrets, local state, and heavy dirs out of the Docker image.
+.git/
+.github/
+.venv/
+.venv-*/
+__pycache__/
+.pytest_cache/
+data/
+logs/
+outputs/
+*.duckdb
+*.duckdb.wal
+# Billing order store + key material must never ship in the image
+# (.gitignore already excludes them from git; this excludes them from COPY).
+billing_server/*.sqlite3
+billing_server/*.sqlite3-*
+billing_server/keys/
+*.pem
+*.key
+*-service-account.json
+config/users.json
+config/db_connections.json
+config/llm_runtime.json
+config/google_login_pending.json
+.env
+billing_server/.env
+graphify-out/
+website/
+website-react/
+node_modules/
+dist/
+build/
+*.log

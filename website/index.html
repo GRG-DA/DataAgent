@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataAgent — Where Your Data Lives</title>
+  <meta name="description" content="Free Windows .exe download. Ask questions in natural language, explore data with SQL, build dashboards, and export to Power BI — powered by local LLMs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="home">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<!-- ═══════ Navigation ═══════ -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+
+  <!-- ═══════ Hero — band-ink · two-column editorial ═══════ -->
+  <section class="hero band band-ink">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="dot"></span>
+          v1.0.0 — Now Available
+        </div>
+        <h1 class="hero-title display">
+          <span class="line">Where your</span>
+          <span class="line">data <span class="accent">lives</span></span>
+        </h1>
+        <p class="hero-desc">
+          Ask in plain English, explore with SQL, build dashboards, and export to Power BI —
+          everything runs locally on your machine with open-source LLMs.
+        </p>
+        <div class="hero-actions">
+          <a href="download.html" class="btn btn-on-dark btn-lg" data-mag="1" data-sheen="1">
+            <span class="btn-icon">&#11015;</span>
+            Download Free
+          </a>
+          <a href="features.html" class="btn btn-ghost btn-lg" data-mag="1">
+            Explore Features
+          </a>
+        </div>
+        <ul class="hero-pills" aria-label="Key highlights">
+          <li>100% Local</li>
+          <li>Open Source</li>
+          <li>No Telemetry</li>
+        </ul>
+      </div>
+
+      <div class="hero-stage" aria-hidden="true">
+        <div class="hero-stage-glow"></div>
+        <div class="hero-stack">
+          <div class="hero-panel hero-panel-chat">
+            <div class="hp-bar"><span></span><span></span><span></span><em>DataAgent — Chat</em></div>
+            <div class="hp-body">
+              <div class="hp-bubble user">Sales by region last quarter?</div>
+              <div class="hp-bubble ai">North leads at <strong>₹4.2L</strong> — +18% QoQ.</div>
+              <div class="hp-chart">
+                <span style="--h:46%"></span><span style="--h:72%"></span>
+                <span style="--h:58%"></span><span style="--h:90%"></span>
+                <span style="--h:64%"></span><span style="--h:78%"></span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-float hero-float-a">
+            <span class="hf-label">Warehouse</span>
+            <span class="hf-value">DuckDB</span>
+          </div>
+          <div class="hero-float hero-float-b">
+            <span class="hf-label">Latency</span>
+            <span class="hf-value">12ms</span>
+          </div>
+          <div class="hero-float hero-float-c">
+            <span class="hf-dot"></span>
+            <span class="hf-label">Private by default</span>
+          </div>
+          <svg class="da-mark hero-mark" viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="84" height="84" rx="22" fill="#140B2E"/>
+            <rect x="14" y="14" width="26" height="26" rx="8" fill="#6D28D9"/>
+            <rect x="44" y="14" width="26" height="26" rx="13" fill="#F5841F"/>
+            <rect x="14" y="44" width="26" height="26" rx="13" fill="#22D3EE"/>
+            <rect x="44" y="44" width="26" height="26" rx="8" fill="#EEE9FF"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Explore Anything — band-violet + sticky showcase ═══════ -->
+  <section class="section band band-violet">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <div class="section-badge"><span class="dot"></span> The Workspace</div>
+        <h2 class="display display-lg display-ink">Explore<br>anything</h2>
+        <p class="section-subtitle">
+          One desktop app. Chat, SQL, dashboards, and a spreadsheet engine —
+          side by side against your local DuckDB warehouse.
+        </p>
+      </div>
+
+      <div class="showcase" data-scrolly>
+        <div class="showcase-col">
+          <div class="card tile-violet" data-step="0">
+            <div class="card-icon purple">&#129302;</div>
+            <h3 class="card-title">AI Chat</h3>
+            <p class="card-text">Ask questions in plain English. The agent writes SQL, runs it, and returns answers with charts — powered by Ollama or your cloud keys.</p>
+            <div class="tile-art" aria-hidden="true">
+              <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="8" width="90" height="34" rx="14" fill="rgba(255,255,255,0.25)"/>
+                <rect x="34" y="50" width="100" height="32" rx="14" fill="rgba(255,255,255,0.5)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card tile-ink" data-step="2">
+            <div class="card-icon blue">&#128424;</div>
+            <h3 class="card-title">SQL Explorer</h3>
+            <p class="card-text">Raw SQL against the warehouse with syntax highlighting, autocomplete, query history, and one-click result export.</p>
+            <div class="tile-art" aria-hidden="true">
+              <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="10" width="132" height="14" rx="7" fill="#22D3EE"/>
+                <rect x="4" y="34" width="96" height="14" rx="7" fill="rgba(255,255,255,0.35)"/>
+                <rect x="4" y="58" width="114" height="14" rx="7" fill="#F5841F"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="showcase-center">
+          <div class="app-mock" aria-hidden="true">
+            <div class="app-mock-bar">
+              <span class="app-mock-dot"></span>
+              <span class="app-mock-dot"></span>
+              <span class="app-mock-dot"></span>
+              <span class="app-mock-title" data-panel-title>DataAgent — Chat</span>
+            </div>
+            <div class="app-mock-body">
+              <div class="mock-panels">
+
+                <!-- Panel 0 · Chat -->
+                <div class="mock-panel is-active" data-panel="0" data-title="DataAgent — Chat">
+                  <div class="mock-bubble user">What were total sales by region last quarter?</div>
+                  <div class="mock-bubble ai">
+                    Here's the breakdown — North leads with ₹4.2L:
+                    <code class="mock-sql">SELECT region, SUM(amount)
+FROM orders
+WHERE q = 'Q3'
+GROUP BY region;</code>
+                  </div>
+                  <div class="mock-chart">
+                    <span class="mock-bar" style="height:42%"></span>
+                    <span class="mock-bar" style="height:68%"></span>
+                    <span class="mock-bar" style="height:55%"></span>
+                    <span class="mock-bar" style="height:88%"></span>
+                    <span class="mock-bar" style="height:72%"></span>
+                    <span class="mock-bar" style="height:60%"></span>
+                  </div>
+                </div>
+
+                <!-- Panel 1 · Power BI Studio (step 1) -->
+                <div class="mock-panel" data-panel="1" data-title="DataAgent — Power BI Studio">
+                  <div class="kpi-row">
+                    <div class="kpi-card"><span class="kpi-label">Revenue</span><span class="kpi-value">₹12.9L</span><span class="kpi-delta up">+18%</span></div>
+                    <div class="kpi-card"><span class="kpi-label">Orders</span><span class="kpi-value">3,412</span><span class="kpi-delta up">+7%</span></div>
+                    <div class="kpi-card"><span class="kpi-label">AOV</span><span class="kpi-value">₹378</span><span class="kpi-delta down">-2%</span></div>
+                  </div>
+                  <div class="mock-chart">
+                    <span class="mock-bar" style="height:38%"></span>
+                    <span class="mock-bar" style="height:62%"></span>
+                    <span class="mock-bar" style="height:74%"></span>
+                    <span class="mock-bar" style="height:51%"></span>
+                    <span class="mock-bar" style="height:90%"></span>
+                    <span class="mock-bar" style="height:66%"></span>
+                    <span class="mock-bar" style="height:80%"></span>
+                  </div>
+                  <div class="mock-status"><span class="hf-dot"></span> 30+ chart types · export .pbix</div>
+                </div>
+
+                <!-- Panel 2 · SQL Explorer (step 2) -->
+                <div class="mock-panel" data-panel="2" data-title="DataAgent — SQL Explorer">
+                  <div class="mock-sql mock-sql-lg"><span class="kw">SELECT</span> region,
+       <span class="fn">SUM</span>(amount) <span class="kw">AS</span> revenue
+<span class="kw">FROM</span> orders
+<span class="kw">WHERE</span> quarter = <span class="str">'Q3'</span>
+<span class="kw">GROUP BY</span> region
+<span class="kw">ORDER BY</span> revenue <span class="kw">DESC</span>;</div>
+                  <div class="mock-table">
+                    <div class="mock-row head"><span>region</span><span>revenue</span></div>
+                    <div class="mock-row"><span>North</span><span>₹4,20,000</span></div>
+                    <div class="mock-row"><span>West</span><span>₹3,64,500</span></div>
+                    <div class="mock-row"><span>South</span><span>₹2,91,200</span></div>
+                    <div class="mock-row"><span>East</span><span>₹2,12,800</span></div>
+                  </div>
+                  <div class="mock-status"><span class="hf-dot"></span> 4 rows · 12ms · warehouse.duckdb</div>
+                </div>
+
+                <!-- Panel 3 · Excel Engine (step 3) -->
+                <div class="mock-panel" data-panel="3" data-title="DataAgent — Excel Engine">
+                  <div class="mock-sheet">
+                    <div class="mock-row head"><span>A · region</span><span>B · revenue</span><span>C · growth</span></div>
+                    <div class="mock-row"><span>North</span><span>420000</span><span>18%</span></div>
+                    <div class="mock-row"><span>West</span><span>364500</span><span>11%</span></div>
+                    <div class="mock-row"><span>South</span><span>291200</span><span>6%</span></div>
+                    <div class="mock-row"><span>East</span><span>212800</span><span>-2%</span></div>
+                    <div class="mock-row formula"><span>SUM</span><span>=SUM(B2:B5)</span><span>1288500</span></div>
+                  </div>
+                  <div class="mock-status"><span class="hf-dot"></span> AutoSum · multi-sheet · CSV / XLSX</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          <div class="scrolly-dots" aria-hidden="true">
+            <span data-dot="0" class="is-active"></span>
+            <span data-dot="1"></span>
+            <span data-dot="2"></span>
+            <span data-dot="3"></span>
+          </div>
+          <svg class="da-mark" viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="84" height="84" rx="22" fill="#140B2E"/>
+            <rect x="14" y="14" width="26" height="26" rx="8" fill="#6D28D9"/>
+            <rect x="44" y="14" width="26" height="26" rx="13" fill="#F5841F"/>
+            <rect x="14" y="44" width="26" height="26" rx="13" fill="#22D3EE"/>
+            <rect x="44" y="44" width="26" height="26" rx="8" fill="#EEE9FF"/>
+          </svg>
+        </div>
+
+        <div class="showcase-col showcase-col-offset">
+          <div class="card tile-orange" data-step="1">
+            <div class="card-icon pink">&#128202;</div>
+            <h3 class="card-title">Power BI Studio</h3>
+            <p class="card-text">30+ chart types on a drag-and-drop canvas. Export a real .pbix with your data, star schema and DAX measures — double-click it in Power BI Desktop and it works.</p>
+            <div class="tile-art" aria-hidden="true">
+              <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="46" width="22" height="36" rx="6" fill="rgba(20,11,46,0.35)"/>
+                <rect x="38" y="28" width="22" height="54" rx="6" fill="rgba(20,11,46,0.55)"/>
+                <rect x="68" y="12" width="22" height="70" rx="6" fill="rgba(20,11,46,0.8)"/>
+                <rect x="98" y="34" width="22" height="48" rx="6" fill="rgba(20,11,46,0.45)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="card tile-cyan" data-step="3">
+            <div class="card-icon green">&#128203;</div>
+            <h3 class="card-title">Excel Engine</h3>
+            <p class="card-text">Full spreadsheet with formula bar, formatting, AutoSum, multi-sheet, and CSV / XLSX import-export — all in-browser.</p>
+            <div class="tile-art" aria-hidden="true">
+              <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="8" width="128" height="74" rx="10" fill="rgba(20,11,46,0.2)"/>
+                <rect x="6" y="8" width="128" height="18" rx="10" fill="rgba(20,11,46,0.45)"/>
+                <rect x="14" y="34" width="50" height="10" rx="5" fill="rgba(20,11,46,0.35)"/>
+                <rect x="14" y="52" width="70" height="10" rx="5" fill="rgba(20,11,46,0.25)"/>
+                <rect x="14" y="70" width="40" height="6" rx="3" fill="rgba(20,11,46,0.2)"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="scrolly-progress" aria-hidden="true"><span data-scrolly-progress></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Marquee strip ═══════ -->
+  <div class="marquee band band-ink" aria-hidden="true">
+    <div class="marquee-track">
+      <div class="marquee-group">
+        <span class="vio">Local-first</span><span class="marquee-dot"></span>
+        <span>No telemetry</span><span class="marquee-dot"></span>
+        <span class="alt">Open source</span><span class="marquee-dot"></span>
+        <span>DuckDB warehouse</span><span class="marquee-dot"></span>
+        <span class="vio">Power BI export</span><span class="marquee-dot"></span>
+        <span>10 LLM providers</span><span class="marquee-dot"></span>
+        <span class="alt">Runs on your machine</span><span class="marquee-dot"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ How it works — pinned horizontal rail ═══════ -->
+  <section class="section band band-mint rail-section" data-rail>
+    <div class="container">
+      <div class="section-header">
+        <div class="section-badge"><span class="dot"></span> How it works</div>
+        <h2 class="display display-lg display-ink">CSV to boardroom<br>in five steps</h2>
+        <p class="section-subtitle">
+          Scroll sideways through the pipeline — every step runs on your machine.
+        </p>
+      </div>
+    </div>
+    <div class="rail">
+      <div class="rail-track">
+        <article class="rail-card">
+          <span class="rail-num">01</span>
+          <div class="card-icon purple">&#128187;</div>
+          <h3 class="card-title">Install</h3>
+          <p class="card-text">Download the Windows <code class="code-inline">.exe</code> and run it. No developer setup — you create a local account on first launch, with no cloud sign-up, no email verification and no card required.</p>
+        </article>
+        <article class="rail-card">
+          <span class="rail-num">02</span>
+          <div class="card-icon blue">&#128451;</div>
+          <h3 class="card-title">Connect data</h3>
+          <p class="card-text">Drop a CSV/XLSX, or point at Postgres, MySQL, or your existing warehouse. Schema is inferred on import.</p>
+        </article>
+        <article class="rail-card">
+          <span class="rail-num">03</span>
+          <div class="card-icon purple">&#129302;</div>
+          <h3 class="card-title">Ask anything</h3>
+          <p class="card-text">Plain-English questions become SQL, run locally, and come back with charts — via Ollama or your cloud keys.</p>
+        </article>
+        <article class="rail-card">
+          <span class="rail-num">04</span>
+          <div class="card-icon pink">&#128202;</div>
+          <h3 class="card-title">Build the view</h3>
+          <p class="card-text">Pin charts to a live dashboard on a drag-and-drop canvas. 30+ chart types, real-time warehouse refresh.</p>
+        </article>
+        <article class="rail-card">
+          <span class="rail-num">05</span>
+          <div class="card-icon amber">&#128229;</div>
+          <h3 class="card-title">Ship it</h3>
+          <p class="card-text">Export a real .pbix for Power BI, or PDF, PowerPoint, Excel, CSV — the data itself never leaves your machine.</p>
+        </article>
+      </div>
+    </div>
+    <div class="rail-hint" aria-hidden="true">Scroll <span>&rarr;</span></div>
+  </section>
+
+  <!-- ═══════ Ship Insight — band-cream 2×4 bento ═══════ -->
+  <section class="section band band-cream">
+    <div class="container">
+      <div class="section-header animate-on-scroll">
+        <div class="section-badge"><span class="dot"></span> Ship It</div>
+        <h2 class="display display-lg display-ink">Ship insight<br>anywhere</h2>
+        <p class="section-subtitle">
+          From warehouse to boardroom — dashboards, exports, ETL, and multi-provider AI in one pipeline.
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card animate-on-scroll animate-delay-1">
+          <div class="card-icon purple">&#128200;</div>
+          <h3 class="card-title">Dashboards</h3>
+          <p class="card-text">Pin charts to living dashboards that refresh against the warehouse. Share a link — the data stays on your machine.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-2">
+          <div class="card-icon amber">&#128229;</div>
+          <h3 class="card-title">Exports</h3>
+          <p class="card-text">Power BI (.pbix), PDF, PowerPoint, Excel, and CSV. Send reports without ever sending the underlying data.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-3">
+          <div class="card-icon blue">&#128451;</div>
+          <h3 class="card-title">Warehouse + ETL</h3>
+          <p class="card-text">DuckDB core with pipelines, data catalog, lineage, and automated quality checks. Upload files or connect live databases.</p>
+        </div>
+        <div class="card animate-on-scroll animate-delay-4">
+          <div class="card-icon green">&#9889;</div>
+          <h3 class="card-title">Multi-Provider AI</h3>
+          <p class="card-text">Ollama, LM Studio, OpenAI, Anthropic, Gemini, DeepSeek, Groq, xAI and more — switch per query from Settings.</p>
+          <div style="margin-top:16px;">
+            <span class="feature-tag core">Ollama</span>
+            <span class="feature-tag ai">OpenAI</span>
+            <span class="feature-tag ai">Claude</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Maximum Privacy — band-peach + sticky frame ═══════ -->
+  <section class="section band band-peach privacy">
+    <div class="container">
+      <div class="privacy-frame" aria-hidden="true"></div>
+      <div class="privacy-content">
+        <h2 class="display display-xl display-ink">Maximum privacy</h2>
+        <div class="privacy-grid">
+          <div class="card">
+            <div class="card-icon purple">&#128274;</div>
+            <h3 class="card-title">Local-first</h3>
+            <p class="card-text">Queries, models, and files never leave your machine unless you explicitly wire a cloud provider.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon blue">&#128101;</div>
+            <h3 class="card-title">SSO + RBAC</h3>
+            <p class="card-text">OIDC / SAML single sign-on with role-based access control and row-level security for teams.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon amber">&#128221;</div>
+            <h3 class="card-title">Audit logs</h3>
+            <p class="card-text">Every query, export, and permission change is recorded — exportable for compliance reviews.</p>
+          </div>
+          <div class="card">
+            <div class="card-icon green">&#128087;</div>
+            <h3 class="card-title">Windows .exe</h3>
+            <p class="card-text">One signed installer for the whole stack, with a portable build that runs straight from a folder &mdash; nothing to compile, nothing to containerise.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Stats strip ═══════ -->
+  <section class="section band band-cream2" style="padding-top:72px;padding-bottom:72px;">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-panel animate-on-scroll animate-delay-1">
+          <span data-count="30" data-suffix="+">0</span>
+          <span class="stat-label">Features</span>
+        </div>
+        <div class="stat-panel animate-on-scroll animate-delay-2">
+          <span data-count="10" data-suffix="">0</span>
+          <span class="stat-label">LLM Providers</span>
+        </div>
+        <div class="stat-panel animate-on-scroll animate-delay-3">
+          <span data-count="100" data-suffix="%">0</span>
+          <span class="stat-label">Local &amp; Private</span>
+        </div>
+        <div class="stat-panel animate-on-scroll animate-delay-4">
+          <span data-count="0" data-prefix="$">$0</span>
+          <span class="stat-label">Free &amp; Open</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Get Started — band-navy ═══════ -->
+  <section class="band band-navy cta-band">
+    <div class="container">
+      <div class="section-badge light"><span class="dot"></span> Free tier &mdash; or self-host for everything</div>
+      <h2 class="display">Get started</h2>
+      <p class="cta-sub">Install in minutes. Keep every byte on your machine.</p>
+      <div class="hero-actions" style="justify-content:center;">
+        <a href="download.html" class="btn btn-on-dark btn-lg" data-mag="1" data-sheen="1">
+          <span class="btn-icon">&#11015;</span>
+          Download v1.0.0
+        </a>
+        <a href="docs.html" class="btn btn-ghost btn-lg" data-mag="1">Read the Docs</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ Learn panel ═══════ -->
+  <section class="section band band-cream">
+    <div class="container">
+      <div class="learn-panel animate-on-scroll">
+        <div class="learn-shapes" aria-hidden="true">
+          <svg viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="70" height="70" rx="18" fill="#6D28D9" opacity="0.35"/>
+          </svg>
+          <svg viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="43" cy="43" r="43" fill="#F5841F" opacity="0.35"/>
+          </svg>
+        </div>
+        <h2 class="display">New to DataAgent?</h2>
+        <p>
+          Go from a CSV on your desktop to a shareable Power BI report in under ten minutes —
+          no cloud account, no data upload, no subscription.
+        </p>
+        <div class="hero-actions" style="justify-content:center;">
+          <a href="docs.html" class="btn btn-primary btn-lg">Get Started Guide</a>
+          <a href="features.html" class="btn btn-secondary btn-lg">Tour the Features</a>
+          <a href="faq.html" class="btn btn-ghost btn-lg">FAQ</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════ Footer ═══════ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<!-- ═══════ Toast ═══════ -->
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

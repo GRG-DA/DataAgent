@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact — LLM Data Analytics Agent</title>
+  <meta name="description" content="Get in touch with the DataAgent team. Bug reports, feature requests, and general inquiries.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="calm">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html" class="active">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">Get In Touch</div>
+      <h1>Let's <span class="gradient-text">connect</span></h1>
+      <p>Have a question, found a bug, or want to contribute? We'd love to hear from you.</p>
+    </div>
+
+    <div class="contact-grid">
+      <!-- Contact Form -->
+      <div class="card contact-form animate-on-scroll">
+        <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:24px;">Send a Message</h3>
+        <form id="contactForm" onsubmit="handleSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" for="name">Name</label>
+            <input class="form-input" type="text" id="name" name="name" autocomplete="name" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input class="form-input" type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="subject">Subject</label>
+            <select class="form-input" id="subject" name="subject">
+              <option value="general">General Inquiry</option>
+              <option value="bug">Bug Report</option>
+              <option value="feature">Feature Request</option>
+              <option value="enterprise">Enterprise / Partnership</option>
+              <option value="security">Security Issue</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="message">Message</label>
+            <textarea class="form-textarea" id="message" name="message" placeholder="Tell us what's on your mind..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+            <span class="btn-icon">&#9993;</span>
+            Send Message
+          </button>
+          <p id="contactStatus" style="font-size:0.85rem;color:var(--text-secondary);margin-top:12px;line-height:1.7;"></p>
+        </form>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="contact-links animate-on-scroll animate-delay-1">
+        <a href="https://github.com/DataAgent/DataAgent/issues" class="card contact-link-card" target="_blank" rel="noopener">
+          <div class="link-icon" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:var(--primary-light);">&#128196;</div>
+          <div class="link-info">
+            <h4>GitHub Issues</h4>
+            <p>Report bugs, request features, or track progress on open issues.</p>
+          </div>
+        </a>
+
+        <a href="https://github.com/DataAgent/DataAgent/discussions" class="card contact-link-card" target="_blank" rel="noopener">
+          <div class="link-icon" style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.2);color:var(--info);">&#128172;</div>
+          <div class="link-info">
+            <h4>GitHub Discussions</h4>
+            <p>Ask questions, share ideas, and connect with the community.</p>
+          </div>
+        </a>
+
+        <a href="https://github.com/DataAgent/DataAgent" class="card contact-link-card" target="_blank" rel="noopener">
+          <div class="link-icon" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2);color:var(--success);">&#128736;</div>
+          <div class="link-info">
+            <h4>Contribute</h4>
+            <p>Check out the source code and submit a pull request.</p>
+          </div>
+        </a>
+
+        <div class="card contact-link-card" style="cursor:default;">
+          <div class="link-icon" style="background:rgba(232,121,249,0.12);border:1px solid rgba(232,121,249,0.2);color:var(--accent-pink);">&#128231;</div>
+          <div class="link-info">
+            <h4>Email</h4>
+            <p>contact@dataagent.dev</p>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="card" style="padding:32px;margin-top:8px;">
+          <h4 style="font-size:1.05rem;font-weight:700;margin-bottom:20px;">Frequently Asked</h4>
+
+          <details style="margin-bottom:12px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Is DataAgent really free?</summary>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. The core product is free and open source forever. Optional paid plans unlock higher entitlements such as unlimited AI queries and Power BI export — see <a href="billing.html">pricing</a>. If you use local LLMs via Ollama, there are zero ongoing costs.</p>
+          </details>
+
+          <details style="margin-bottom:12px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Does my data leave my computer?</summary>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Not unless you configure a cloud LLM provider. With Ollama running locally, everything stays on your machine — the analytics engine, the data warehouse, and the AI inference.</p>
+          </details>
+
+          <details style="margin-bottom:12px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Can I use it commercially?</summary>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. DataAgent is open source under the GNU AGPL v3 licence — you may use it for personal projects, internal tools and client deliverables. AGPL has one condition: if you modify it and let users interact with it over a network, you must offer those users the modified source. Running it unmodified, including self-hosting it for your own team, triggers none of that. Full terms are in the LICENSE file at the root of the <a href="https://github.com/DataAgent/DataAgent" target="_blank" rel="noopener">repository</a>.</p>
+          </details>
+
+          <details>
+            <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">How does Power BI export work?</summary>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">DataAgent generates a real .pbix file that contains your data — not a screenshot, and not an empty .pbit template. The exported file carries your layout, themes, star-schema data model and DAX measures, and DataAgent also imports existing .pbix/.pbit files and rebuilds them locally. Double-click the export in Power BI Desktop and it works.</p>
+          </details>
+
+          <p style="margin-top:16px;font-size:.85rem;font-weight:600;">
+            <a href="faq.html">See all frequently asked questions &#8594;</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free & Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script>
+/* ── Contact form delivery ──────────────────────────────────────────────
+   The operator MUST set both values below before deploying this site:
+
+     window.CONTACT_ENDPOINT — a URL that accepts a JSON POST with
+       { name, email, subject, message } and returns 2xx (a form endpoint,
+       a serverless function, or the billing server's contact route).
+       Leave it empty and the form will say plainly that nothing was sent
+       instead of pretending to deliver the message.
+     window.CONTACT_EMAIL — a real, monitored inbox for security reports
+       and anything that must not be lost in a form.
+
+   GitHub issues always work as a fallback channel:
+   https://github.com/DataAgent/DataAgent/issues
+   ─────────────────────────────────────────────────────────────────────── */
+window.CONTACT_ENDPOINT = '';
+window.CONTACT_EMAIL = 'contact@dataagent.dev';
+
+function contactStatus(message, ok) {
+  var el = document.getElementById('contactStatus');
+  if (!el) return;
+  el.innerHTML = message;
+  el.style.color = ok ? 'var(--success)' : 'var(--text-secondary)';
+}
+
+function handleSubmit(e) {
+  e.preventDefault();
+  var form = e.target;
+  var btn = form.querySelector('button[type="submit"]');
+  var endpoint = (window.CONTACT_ENDPOINT || '').trim();
+  var email = (window.CONTACT_EMAIL || '').trim();
+  var issues = 'https://github.com/DataAgent/DataAgent/issues';
+
+  if (!endpoint) {
+    contactStatus(
+      'This form is not connected on this deployment, so nothing was sent. ' +
+      'Email <a href="mailto:' + email + '">' + email + '</a> or open an issue on ' +
+      '<a href="' + issues + '" target="_blank" rel="noopener">GitHub</a> — both reach a human.',
+      false
+    );
+    return;
+  }
+
+  var f = form.elements;
+  var payload = {
+    name: (f.namedItem('name').value || '').trim(),
+    email: (f.namedItem('email').value || '').trim(),
+    subject: f.namedItem('subject').value,
+    message: f.namedItem('message').value
+  };
+
+  btn.disabled = true;
+  contactStatus('Sending…', true);
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r;
+  }).then(function () {
+    btn.innerHTML = '<span class="btn-icon">&#10003;</span> Message Sent!';
+    btn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+    contactStatus('Message sent. We will reply to the address you gave us.', true);
+    setTimeout(function () {
+      btn.innerHTML = '<span class="btn-icon">&#9993;</span> Send Message';
+      btn.style.background = '';
+      btn.disabled = false;
+      form.reset();
+    }, 3000);
+  }).catch(function () {
+    btn.disabled = false;
+    contactStatus(
+      'The message could not be sent — the request failed and nothing was delivered. ' +
+      'Please email <a href="mailto:' + email + '">' + email + '</a> instead.',
+      false
+    );
+  });
+}
+</script>
+</body>
+</html>

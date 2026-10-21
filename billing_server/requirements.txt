@@ -1,0 +1,14 @@
+# DataAgent billing server — minimal runtime dependencies (billing host /
+# container image only; the desktop app keeps its own requirements.txt).
+# Pinned to match the app so starlette <0.39 keeps holding
+# (fastapi 0.115.0 needs starlette <0.39.0 — do NOT add `mcp` here).
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+httpx[socks]==0.28.1
+cryptography>=42.0.0
+bcrypt>=4.0.0
+# Turso/libSQL client — only exercised when TURSO_DATABASE_URL is set.
+# NOTE: 0.1.11 ships x86_64 wheels only (no aarch64/musl) — deploy on
+# x86_64 hosts with glibc (Debian/Ubuntu), not Oracle Ampere ARM.
+libsql==0.1.11

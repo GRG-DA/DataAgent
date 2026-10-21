@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — DataAgent for Windows</title>
+  <meta name="description" content="Installation, architecture, configuration, and API reference for DataAgent — the AI data analytics platform for Windows.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="docs">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">Documentation</div>
+      <h1>Technical <span class="gradient-text">documentation</span></h1>
+      <p>Installation, architecture, configuration, and API reference for DataAgent for Windows.</p>
+    </div>
+
+    <div class="docs-layout">
+      <!-- Sidebar -->
+      <aside class="docs-sidebar animate-on-scroll">
+        <h4>On This Page</h4>
+        <ul class="docs-nav">
+          <li><a href="#install" class="active">Installation</a></li>
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#config">Configuration</a></li>
+          <li><a href="#providers">AI Providers</a></li>
+          <li><a href="#api">API Reference</a></li>
+          <li><a href="#desktop">What Ships</a></li>
+          <li><a href="#security">Security</a></li>
+        </ul>
+      </aside>
+
+      <!-- Content -->
+      <div class="docs-content">
+        <h2 id="install">Installation</h2>
+        <p>
+          DataAgent for Windows is delivered as a single signed installer. Download <code class="code-inline">DataAgent-Setup.exe</code> from the <a href="download.html">download page</a>, run it, and open DataAgent from the Start Menu. The application runtime, analytics engine, and interface are packaged inside the executable, so nothing has to be prepared beforehand. The one optional extra download is the local model used for AI chat &mdash; see AI Setup on the <a href="download.html#ai-setup">download page</a>; SQL, Excel, dashboards and exports need no model at all.
+        </p>
+
+        <div class="code-block">
+          <code>Installer       DataAgent-Setup.exe  (approx. 490 MB)
+Installs to     C:\Program Files\DataAgent
+Shortcuts       Start Menu — DataAgent, DataAgent (web)
+Portable build  DataAgent.exe — runs from any folder, no install
+First account   Created by the operator — there is no built-in default</code>
+        </div>
+
+        <p>
+          When the wizard finishes, DataAgent opens its workspace automatically. Choose your AI provider in Settings and the platform is ready for your first dataset.
+        </p>
+
+        <h2 id="overview">Overview</h2>
+        <p>
+          DataAgent is an AI-powered data analytics platform for Windows. It combines a <strong>FastAPI</strong> service layer, an embedded <strong>DuckDB</strong> analytics engine, and your choice of <strong>large language model</strong> into one desktop application for asking questions, writing SQL, building dashboards, and exporting results.
+        </p>
+        <p>
+          The application runs entirely on your machine. Datasets, dashboards, and credentials stay in the local workspace; nothing is transmitted anywhere unless you connect a cloud model provider yourself. Release quality is verified by the project's own automated test suite &mdash; a pytest suite that runs on every change, with a coverage gate enforced in CI (see <code class="code-inline">pyproject.toml</code>). It is the same suite a reviewer can run locally, so there is no separate "product accuracy" number to trust.
+        </p>
+
+        <h2 id="architecture">Architecture</h2>
+        <p>The platform is organised into three layers:</p>
+
+        <div class="arch-grid">
+          <div class="card arch-card">
+            <div class="arch-icon">&#9881;</div>
+            <h4>Service Layer</h4>
+            <p>Application services with REST endpoints for chat, SQL, data management, authentication, and export</p>
+          </div>
+          <div class="card arch-card">
+            <div class="arch-icon">&#128424;</div>
+            <h4>Analytics Engine</h4>
+            <p>Embedded DuckDB warehouse for SQL execution, data profiling, pipelines, and aggregation</p>
+          </div>
+          <div class="card arch-card">
+            <div class="arch-icon">&#129302;</div>
+            <h4>AI Layer</h4>
+            <p>Multi-provider model integration with Ollama, OpenAI, Anthropic, Gemini, and more</p>
+          </div>
+        </div>
+
+        <p>How the product is organised:</p>
+        <div class="code-block">
+          <code>Application      Desktop shell, services, and the workspace interface
+Analytics        Embedded DuckDB warehouse, catalog, and data quality checks
+AI orchestration Prompting, model routing, and grounded SQL generation
+Packaging        Signed Windows installer and portable build
+Data             Local warehouse file and every uploaded dataset</code>
+        </div>
+
+        <h2 id="config">Configuration</h2>
+        <p>Settings are managed in the application under <strong>Settings</strong>, and stored in <code class="code-inline">config/settings.yaml</code> for administrators who prefer file-based management:</p>
+
+        <div class="code-block">
+          <code><span class="comment"># config/settings.yaml</span>
+app:
+  name: <span class="string">"DataAgent"</span>
+  version: <span class="string">"1.0.0"</span>
+  port: <span class="number">8002</span>
+
+database:
+  engine: <span class="string">"duckdb"</span>
+  path: <span class="string">"data/warehouse.duckdb"</span>
+  backup_enabled: <span class="keyword">true</span>
+
+auth:
+  enabled: <span class="keyword">true</span>
+  secret_key: <span class="string">"auto-generated"</span>
+  session_ttl_hours: <span class="number">72</span>
+
+llm:
+  provider: <span class="string">"ollama"</span>         <span class="comment"># ollama | openai | anthropic | gemini</span>
+  model: <span class="string">"qwen2.5:7b"</span>
+  temperature: <span class="number">0.3</span>
+  max_tokens: <span class="number">4096</span></code>
+        </div>
+
+        <p>
+          A fresh install ships with <strong>no built-in account</strong> &mdash; no default email, no default password. The first account is created by the operator, and that first registrant becomes the admin. Creating it over HTTP requires the <code class="code-inline">DATAAGENT_BOOTSTRAP_TOKEN</code> environment variable; with no token configured, the first admin cannot be registered over HTTP at all and must be provisioned out of band (see <code class="code-inline">docs/OPERATIONS.md</code> and <code class="code-inline">docker-compose.yml</code>). Every later account registers as a standard, least-privilege user unless an existing admin grants more.
+        </p>
+
+        <h2 id="providers">AI Providers</h2>
+        <p>Ten model providers are supported. Choose one during setup or switch at any time in Settings:</p>
+
+        <ul>
+          <li><strong>Ollama</strong> &mdash; Local models including Qwen 2.5, LLaMA 3, Mistral, and Phi-3. Detected automatically once running; no configuration required. The model is pulled once (about 4.7 GB for qwen2.5:7b) from the Ollama settings panel or with <code class="code-inline">ollama pull</code>.</li>
+          <li><strong>OpenAI</strong> — GPT-4o and GPT-4o-mini. Requires an API key.</li>
+          <li><strong>Anthropic</strong> — Claude 3.5 Sonnet and Claude 3 Haiku. Requires an API key.</li>
+          <li><strong>Google Gemini</strong> — Gemini 1.5 Pro and Gemini Flash. Requires an API key.</li>
+          <li><strong>DeepSeek</strong> — DeepSeek Chat and DeepSeek Coder. Requires an API key.</li>
+          <li><strong>Groq</strong> — LLaMA 3 on Groq hardware for low-latency inference. Requires an API key.</li>
+          <li><strong>xAI</strong> — Grok-2. Requires an API key.</li>
+          <li><strong>LM Studio</strong> — Desktop model server for local inference. Detected automatically once running.</li>
+        </ul>
+
+        <h2 id="api">API Reference</h2>
+        <p>The platform exposes a documented REST API for integrations and automation:</p>
+
+        <div class="code-block">
+          <code><span class="comment"># Authentication</span>
+POST   /api/auth/login          <span class="comment"># Sign in, returns token</span>
+POST   /api/auth/logout         <span class="comment"># End session</span>
+GET    /api/auth/me             <span class="comment"># Current user</span>
+
+<span class="comment"># Assistant</span>
+POST   /api/chat                <span class="comment"># Ask a question, receive an answer</span>
+GET    /api/chat/history        <span class="comment"># Conversation history</span>
+DELETE /api/chat/history        <span class="comment"># Clear history</span>
+
+<span class="comment"># SQL</span>
+POST   /api/sql/execute         <span class="comment"># Run a query</span>
+GET    /api/sql/history         <span class="comment"># Query history</span>
+GET    /api/sql/schema          <span class="comment"># Warehouse schema</span>
+
+<span class="comment"># Data</span>
+POST   /api/data/upload         <span class="comment"># Upload CSV, Excel, or JSON</span>
+GET    /api/data/tables         <span class="comment"># List warehouse tables</span>
+GET    /api/data/profile/{table} <span class="comment"># Column profiling</span>
+
+<span class="comment"># Dashboards</span>
+GET    /api/dashboards           <span class="comment"># List dashboards</span>
+POST   /api/dashboards           <span class="comment"># Create a dashboard</span>
+GET    /api/dashboards/{id}      <span class="comment"># Dashboard detail</span>
+PUT    /api/dashboards/{id}      <span class="comment"># Update a dashboard</span>
+
+<span class="comment"># Export</span>
+POST   /api/export/pbix         <span class="comment"># Power BI — returns a .pbix with data</span>
+POST   /api/export/pdf          <span class="comment"># PDF</span>
+POST   /api/export/pptx         <span class="comment"># PowerPoint</span>
+POST   /api/export/xlsx         <span class="comment"># Excel</span></code>
+        </div>
+
+        <p>
+          The Power BI export returns a <code class="code-inline">.pbix</code> file that contains your data &mdash; star schema and DAX measures included &mdash; so it opens in Power BI Desktop with your charts already populated. DataAgent also imports existing <code class="code-inline">.pbix</code> files and Power BI templates, and rebuilds them locally.
+        </p>
+
+        <h2 id="desktop">What Ships</h2>
+        <p>Everything the installer places on the machine, and how to manage it:</p>
+
+        <div class="code-block">
+          <code>Application      C:\Program Files\DataAgent
+Workspace data   C:\Program Files\DataAgent\data
+Launch           Start Menu — DataAgent
+Status and logs  Settings — Logs &amp; status
+Maintenance      Settings &gt; Apps &gt; DataAgent &gt; Uninstall</code>
+        </div>
+
+        <h2 id="security">Security</h2>
+        <p>Enterprise-grade controls are included in every installation:</p>
+        <ul>
+          <li><strong>Authentication</strong> — Token-based sessions with a configurable lifetime (72 hours by default)</li>
+          <li><strong>Role-Based Access</strong> — Admin, Editor, and Viewer roles with granular permissions</li>
+          <li><strong>Single Sign-On</strong> — OpenID Connect and SAML 2.0 with Okta, Azure AD, and Keycloak</li>
+          <li><strong>Audit Logging</strong> — Sign-ins, queries, exports, and settings changes are recorded</li>
+          <li><strong>Row-Level Security</strong> — Per-role data filtering enforced by the analytics engine</li>
+          <li><strong>API Key Management</strong> — Scoped keys with rotation and usage tracking</li>
+          <li><strong>Data Privacy</strong> — All data stays local, with no telemetry, no analytics and no crash reporting. The only outbound calls are the GitHub update check and the LLM provider you configure (see the <a href="faq.html">FAQ</a>)</li>
+        </ul>
+
+        <div class="inline-cta animate-on-scroll" style="margin-top: 44px;">
+          <p>Looking for quick answers?</p>
+          <a href="faq.html" class="btn btn-primary btn-sm">Read the FAQ</a>
+          <a href="changelog.html" class="btn btn-secondary btn-sm">See what's new</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+# DataAgent — Caddy config for the billing VPS (Ubuntu/Debian, x86_64).
+#
+# Single origin (recommended — the billing server has no CORS middleware,
+# and same-origin keeps checkout fetch() calls and the webhook URL simple):
+#
+#   https://yourdomain.com/               static storefront   (website/)
+#   https://yourdomain.com/create-… etc.  JSON API → uvicorn 127.0.0.1:8090
+#
+# TLS certificates are issued + renewed automatically (Let's Encrypt).
+#
+# Install:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   # edit the hostname below (keep both apex and www on one line)
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# DNS: one A record for the apex AND one for www, both → the VPS IP.
+# Ports 80 + 443 must be reachable (Oracle: open them in the VPC security
+# list AND remove the image's default INPUT block — see the deploy guide).
+
+yourdomain.com, www.yourdomain.com {
+	encode gzip
+
+	# Baseline security headers. HSTS kicks in once TLS works; remove it only
+	# if you ever need plain-HTTP fallback (you shouldn't for a billing site).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# API endpoints + server-rendered pages → uvicorn.
+	# Paths mirror every @app route in billing_server/main.py; everything
+	# else falls through to the static storefront below.
+	reverse_proxy /create-order* /create-subscription* /verify* /razorpay/* /v1/* /admin/* /success* /healthz 127.0.0.1:8090
+
+	# Static storefront (uploaded copy of website/).
+	root * /srv/dataagent/website
+	file_server
+}
+
+# ── Alternative: split the API onto a subdomain ──────────────────────
+# Requires adding CORSMiddleware (with an explicit origin allowlist) to
+# billing_server/main.py first — without it browsers will block the
+# storefront's fetch() calls. Not needed for the single-origin setup above.
+#
+# billing.yourdomain.com {
+# 	encode gzip
+# 	reverse_proxy 127.0.0.1:8090
+# }

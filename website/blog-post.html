@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why local-first analytics wins — DataAgent Blog</title>
+  <meta name="description" content="Cloud BI made everyone faster — until the compliance review. How a local LLM plus DuckDB keeps the speed without shipping rows anywhere.">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="blog">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">Blog · 8 min read</div>
+      <h1>Why local-first analytics <span class="gradient-text">wins</span> for teams that can't share their data</h1>
+      <p>Published September 18, 2026 · Engineering</p>
+    </div>
+
+    <div class="docs-layout">
+      <aside class="docs-sidebar animate-on-scroll">
+        <h4>On This Page</h4>
+        <ul class="docs-nav">
+          <li><a href="#why" class="active">Why local-first</a></li>
+          <li><a href="#stack">The stack</a></li>
+          <li><a href="#trust">Trusting the SQL</a></li>
+          <li><a href="#tradeoffs">Trade-offs</a></li>
+          <li><a href="#start">Get started</a></li>
+        </ul>
+        <p style="margin-top: 18px;"><a href="blog.html" style="font-size:.85rem; font-weight:600;">&#8592; All posts</a></p>
+      </aside>
+
+      <div class="docs-content">
+        <p>
+          Cloud BI made everyone faster — until the compliance review. For a growing set of teams,
+          the request "just put it in Looker" now triggers a six-week security questionnaire, and the
+          answer is often <strong>no</strong>. Not because the tool is bad, but because the rows
+          are not allowed to leave the building.
+        </p>
+        <p>
+          DataAgent starts from the opposite premise: <strong>your data already lives on your machine,
+          and it should stay there.</strong> The warehouse is an embedded DuckDB file, the LLM is one
+          you choose (including a fully local Ollama model), and the whole product ships as one
+          self-contained Windows app you can read top to bottom.
+        </p>
+
+        <h2 id="why">Why "just use the cloud" stops working</h2>
+        <p>
+          The hidden cost of cloud analytics isn't the license — it's the data gravity. Every upload
+          creates a copy: in a bucket, in a query cache, in someone's notebook export. For
+          healthcare, finance, government, and any team handling customer PII, each copy is a new
+          thing to audit. At some point the questionnaire arrives, and the honest answer to
+          "where does the data go?" has to be: <em>nowhere else</em>.
+        </p>
+        <p>
+          Local-first sidesteps the review because the data flow is trivially simple. There is no
+          ingestion pipeline to a vendor, no third subprocessor list, no egress to model providers —
+          unless <strong>you</strong> explicitly configure one.
+        </p>
+
+        <h2 id="stack">The stack that makes it possible</h2>
+        <p>Three pieces do all the heavy lifting:</p>
+        <ul>
+          <li><strong>DuckDB</strong> — an embedded analytical engine. No server, no cluster; the warehouse is one file with columnar speed.</li>
+          <li><strong>Local (or chosen) LLMs</strong> — Ollama on your laptop, or a hosted provider if your policy allows it. Swap with a config file, not a migration.</li>
+          <li><strong>FastAPI</strong> — a single backend process serving the web UI, the chat stream, SQL execution, and export.</li>
+        </ul>
+        <div class="code-block">
+          <code><span class="comment"># download, run, done</span>
+DataAgent-Setup.exe          <span class="comment"># one installer, everything included</span>
+<span class="comment"># your workspace opens automatically</span></code>
+        </div>
+
+        <h2 id="trust">Trusting the SQL you didn't write</h2>
+        <p>
+          An assistant that writes queries is only useful if you can audit them. Every DataAgent
+          answer reveals the exact SQL behind it — no hidden semantic layer, no vendor-defined
+          "metric store" you can't inspect. On the security side, the rules are deliberately
+          boring:
+        </p>
+        <ul>
+          <li>SQL is <strong>parameterized</strong> at execution; generated queries run read-only against the warehouse.</li>
+          <li>Everything crossing the API boundary is validated with schemas before it touches business logic.</li>
+          <li>Secrets — JWT keys, DB credentials — live outside git and are never surfaced into the model context or logs.</li>
+        </ul>
+        <blockquote style="margin: 26px 0; padding: 20px 26px; border-left: 4px solid var(--da-violet); background: rgba(109,40,217,.06); border-radius: 0 14px 14px 0; font-size: 1.05rem; line-height: 1.65; color: var(--da-ink);">
+          "Boring security is the point. If the data plane can be explained in one paragraph, the
+          audit writes itself."
+        </blockquote>
+
+        <h2 id="tradeoffs">The honest trade-offs</h2>
+        <p>
+          Local-first is not free. A laptop DuckDB won't match a warehouse cluster on a
+          5-billion-row join — you trade elastic scale for absolute data control. Model quality on
+          fully local weights trails the best hosted models on tricky reasoning tasks. And
+          collaboration means sharing a dashboard file, not a live URL.
+        </p>
+        <p>
+          For the teams we built this for — the ones whose alternative is "no analytics at all"
+          — those trade-offs are easy. Control over rows beats scale you were never allowed to use.
+        </p>
+
+        <h2 id="start">Get started in five minutes</h2>
+        <p>
+          Install is one .exe. Connect a source, ask a question, read the SQL, ship the chart.
+          If DataAgent doesn't fit your workflow, the FAQ covers the usual doubts — and the whole
+          thing is open source, so you can check our answers before you trust them.
+        </p>
+        <div class="code-block">
+          <code><span class="comment"># or skip the installer entirely</span>
+DataAgent.exe               <span class="comment"># portable — runs from any folder</span></code>
+        </div>
+        <p style="margin-top: 26px;">
+          <a class="btn btn-primary" href="download.html">Download DataAgent</a>
+          <a class="btn btn-secondary" href="faq.html" style="margin-left: 10px;">Read the FAQ</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — DataAgent</title>
+  <meta name="description" content="The current state of DataAgent — what the local-first AI data analytics agent does today, how it is built, and what is still open.">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+</head>
+<body data-fx-scene="blog">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <div class="container">
+    <div class="page-header animate-on-scroll">
+      <div class="section-badge">Changelog</div>
+      <h1>What's <span class="gradient-text">new</span></h1>
+      <p>The current state of DataAgent: what the app does, how it is built, and what is still open. There is no dated public release history &mdash; work on the codebase is recorded from 6 October 2026.</p>
+    </div>
+
+    <section class="section" style="padding-top: 0;">
+      <div class="timeline">
+        <article class="timeline-item release-latest animate-on-scroll">
+          <div class="timeline-head">
+            <span class="timeline-version">v1.0.0 (current build)</span>
+            <span class="chip chip-orange">Latest</span>
+            <span class="timeline-date">Unreleased</span>
+          </div>
+          <p class="timeline-summary">This is the current state of the codebase. Work on DataAgent is recorded from 6 October 2026 and has been a single line of development since, so there is no dated public release history behind this entry &mdash; everything below ships in the build you download today.</p>
+          <div class="change-group added">
+            <h4>What the app does</h4>
+            <ul>
+              <li>Natural-language chat over your local warehouse &mdash; the generated SQL is shown for every answer</li>
+              <li>SQL workbench, file upload (CSV, Excel, JSON, Parquet, TSV) and live database connections</li>
+              <li>Dashboard Studio: 30+ chart types on a drag-and-drop canvas, with <code class="code-inline">.pbix</code> export and <code class="code-inline">.pbix</code> import</li>
+              <li>ETL pipelines, data profiling, data catalog, lineage and scheduled reports</li>
+              <li>Ten LLM providers &mdash; Ollama, OpenAI, Anthropic, Gemini, DeepSeek, Groq, xAI, LM Studio and more</li>
+              <li>JWT authentication with Google sign-in, role-based access, SSO, audit logging and row-level security</li>
+              <li>MCP servers for DuckDB, memory and filesystem</li>
+              <li>Signed Windows <code class="code-inline">.exe</code> installer and a portable build, plus a Docker image for self-hosting</li>
+            </ul>
+          </div>
+          <div class="change-group changed">
+            <h4>How it is built</h4>
+            <ul>
+              <li>Warehouse opened read-only for analysis; ETL writes funnel through one dedicated process</li>
+              <li>Web UI auto-reloads on change with <code class="code-inline">WAREHOUSE_RELOAD=1</code></li>
+              <li>Quality is gated by the project's pytest suite and the coverage floor set in <code class="code-inline">pyproject.toml</code></li>
+            </ul>
+          </div>
+          <div class="change-group fixed">
+            <h4>Hardened</h4>
+            <ul>
+              <li>Windows file-lock errors when two processes opened the DuckDB warehouse</li>
+              <li>Long-running queries no longer block the chat stream</li>
+              <li>First-admin takeover on an exposed port &mdash; creating the first admin now requires <code class="code-inline">DATAAGENT_BOOTSTRAP_TOKEN</code></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+      <div class="inline-cta animate-on-scroll">
+        <p>Ready to try the current build?</p>
+        <a href="download.html" class="btn btn-primary">Download DataAgent</a>
+        <a href="docs.html" class="btn btn-secondary">Read the docs</a>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+</body>
+</html>

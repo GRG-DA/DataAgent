@@ -1,0 +1,177 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link [ref=f1e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f1e6]:
+        - link " Home" [ref=f1e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f1e8]: 
+          - generic [ref=f1e9]: Home
+        - button " Data " [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e12]: 
+          - generic [ref=f1e13]: Data
+          - generic [ref=f1e14]: 
+        - button " Analyze " [ref=f1e16] [cursor=pointer]:
+          - generic [ref=f1e17]: 
+          - generic [ref=f1e18]: Analyze
+          - generic [ref=f1e19]: 
+        - button " Tools " [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: 
+          - generic [ref=f1e23]: Tools
+          - generic [ref=f1e24]: 
+        - link " Excel" [ref=f1e25] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f1e26]: 
+          - generic [ref=f1e27]: Excel
+        - link " Settings" [ref=f1e28] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f1e29]: 
+          - generic [ref=f1e30]: Settings
+      - generic [ref=f1e31]:
+        - text:  
+        - button "" [ref=f1e35]
+        - generic [ref=f1e37]:
+          - button "V" [ref=f1e38] [cursor=pointer]
+          - text:     
+        - button "" [ref=f1e40]
+        - text: 
+  - text:            
+  - main [ref=f1e42]:
+    - generic [ref=f1e338]:
+      - complementary [ref=f1e339]:
+        - generic [ref=f1e340]:
+          - button "+ New chat" [ref=f1e341] [cursor=pointer]:
+            - generic [ref=f1e342]: +
+            - text: New chat
+          - textbox "Search conversations" [ref=f1e343]:
+            - /placeholder: Search conversations...
+        - generic [ref=f1e430] [cursor=pointer]:
+          - generic [ref=f1e431]: What is total revenue by region in verif…
+          - generic [ref=f1e432]: "Result: 4 rows × 3 columns Highlights: - Total value: 757.62"
+          - generic [ref=f1e433]: 04:17 PM
+          - generic [ref=f1e434]:
+            - button "" [ref=f1e435]
+            - button "" [ref=f1e437]
+      - button "" [ref=f1e353] [cursor=pointer]
+      - main [ref=f1e355]:
+        - generic [ref=f1e356]:
+          - generic [ref=f1e357]:
+            - generic "Click to rename" [ref=f1e358] [cursor=pointer]: What is total revenue by region in verif…
+            - generic [ref=f1e359]:
+              - generic [ref=f1e360]:
+                - button "All tables " [ref=f1e361]:
+                  - generic [ref=f1e362]: All tables
+                  - generic [ref=f1e363]: 
+                - text: 
+              - button "" [ref=f1e364]
+              - combobox [ref=f1e366] [cursor=pointer]:
+                - option "Quick tasks..." [selected]
+                - option "Show me trends"
+                - option "Find anomalies"
+                - option "Compare groups"
+                - option "Data summary"
+                - option "Correlations"
+                - option "Missing values"
+                - option "Top segments"
+                - option "Generate SQL"
+              - button "+" [ref=f1e367]
+          - generic [ref=f1e369]:
+            - generic [ref=f1e440]:
+              - generic [ref=f1e441]: What is total revenue by region in verify_orders?
+              - generic [ref=f1e442]:
+                - generic [ref=f1e443]: 04:17 PM
+                - generic [ref=f1e444]:
+                  - button "" [ref=f1e445] [cursor=pointer]
+                  - button "" [ref=f1e447] [cursor=pointer]
+            - generic [ref=f1e449]:
+              - generic [ref=f1e450]: 
+              - generic [ref=f1e452]:
+                - generic [ref=f1e456]:
+                  - img:
+                    - generic:
+                      - generic:
+                        - generic: 37.5%
+                        - generic: 25%
+                        - generic: 25%
+                        - generic: 12.5%
+                  - img:
+                    - generic [ref=f1e464]:
+                      - generic [ref=f1e465]:
+                        - generic [ref=f1e466]: North
+                        - generic [ref=f1e471] [cursor=pointer]
+                      - generic [ref=f1e472]:
+                        - generic [ref=f1e473]: South
+                        - generic [ref=f1e478] [cursor=pointer]
+                      - generic [ref=f1e479]:
+                        - generic [ref=f1e480]: West
+                        - generic [ref=f1e485] [cursor=pointer]
+                      - generic [ref=f1e486]:
+                        - generic [ref=f1e487]: East
+                        - generic [ref=f1e492] [cursor=pointer]
+                  - toolbar [ref=f1e493]:
+                    - generic [ref=f1e494]:
+                      - button "Download plot as a PNG" [ref=f1e495] [cursor=pointer]
+                      - button "Share chart..." [ref=f1e498] [cursor=pointer]
+                    - link "plotly-logomark" [ref=f1e502] [cursor=pointer]:
+                      - /url: https://plotly.com/
+                      - img "plotly-logomark" [ref=f1e503]
+                - generic [ref=f1e516]:
+                  - strong [ref=f1e517]: "Result: 4 rows × 3 columns"
+                  - generic [ref=f1e518]:
+                    - generic [ref=f1e519]:
+                      - generic [ref=f1e520]: Total value
+                      - generic [ref=f1e521]: "757.62"
+                    - generic [ref=f1e522]:
+                      - generic [ref=f1e523]: Average value
+                      - generic [ref=f1e524]: "189.4"
+                    - generic [ref=f1e525]:
+                      - generic [ref=f1e526]: Range
+                      - generic [ref=f1e527]: 99.8 – 281.9
+                    - generic [ref=f1e528]:
+                      - generic [ref=f1e529]: Highest
+                      - generic [ref=f1e530]: North = 281.9
+                    - generic [ref=f1e531]:
+                      - generic [ref=f1e532]: Lowest
+                      - generic [ref=f1e533]: East = 99.8
+                  - table [ref=f1e535]:
+                    - rowgroup [ref=f1e536]:
+                      - row [ref=f1e537]:
+                        - columnheader "Group name" [ref=f1e538]
+                        - columnheader "Value" [ref=f1e539]
+                        - columnheader "Count" [ref=f1e540]
+                    - rowgroup [ref=f1e541]:
+                      - row [ref=f1e542]:
+                        - cell "North" [ref=f1e543]
+                        - cell "281.90" [ref=f1e544]
+                        - cell "3" [ref=f1e545]
+                      - row [ref=f1e546]:
+                        - cell "South" [ref=f1e547]
+                        - cell "189.92" [ref=f1e548]
+                        - cell "2" [ref=f1e549]
+                      - row [ref=f1e550]:
+                        - cell "West" [ref=f1e551]
+                        - cell "186" [ref=f1e552]
+                        - cell "2" [ref=f1e553]
+                      - row [ref=f1e554]:
+                        - cell "East" [ref=f1e555]
+                        - cell "99.80" [ref=f1e556]
+                        - cell "1" [ref=f1e557]
+                  - text: 📊
+                  - strong [ref=f1e558]: 1 chart
+                  - text: — see above.
+                  - generic [ref=f1e559]:
+                    - generic [ref=f1e560]: 
+                    - generic [ref=f1e561]:
+                      - text: "Source:"
+                      - strong [ref=f1e562]: analytics.verify_orders
+                - generic [ref=f1e563]:
+                  - generic [ref=f1e564]: 04:17 PM
+                  - generic [ref=f1e565]:
+                    - button "" [ref=f1e566] [cursor=pointer]
+                    - button "" [ref=f1e568] [cursor=pointer]
+          - generic [ref=f1e393]:
+            - generic [ref=f1e394]:
+              - textbox "Ask about your data..." [ref=f1e395]
+              - button "" [active] [ref=f1e570] [cursor=pointer]
+            - generic [ref=f1e398]: Enter to send · Shift+Enter for a new line

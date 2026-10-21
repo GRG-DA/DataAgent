@@ -1,0 +1,29 @@
+# Legal / company details for the hosted deployment.
+#
+# The pages under web/legal/ read these values. A `[[MARKER]]` left in place
+# is reported by `scripts/ci/preflight.ps1` and by the startup check in
+# api/main.py, so an operator cannot ship a page that still says
+# "[[COMPANY_NAME]]".
+#
+# Copy this file, fill it in, and keep the filled copy out of git if it
+# holds anything sensitive (it should not — it is public page content).
+
+company:
+  name: "[[COMPANY_NAME]]"
+  address: "[[COMPANY_ADDRESS]]"
+  jurisdiction: "[[JURISDICTION]]"
+  contact_email: "[[CONTACT_EMAIL]]"
+  security_email: "[[SECURITY_EMAIL]]"
+  dpo_email: "[[DPO_EMAIL]]"
+
+legal:
+  effective_date: "[[EFFECTIVE_DATE]]"
+  data_region: "[[DATA_REGION]]"
+  retention_days: "[[RETENTION_DAYS]]"
+
+subprocessors:
+  hosting: "[[SUBPROCESSOR_HOSTING]]"
+  storage: "[[SUBPROCESSOR_STORAGE]]"
+  email: "[[SUBPROCESSOR_EMAIL]]"
+  llm: "[[SUBPROCESSOR_LLM]]"
+  monitoring: "[[SUBPROCESSOR_MONITORING]]"

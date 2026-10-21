@@ -1,0 +1,15 @@
+# Used when building with: docker build -f billing_server/Dockerfile .
+# BuildKit picks <Dockerfile>.dockerignore over the repo-root .dockerignore,
+# so the main app's image (docker compose build .) is unaffected.
+# Ships only the two runtime packages; keeps data/ and runtime state out.
+
+*
+!billing_server
+!keygen_app
+
+**/__pycache__
+**/*.pyc
+billing_server/billing.sqlite3
+billing_server/billing.sqlite3-*
+billing_server/.env
+billing_server/keys

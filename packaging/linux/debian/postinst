@@ -1,0 +1,82 @@
+#!/bin/bash
+# deb postinst — install app payload + Cloudflare WARP, register services.
+set -e
+
+APP_DIR="/opt/dataagent"
+APP_USER="dataagent"
+SERVICE_NAME="dataagent"
+PKG_DIR="/usr/share/dataagent"
+
+# App payload shipped by the package.
+install -d "$APP_DIR"
+if [ -d "$PKG_DIR/app" ]; then
+  cp -a "$PKG_DIR/app/." "$APP_DIR/"
+fi
+chmod 0755 "$APP_DIR/DataAgentShell/DataAgentShell" 2>/dev/null || true
+chmod 0755 "$APP_DIR/DataAgent" 2>/dev/null || true
+chmod 0755 "$APP_DIR/dataagent-launch.sh" 2>/dev/null || true
+
+if ! id "$APP_USER" >/dev/null 2>&1; then
+  useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER" || true
+fi
+chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+
+# Cloudflare WARP — install + connect.
+if [ -x "$PKG_DIR/warp-install.sh" ]; then
+  bash "$PKG_DIR/warp-install.sh" || true
+fi
+if command -v warp-cli >/dev/null 2>&1; then
+  warp-cli registration new >/dev/null 2>&1 || true
+  warp-cli connect >/dev/null 2>&1 || true
+fi
+
+# opencode CLI — install so the AI server works out of the box.
+if [ -x "$PKG_DIR/opencode-install.sh" ]; then
+  bash "$PKG_DIR/opencode-install.sh" || true
+fi
+
+# systemd unit (opt-in — desktop shell is the default launch on Linux).
+if command -v systemctl >/dev/null 2>&1; then
+  cat > "/etc/systemd/system/$SERVICE_NAME.service" <<EOF
+[Unit]
+Description=DataAgent — LLM Data Analytics Agent web app
+After=network-online.target warp-svc.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$APP_USER
+Group=$APP_USER
+WorkingDirectory=$APP_DIR
+ExecStart=$APP_DIR/dataagent-launch.sh web
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=$APP_DIR
+Environment=XDG_DATA_HOME=$APP_DIR/.local/share
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload || true
+fi
+
+# Desktop entry + autostart (launches the GTK shell, like the Windows app).
+install -d /usr/share/applications
+cat > /usr/share/applications/dataagent.desktop <<EOF
+[Desktop Entry]
+Type=Application
+Name=DataAgent
+Comment=LLM Data Analytics Agent
+Exec=/opt/dataagent/dataagent-launch.sh
+Icon=applications-science
+Terminal=false
+Categories=Office;Science;
+EOF
+for xdg in /etc/xdg/autostart /usr/share/xdg/autostart; do
+  install -d "$xdg" 2>/dev/null || continue
+  cp -f /usr/share/applications/dataagent.desktop "$xdg/dataagent.desktop"
+done
+
+exit 0

@@ -1,0 +1,747 @@
+{
+  "name": "DarkBlue",
+  "dataColors": [
+    "#4472C4", "#ED7D31", "#A5A5A5", "#FFC000", "#5B9BD5",
+    "#70AD47", "#264478", "#9B2335", "#44546A", "#548235",
+    "#BF8F00", "#843C0C", "#1B2A4A", "#2E5090", "#7B61FF"
+  ],
+  "foreground": "#252423",
+  "foregroundNeutralSecondary": "#605E5C",
+  "foregroundNeutralTertiary": "#B3B0AD",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F5F7FA",
+  "backgroundNeutral": "#E8ECF1",
+  "tableAccent": "#4472C4",
+  "good": "#70AD47",
+  "neutral": "#FFC000",
+  "bad": "#C00000",
+  "maximum": "#4472C4",
+  "center": "#FFC000",
+  "minimum": "#DEEFFF",
+  "null": "#FF7F48",
+  "hyperlink": "#0078d4",
+  "visitedHyperlink": "#0078d4",
+  "textClasses": {
+    "callout": {
+      "fontSize": 40,
+      "fontFace": "DIN",
+      "color": "#252423"
+    },
+    "title": {
+      "fontSize": 12,
+      "fontFace": "DIN Bold",
+      "color": "#252423"
+    },
+    "header": {
+      "fontSize": 12,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#252423"
+    },
+    "label": {
+      "fontSize": 10,
+      "fontFace": "Segoe UI",
+      "color": "#605E5C"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "*": [
+          {
+            "wordWrap": true
+          }
+        ],
+        "general": [
+          {
+            "responsive": true,
+            "keepLayerOrder": true
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "radius": 8
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "title": [
+          {
+            "show": true,
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold",
+            "fontWeight": "Bold",
+            "alignment": "Left",
+            "titleWrap": true
+          }
+        ],
+        "lockAspect": [
+          {
+            "show": false
+          }
+        ],
+        "line": [
+          {
+            "transparency": 0
+          }
+        ],
+        "outline": [
+          {
+            "transparency": 0
+          }
+        ],
+        "plotArea": [
+          {
+            "transparency": 0
+          }
+        ],
+        "categoryAxis": [
+          {
+            "show": true,
+            "showAxisTitle": false,
+            "concatenateLabels": false,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#605E5C"
+              }
+            },
+            "gridlineStyle": "dotted",
+            "gridlineColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "gridlineShow": true
+          }
+        ],
+        "valueAxis": [
+          {
+            "show": true,
+            "showAxisTitle": false,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#605E5C"
+              }
+            },
+            "gridlineStyle": "dotted",
+            "gridlineColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "gridlineShow": true
+          }
+        ],
+        "y2Axis": [
+          {
+            "show": true
+          }
+        ],
+        "legend": [
+          {
+            "show": true,
+            "position": "Top",
+            "showTitle": false,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#605E5C"
+              }
+            }
+          }
+        ],
+        "labels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "labelPrecision": 0,
+            "displayUnits": 0
+          }
+        ],
+        "lineStyles": [
+          {
+            "strokeWidth": 3
+          }
+        ],
+        "wordWrap": [
+          {
+            "show": true
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": false
+          }
+        ],
+        "outspacePane": [
+          {
+            "backgroundColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0,
+            "border": true,
+            "borderColor": {
+              "solid": {
+                "color": "#B3B0AD"
+              }
+            }
+          }
+        ],
+        "filterCard": [
+          {
+            "$id": "Applied",
+            "transparency": 0,
+            "foregroundColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "border": true
+          },
+          {
+            "$id": "Available",
+            "transparency": 0,
+            "foregroundColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "border": true
+          }
+        ],
+        "header": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 12
+          }
+        ],
+        "data": [
+          {
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "cardVisual": {
+      "*": {
+        "callout": [
+          {
+            "fontSize": 36,
+            "fontFamily": "DIN",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "displayUnits": 0,
+            "label": "",
+            "wordWrap": true
+          }
+        ],
+        "categoryLabels": [
+          {
+            "show": true,
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold",
+            "fontColor": {
+              "solid": {
+                "color": "#605E5C"
+              }
+            }
+          }
+        ],
+        "title": [
+          {
+            "show": false
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "wordWrap": [
+          {
+            "show": true
+          }
+        ]
+      }
+    },
+    "clusteredColumnChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "displayUnits": 0,
+            "labelPrecision": 0,
+            "labelStyle": "Category, value"
+          }
+        ],
+        "column": [
+          {
+            "show": true,
+            "innerPadding": 20
+          }
+        ]
+      }
+    },
+    "lineChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": false
+          }
+        ],
+        "line": [
+          {
+            "show": true,
+            "strokeWidth": 3
+          }
+        ],
+        "marker": [
+          {
+            "show": true,
+            "size": 8
+          }
+        ]
+      }
+    },
+    "donutChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "displayUnits": 0,
+            "labelStyle": "Percent of total"
+          }
+        ],
+        "detail": [
+          {
+            "show": true
+          }
+        ]
+      }
+    },
+    "areaChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": false
+          }
+        ],
+        "line": [
+          {
+            "show": true,
+            "strokeWidth": 2
+          }
+        ]
+      }
+    },
+    "scatterChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": false
+          }
+        ],
+        "bubbles": [
+          {
+            "markerRangeType": "auto"
+          }
+        ]
+      }
+    },
+    "tableEx": {
+      "*": {
+        "grid": [
+          {
+            "gridVertical": true,
+            "gridHorizontal": true,
+            "rowPadding": 8,
+            "outlineColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "gridVerticalColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "gridHorizontalColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "textSize": 10,
+            "fontFamily": "Segoe UI"
+          }
+        ],
+        "columnHeaders": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "fontFamily": "Segoe UI Semibold",
+            "fontSize": 10,
+            "backColor": {
+              "solid": {
+                "color": "#4472C4"
+              }
+            },
+            "alignment": "Left",
+            "wordWrap": true
+          }
+        ],
+        "values": [
+          {
+            "fontColorPrimary": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "backColorPrimary": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "fontColorSecondary": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "backColorSecondary": {
+              "solid": {
+                "color": "#F5F7FA"
+              }
+            },
+            "fontFamily": "Segoe UI",
+            "fontSize": 10,
+            "wordWrap": true,
+            "alignment": "Left"
+          }
+        ],
+        "total": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "backColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "fontFamily": "Segoe UI Semibold",
+            "fontSize": 10
+          }
+        ],
+        "title": [
+          {
+            "show": true,
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ],
+        "header": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "backColor": {
+              "solid": {
+                "color": "#4472C4"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "header": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ],
+        "data": [
+          {
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 10
+          }
+        ],
+        "selection": [
+          {
+            "selectAllCheckboxEnabled": true,
+            "singleSelect": false
+          }
+        ],
+        "general": [
+          {
+            "outlineColor": {
+              "solid": {
+                "color": "#E8ECF1"
+              }
+            },
+            "outline": true,
+            "outlineStyle": "solid"
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "title": [
+          {
+            "show": false
+          }
+        ],
+        "header": [
+          {
+            "show": true,
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ]
+      }
+    },
+    "gauge": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 20,
+            "fontFamily": "DIN",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ],
+        "calloutValueLabel": [
+          {
+            "fontSize": 20,
+            "fontFamily": "DIN",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ],
+        "target": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "funnel": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "treemap": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "waterfallChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": true,
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ],
+        "sentimentColors": [
+          {
+            "increaseFill": {
+              "solid": {
+                "color": "#70AD47"
+              }
+            },
+            "decreaseFill": {
+              "solid": {
+                "color": "#C00000"
+              }
+            },
+            "totalFill": {
+              "solid": {
+                "color": "#4472C4"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "radarChart": {
+      "*": {
+        "dataLabels": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#F5F7FA"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "wallpaper": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#F5F7FA"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "displayArea": [
+          {
+            "transparency": 0
+          }
+        ],
+        "outspace": [
+          {
+            "transparency": 0
+          }
+        ]
+      }
+    }
+  }
+}

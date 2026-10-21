@@ -1,0 +1,106 @@
+# Prometheus scrape + alert rules for a hosted DataAgent deployment.
+#
+# The app exposes:
+#   GET /metrics            Prometheus exposition (bearer METRICS_TOKEN)
+#   GET /health/live        liveness  (no dependency checks)
+#   GET /health/ready       readiness (the warehouse must be usable)
+#   GET /health/system      deep check, per dependency
+#
+# `METRICS_TOKEN` must be set — the exposition is NOT anonymous, because it
+# names every API path, per-path request counts and the tenant count.
+#
+#   prometheus.yml:
+#     scrape_configs:
+#       - job_name: dataagent
+#         metrics_path: /metrics
+#         bearer_token_file: /etc/prometheus/secrets/dataagent_metrics_token
+#         static_configs:
+#           - targets: ['dataagent:8002']
+#
+#   alert_rules.yml  ->  rule_files: ['alert_rules.yml']
+
+groups:
+  - name: dataagent-availability
+    rules:
+      - alert: DataAgentDown
+        expr: up{job="dataagent"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DataAgent is not responding to /metrics"
+          description: "The scrape has failed for 2 minutes."
+
+      - alert: DataAgentNotReady
+        expr: probe_success{job="dataagent-blackbox", target="ready"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DataAgent /health/ready is failing"
+          description: "The warehouse is not usable — reads and writes will fail."
+
+      - alert: DataAgentDeepHealthDegraded
+        expr: dataagent_health_component_ok{component=~"warehouse|identity_store|audit_sink|billing"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DataAgent dependency {{ $labels.component }} is down"
+          description: "The deep health check reports {{ $labels.component }} as unavailable."
+
+  - name: dataagent-traffic
+    rules:
+      - alert: DataAgentHighErrorRate
+        expr: |
+          sum(rate(dataagent_http_requests_total{status=~"5.."}[5m]))
+            /
+          clamp_min(sum(rate(dataagent_http_requests_total[5m])), 0.001)
+            > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DataAgent 5xx rate above 5%"
+          description: "{{ $value | humanizePercentage }} of requests are failing."
+
+      - alert: DataAgentRateLimited
+        expr: sum(rate(dataagent_rate_limited_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DataAgent is rate limiting requests"
+          description: "Bucket: {{ $labels.bucket }}. Either abuse or a misconfigured proxy (see TRUSTED_PROXY_NETWORKS)."
+
+      - alert: DataAgentTenantCountDropped
+        expr: dataagent_tenants < 1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DataAgent reports zero tenants"
+          description: "The tenant gauge is zero — the identity store may be empty or unreadable."
+
+  - name: dataagent-capacity
+    rules:
+      - alert: DataAgentHighRequestDuration
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(dataagent_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DataAgent p95 request duration above 5s"
+          description: "p95 is {{ $value | humanizeDuration }}."
+
+      - alert: DataAgentAiUsageSpike
+        expr: sum(rate(dataagent_ai_requests_total[10m])) > 1
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "AI request rate is elevated"
+          description: "Feature: {{ $labels.feature }}. Check the per-tenant AI budget (BILLING_TENANT_AI_DAILY_CAP)."

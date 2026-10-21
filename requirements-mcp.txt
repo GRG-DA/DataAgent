@@ -1,0 +1,13 @@
+# Dependencies for the isolated MCP server venv (.venv-mcp).
+#
+# Keep these in the isolated venv: MCP is optional tooling and must not add
+# its server/runtime stack to the app environment. See requirements.txt.
+#
+# Usage:
+#   python -m venv .venv-mcp
+#   .venv-mcp\Scripts\python.exe -m pip install -r requirements-mcp.txt
+#
+# Serves: mcp_servers/duckdb_mcp_server.py (read-only warehouse queries).
+
+duckdb==1.1.3
+mcp<2

@@ -1,0 +1,15 @@
+#!/bin/bash
+# deb prerm — stop the app service and remove autostart/desktop entries before
+# package removal.
+set -e
+
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl stop dataagent.service || true
+  systemctl disable dataagent.service || true
+fi
+
+rm -f /etc/xdg/autostart/dataagent.desktop
+rm -f /usr/share/xdg/autostart/dataagent.desktop
+rm -f /usr/share/applications/dataagent.desktop
+
+exit 0

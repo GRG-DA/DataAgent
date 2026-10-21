@@ -1,0 +1,120 @@
+- generic [active] [ref=f5e1]:
+  - banner [ref=f5e2]:
+    - generic [ref=f5e3]:
+      - link [ref=f5e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f5e6]:
+        - link " Home" [ref=f5e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f5e8]: 
+          - generic [ref=f5e9]: Home
+        - generic [ref=f5e10]:
+          - button " Data " [ref=f5e11] [cursor=pointer]:
+            - generic [ref=f5e12]: 
+            - generic [ref=f5e13]: Data
+            - generic [ref=f5e14]: 
+          - menu [ref=f5e15]:
+            - menuitem " Upload" [ref=f5e16] [cursor=pointer]:
+              - generic [ref=f5e17]: 
+              - generic [ref=f5e18]: Upload
+            - menuitem " Warehouse" [ref=f5e19] [cursor=pointer]:
+              - generic [ref=f5e20]: 
+              - generic [ref=f5e21]: Warehouse
+        - generic [ref=f5e22]:
+          - button " Analyze " [ref=f5e23] [cursor=pointer]:
+            - generic [ref=f5e24]: 
+            - generic [ref=f5e25]: Analyze
+            - generic [ref=f5e26]: 
+          - menu [ref=f5e27]:
+            - menuitem " Dashboard Studio" [ref=f5e28] [cursor=pointer]:
+              - generic [ref=f5e29]: 
+              - generic [ref=f5e30]: Dashboard Studio
+            - menuitem " Analysis" [ref=f5e31] [cursor=pointer]:
+              - generic [ref=f5e32]: 
+              - generic [ref=f5e33]: Analysis
+            - menuitem " AI Chat" [ref=f5e34] [cursor=pointer]:
+              - generic [ref=f5e35]: 
+              - generic [ref=f5e36]: AI Chat
+            - menuitem " SQL Explorer" [ref=f5e37] [cursor=pointer]:
+              - generic [ref=f5e38]: 
+              - generic [ref=f5e39]: SQL Explorer
+        - generic [ref=f5e40]:
+          - button " Tools " [ref=f5e41] [cursor=pointer]:
+            - generic [ref=f5e42]: 
+            - generic [ref=f5e43]: Tools
+            - generic [ref=f5e44]: 
+          - menu [ref=f5e45]:
+            - menuitem " Export" [ref=f5e46] [cursor=pointer]:
+              - generic [ref=f5e47]: 
+              - generic [ref=f5e48]: Export
+              - generic [aria-hidden] [ref=f5e49]: 
+            - menuitem " Compare" [ref=f5e50] [cursor=pointer]:
+              - generic [ref=f5e51]: 
+              - generic [ref=f5e52]: Compare
+            - menuitem " Anomalies" [ref=f5e53] [cursor=pointer]:
+              - generic [ref=f5e54]: 
+              - generic [ref=f5e55]: Anomalies
+            - menuitem " Quality Trends" [ref=f5e56] [cursor=pointer]:
+              - generic [ref=f5e57]: 
+              - generic [ref=f5e58]: Quality Trends
+            - menuitem " Stats" [ref=f5e59] [cursor=pointer]:
+              - generic [ref=f5e60]: 
+              - generic [ref=f5e61]: Stats
+            - menuitem " Forecast" [ref=f5e62] [cursor=pointer]:
+              - generic [ref=f5e63]: 
+              - generic [ref=f5e64]: Forecast
+            - menuitem " Connections" [ref=f5e65] [cursor=pointer]:
+              - generic [ref=f5e66]: 
+              - generic [ref=f5e67]: Connections
+              - generic [aria-hidden] [ref=f5e68]: 
+            - menuitem " Lineage" [ref=f5e69] [cursor=pointer]:
+              - generic [ref=f5e70]: 
+              - generic [ref=f5e71]: Lineage
+            - menuitem " Notebook" [ref=f5e72] [cursor=pointer]:
+              - generic [ref=f5e73]: 
+              - generic [ref=f5e74]: Notebook
+            - menuitem " Automation" [ref=f5e75] [cursor=pointer]:
+              - generic [ref=f5e76]: 
+              - generic [ref=f5e77]: Automation
+              - generic [aria-hidden] [ref=f5e78]: 
+            - text:  
+            - menuitem " Workflows" [ref=f5e79] [cursor=pointer]:
+              - generic [ref=f5e80]: 
+              - generic [ref=f5e81]: Workflows
+              - generic [aria-hidden] [ref=f5e82]: 
+            - menuitem " Marketplace" [ref=f5e83] [cursor=pointer]:
+              - generic [ref=f5e84]: 
+              - generic [ref=f5e85]: Marketplace
+              - generic [aria-hidden] [ref=f5e86]: 
+            - menuitem " Data Catalog" [ref=f5e87] [cursor=pointer]:
+              - generic [ref=f5e88]: 
+              - generic [ref=f5e89]: Data Catalog
+              - generic [aria-hidden] [ref=f5e90]: 
+            - menuitem " Org Structure" [ref=f5e91] [cursor=pointer]:
+              - generic [ref=f5e92]: 
+              - generic [ref=f5e93]: Org Structure
+              - generic [aria-hidden] [ref=f5e94]: 
+            - menuitem " Notifications" [ref=f5e95] [cursor=pointer]:
+              - generic [ref=f5e96]: 
+              - generic [ref=f5e97]: Notifications
+        - link " Excel" [ref=f5e98] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f5e99]: 
+          - generic [ref=f5e100]: Excel
+        - link " Settings" [ref=f5e101] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f5e102]: 
+          - generic [ref=f5e103]: Settings
+      - generic [ref=f5e104]:
+        - text:  
+        - button "" [ref=f5e108]
+        - generic [ref=f5e110]:
+          - button "A" [ref=f5e111] [cursor=pointer]
+          - text:     
+        - button "" [ref=f5e113]
+        - text: 
+  - text:             
+  - main [ref=f5e115]:
+    - generic [ref=f5e117]:
+      - generic [ref=f5e118]: 
+      - paragraph [ref=f5e119]: Loading DataAgent...

@@ -1,0 +1,70 @@
+.kpi-simple, .kpi-trend, .kpi-percentage, .kpi-sparkline, .kpi-mini-line, .kpi-mini-bar, .kpi-progress, .kpi-radial, .kpi-comparison, .kpi-target-actual, .kpi-icon, .kpi-status, .kpi-multi-value, .kpi-previous-period {
+  box-sizing: border-box;
+  font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+}
+
+.kpi-value { line-height: 1.2; letter-spacing: -0.02em; }
+.kpi-label { line-height: 1.4; }
+.kpi-prefix, .kpi-suffix { font-size: 0.6em; opacity: 0.85; }
+.kpi-description { line-height: 1.4; opacity: 0.7; }
+.kpi-subtitle { line-height: 1.4; opacity: 0.8; }
+
+.kpi-trend-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(0,0,0,0.2); border-radius: 12px;
+  padding: 3px 10px; font-size: 11px; backdrop-filter: blur(4px);
+}
+.kpi-trend-badge.positive { color: #86efac; }
+.kpi-trend-badge.negative { color: #fca5a5; }
+.kpi-trend-badge.neutral { color: #d1d5db; }
+
+.kpi-progress-bar { background: rgba(255,255,255,0.2); border-radius: 8px; height: 8px; width: 100%; overflow: hidden; }
+.kpi-progress-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; background: #fff; }
+
+.kpi-radial { display: flex; align-items: center; justify-content: center; }
+.kpi-radial svg { transform: rotate(-90deg); }
+.kpi-radial-track { fill: none; stroke: rgba(255,255,255,0.2); }
+.kpi-radial-fill { fill: none; stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+
+.kpi-comparison { display: flex; align-items: center; gap: 16px; }
+.kpi-comparison-main { flex: 1; text-align: center; }
+.kpi-comparison-divider { width: 1px; height: 60%; background: rgba(255,255,255,0.3); }
+.kpi-comparison-side { flex: 1; text-align: center; }
+
+.kpi-target-actual { display: flex; flex-direction: column; gap: 8px; }
+.kpi-target-actual .kpi-target-row { display: flex; justify-content: space-between; font-size: 12px; }
+.kpi-target-actual .kpi-target-bar { height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+.kpi-target-actual .kpi-target-fill { height: 100%; border-radius: 3px; }
+
+.kpi-icon-container { display: flex; align-items: center; gap: 10px; }
+.kpi-icon-container.icon-left { flex-direction: row; }
+.kpi-icon-container.icon-right { flex-direction: row-reverse; }
+.kpi-icon-container.icon-top { flex-direction: column; }
+.kpi-icon { display: flex; align-items: center; justify-content: center; }
+
+.kpi-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.kpi-status-dot.success { background: #10B981; }
+.kpi-status-dot.warning { background: #F59E0B; }
+.kpi-status-dot.danger { background: #EF4444; }
+.kpi-status-dot.info { background: #3B82F6; }
+.kpi-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; }
+
+.kpi-multi-value { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
+.kpi-multi-item { text-align: center; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; }
+.kpi-multi-item .kpi-value { font-size: 20px; font-weight: 700; }
+.kpi-multi-item .kpi-label { font-size: 10px; }
+
+.kpi-previous { display: flex; flex-direction: column; gap: 4px; }
+.kpi-previous-current { font-size: 28px; font-weight: 800; }
+.kpi-previous-previous { font-size: 13px; opacity: 0.7; }
+.kpi-previous-delta { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-top: 4px; }
+
+.kpi-mini-bars { display: flex; align-items: flex-end; gap: 2px; height: 40px; margin-top: 6px; }
+.kpi-mini-bar-item { flex: 1; background: rgba(255,255,255,0.6); border-radius: 2px 2px 0 0; transition: height 0.3s ease; min-height: 2px; }
+
+.kpi-sparkline-container { width: 100%; margin-top: 6px; }
+.kpi-sparkline-container canvas { width: 100%; height: 32px; opacity: 0.85; border-radius: 4px; }
+.kpi-mini-line-container { width: 100%; margin-top: 8px; }
+.kpi-mini-line-container canvas { width: 100%; height: 50px; opacity: 0.9; border-radius: 4px; }
+
+[data-theme="dark"] .kpi-status-badge { border: 1px solid rgba(255,255,255,0.1); }

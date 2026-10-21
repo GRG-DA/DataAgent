@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataAgent</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: #0f172a; color: #e2e8f0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .wrap { text-align: center; }
+  .logo {
+    width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 18px;
+    background: linear-gradient(135deg, #1783ff, #00c9c9);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 28px; color: #fff;
+    box-shadow: 0 8px 30px rgba(23, 131, 255, 0.35);
+  }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.2px; }
+  p { margin-top: 8px; font-size: 13px; color: #94a3b8; }
+  .spinner {
+    width: 28px; height: 28px; margin: 28px auto 0;
+    border: 3px solid rgba(148, 163, 184, 0.25);
+    border-top-color: #1783ff; border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">DA</div>
+    <h1>DataAgent</h1>
+    <p>Starting local server…</p>
+    <div class="spinner"></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Optional extras for a hosted (multi-replica) deployment.
+#
+# The app runs WITHOUT these: the PostgreSQL driver is imported lazily, so a
+# desktop / single-process install never needs them.  Install them on the
+# servers that run against PostgreSQL:
+#
+#     pip install -r requirements-saas.txt
+#
+# Then select the PostgreSQL backends:
+#
+#     export DATABASE_URL="postgresql://dataagent:secret@db.internal:5432/dataagent"
+#     export DATAAGENT_USER_STORE=postgres     # identity store + revoked-JTI list
+#     export SESSION_BACKEND=postgres           # shared sessions
+#
+# NOTE: keep this file separate from requirements.txt — the pinned FastAPI /
+# starlette pair must not be disturbed (see AGENTS.md).
+
+# PostgreSQL driver (v3) for the identity store and the session store.
+psycopg[binary]>=3.1,<4

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing — DataAgent</title>
+  <meta name="description" content="Choose a plan for DataAgent — AI-powered data analytics. Free ($0), Pro ($6/mo ≈ ₹499), and Lifetime ($120 ≈ ₹10,000); secure checkout via Razorpay.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3000006">
+  <link rel="stylesheet" href="css/pro.css?v=3000005">
+  <link rel="stylesheet" href="css/premium.css?v=2">
+  <style>
+    .billing-notice {
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      background: rgba(59,130,246,.12);
+      color: #3b82f6;
+      border: 1px solid rgba(59,130,246,.3);
+      text-align: center;
+    }
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .plan {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      border-radius: 14px;
+      background: var(--bg-card, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      box-shadow: 0 4px 20px rgba(15,23,42,.06);
+    }
+    .plan.recommended {
+      border-color: var(--accent, #6366f1);
+      box-shadow: 0 8px 30px rgba(99,102,241,.18);
+    }
+    .plan h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+    .plan .price { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+    .plan .price-hint {
+      display: block;
+      font-size: .85rem;
+      font-weight: 500;
+      color: var(--text-secondary, #64748b);
+      margin-top: 2px;
+    }
+    .plan .desc { font-size: .9rem; color: var(--text-secondary, #64748b); margin-bottom: 16px; flex: 1; }
+  </style>
+</head>
+<body data-fx-scene="pricing">
+
+<div class="bg-grid"></div>
+<div class="bg-orbs"></div>
+
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">DA</div>
+    <span>DataAgent</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="features.html">Features</a></li>
+    <li><a href="comparison.html">Comparison</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="billing.html" class="active">Pricing</a></li>
+    <li><a href="contact.html">Contact</a></li>
+    <li><a href="download.html" class="nav-cta">Download</a></li>
+  </ul>
+  <button class="nav-mobile-toggle" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<main class="main-content">
+  <section class="section">
+    <div class="container" style="max-width: 960px;">
+      <div class="section-header">
+        <div class="section-badge">Billing</div>
+        <h2 class="section-title">Choose your <span class="gradient-text">plan</span></h2>
+        <p class="section-subtitle">
+          Unlock unlimited AI queries, advanced analytics, and Power BI export.
+          Pro is $6/mo (&#8776;&#8377;499) — auto-renews monthly, cancel anytime.
+          Lifetime is $120 (&#8776;&#8377;10,000), one-time. Checkout is completed
+          securely on Razorpay (UPI, cards, netbanking) and unlocks with the
+          email you pay with — no codes to paste.
+        </p>
+      </div>
+
+      <div id="billing-root"></div>
+
+      <div class="inline-cta animate-on-scroll">
+        <p>Still deciding? The FAQ answers the usual billing questions.</p>
+        <a href="faq.html" class="btn btn-primary">Read the FAQ</a>
+        <a href="contact.html" class="btn btn-secondary">Contact us</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo" style="margin-bottom:4px;">
+          <div class="nav-logo-icon">DA</div>
+          <span>DataAgent</span>
+        </a>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+      </div>
+            <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="comparison.html">Comparison</a></li>
+          <li><a href="usecases.html">Use Cases</a></li>
+          <li><a href="billing.html">Pricing</a></li>
+          <li><a href="download.html">Download</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="docs.html">Getting Started</a></li>
+          <li><a href="blog.html">Blog</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 DataAgent. Free & Open Source.</span>
+      <span>Built with FastAPI + DuckDB + LLMs</span>
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top" aria-label="Scroll to top">&#8593;</button>
+
+<div class="toast" role="status">
+  <span class="toast-tag">NEW</span>
+  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <button class="toast-close" aria-label="Dismiss">&times;</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
+<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/lenis.min.js"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/fx-core.js?v=1"></script>
+<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
+<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script>
+  /* Optional no-code fallback: a Razorpay Payment Link (Dashboard → Payment
+     Links → Create Link), amount in INR. Lifetime only — monthly Pro must use
+     the subscription checkout (Payment Links cannot auto-renew):
+       lifetime → ₹10000 (note: "DataAgent Lifetime")
+     When set, the lifetime link is used instead of the Checkout popup flow.
+     Leave empty to use the default checkout (billing server at
+     window.BILLING_API_URL, default http://127.0.0.1:8090).
+
+     NOTE: set window.BILLING_API_URL to your real billing server. If it is
+     left unset (or points at localhost), the page renders a "checkout not
+     enabled on this deployment" notice and no payment is attempted. */
+  window.RAZORPAY_PAYMENT_LINKS = { lifetime: '' };
+  // window.BILLING_API_URL = 'https://billing.yourdomain.com';
+</script>
+<script src="js/billing.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "name": "From Template",
+  "blueprint": {
+    "nodes": [
+      {
+        "id": "n_uky4mnh",
+        "type": "data_source",
+        "label": "Data Source",
+        "x": 80,
+        "y": 80,
+        "config": {
+          "table_name": "chocolate_sales",
+          "filter": "",
+          "limit": 100
+        }
+      },
+      {
+        "id": "n_yvxoi3b",
+        "type": "sql",
+        "label": "SQL Query",
+        "x": 340,
+        "y": 80,
+        "config": {
+          "prompt": "",
+          "query": "SELECT * FROM input",
+          "limit": 1000
+        }
+      },
+      {
+        "id": "n_s84uny9",
+        "type": "filter",
+        "label": "Filter",
+        "x": 600,
+        "y": 80,
+        "config": {
+          "column": "Amount",
+          "operator": "greater_than",
+          "value": "10",
+          "condition": ""
+        }
+      },
+      {
+        "id": "n_hji80gu",
+        "type": "aggregate",
+        "label": "Aggregate",
+        "x": 860,
+        "y": 80,
+        "config": {
+          "group_by": "Region",
+          "aggregate_col": "Amount",
+          "aggregate_fn": "sum",
+          "output_name": ""
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_z8g1k5t",
+        "from": "n_uky4mnh",
+        "to": "n_yvxoi3b",
+        "label": ""
+      },
+      {
+        "id": "e_y3vnsr8",
+        "from": "n_yvxoi3b",
+        "to": "n_s84uny9",
+        "label": ""
+      },
+      {
+        "id": "e_wj5cavs",
+        "from": "n_s84uny9",
+        "to": "n_hji80gu",
+        "label": ""
+      }
+    ],
+    "viewport": {
+      "x": 418.47174143108225,
+      "y": 192.32371216524166,
+      "zoom": 0.48717927500000036
+    },
+    "name": "From Template"
+  }
+}

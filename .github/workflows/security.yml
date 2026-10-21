@@ -1,0 +1,110 @@
+name: security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # python  -> the FastAPI backend (api/, agent/, etl/, ...)
+        # javascript -> the vanilla front end under web/ (and website-react/)
+        language: ["python", "javascript"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      # analyze uploads the SARIF to GitHub code scanning automatically.
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  secret-scan:
+    name: gitleaks (history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks scans the history, so it needs the full clone.
+          fetch-depth: 0
+      # gitleaks exits non-zero when it finds a leak, which fails the step.
+      # The docker image is used instead of gitleaks/gitleaks-action because
+      # the action requires a GITLEAKS_LICENSE for organisation accounts.
+      - name: Scan the git history for secrets
+        uses: zricethezav/gitleaks:v8.18.4
+        with:
+          args: detect --source . --redact --verbose --log-opts="--all"
+
+  dependency-review:
+    name: dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      # Reviews the dependency delta of the pull request and fails on a
+      # vulnerable or newly introduced GPL-licensed package. Needs the
+      # dependency graph to be enabled on the repository.
+      # NOTE: this action has no floating `v4`/`v5` tag, so it is pinned.
+      - uses: actions/dependency-review-action@v4.9.0
+        with:
+          fail-on-severity: high
+
+  agentshield:
+    name: agentshield scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install agentshield
+        # agentshield ships as the npm package `ecc-agentshield`; the version
+        # is pinned so the committed baseline stays comparable.
+        run: npm install -g ecc-agentshield@1.6.0
+      - name: agentshield scan
+        run: agentshield scan --path . --format json --output agentshield-report.json
+      # The tree has accepted agentshield findings today, so the gate is a
+      # drift gate: a NEW critical/high finding fails the job. The baseline
+      # (scripts/ci/agentshield-baseline.json) is the only accepted
+      # exception - extend it deliberately, never silently.
+      - name: Fail on new critical/high agentshield findings
+        run: |
+          python3 scripts/ci/agentshield_gate.py \
+            --report agentshield-report.json \
+            --baseline scripts/ci/agentshield-baseline.json
+      - name: agentshield SARIF
+        if: always()
+        continue-on-error: true
+        run: agentshield scan --path . --format sarif --output agentshield.sarif
+      - name: Upload agentshield SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: agentshield.sarif
+          category: agentshield

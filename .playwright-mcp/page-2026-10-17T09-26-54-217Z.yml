@@ -1,0 +1,85 @@
+- generic [active] [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - generic [ref=f4e3]:
+      - link [ref=f4e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f4e6]:
+        - link " Home" [ref=f4e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f4e8]: 
+          - generic [ref=f4e9]: Home
+        - generic [ref=f4e10]:
+          - button " Data " [ref=f4e11] [cursor=pointer]:
+            - generic [ref=f4e12]: 
+            - generic [ref=f4e13]: Data
+            - generic [ref=f4e14]: 
+          - menuitem " Upload" [ref=f4e15] [cursor=pointer]:
+            - generic [ref=f4e16]: 
+            - generic [ref=f4e17]: Upload
+          - menuitem " Warehouse" [ref=f4e18] [cursor=pointer]:
+            - generic [ref=f4e19]: 
+            - generic [ref=f4e20]: Warehouse
+        - generic [ref=f4e21]:
+          - button " Analyze " [ref=f4e22] [cursor=pointer]:
+            - generic [ref=f4e23]: 
+            - generic [ref=f4e24]: Analyze
+            - generic [ref=f4e25]: 
+          - menuitem " Dashboard Studio" [ref=f4e26] [cursor=pointer]:
+            - generic [ref=f4e27]: 
+            - generic [ref=f4e28]: Dashboard Studio
+          - menuitem " Analysis" [ref=f4e29] [cursor=pointer]:
+            - generic [ref=f4e30]: 
+            - generic [ref=f4e31]: Analysis
+          - menuitem " SQL Explorer" [ref=f4e32] [cursor=pointer]:
+            - generic [ref=f4e33]: 
+            - generic [ref=f4e34]: SQL Explorer
+        - generic [ref=f4e35]:
+          - button " Tools " [ref=f4e36] [cursor=pointer]:
+            - generic [ref=f4e37]: 
+            - generic [ref=f4e38]: Tools
+            - generic [ref=f4e39]: 
+          - menuitem " Compare" [ref=f4e40] [cursor=pointer]:
+            - generic [ref=f4e41]: 
+            - generic [ref=f4e42]: Compare
+          - menuitem " Anomalies" [ref=f4e43] [cursor=pointer]:
+            - generic [ref=f4e44]: 
+            - generic [ref=f4e45]: Anomalies
+          - menuitem " Quality Trends" [ref=f4e46] [cursor=pointer]:
+            - generic [ref=f4e47]: 
+            - generic [ref=f4e48]: Quality Trends
+          - menuitem " Stats" [ref=f4e49] [cursor=pointer]:
+            - generic [ref=f4e50]: 
+            - generic [ref=f4e51]: Stats
+          - menuitem " Forecast" [ref=f4e52] [cursor=pointer]:
+            - generic [ref=f4e53]: 
+            - generic [ref=f4e54]: Forecast
+          - menuitem " Lineage" [ref=f4e55] [cursor=pointer]:
+            - generic [ref=f4e56]: 
+            - generic [ref=f4e57]: Lineage
+          - menuitem " Notebook" [ref=f4e58] [cursor=pointer]:
+            - generic [ref=f4e59]: 
+            - generic [ref=f4e60]: Notebook
+          - menuitem " Notifications" [ref=f4e61] [cursor=pointer]:
+            - generic [ref=f4e62]: 
+            - generic [ref=f4e63]: Notifications
+        - link " Excel" [ref=f4e64] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f4e65]: 
+          - generic [ref=f4e66]: Excel
+        - link " Settings" [ref=f4e67] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f4e68]: 
+          - generic [ref=f4e69]: Settings
+      - generic [ref=f4e70]:
+        - text:  
+        - button "" [ref=f4e74]
+        - generic [ref=f4e76]:
+          - button "E" [ref=f4e77] [cursor=pointer]
+          - text:     
+        - button "" [ref=f4e79]
+        - text: 
+  - text:             
+  - main [ref=f4e81]:
+    - generic [ref=f4e83]:
+      - generic [ref=f4e84]: 
+      - paragraph [ref=f4e85]: Loading DataAgent...

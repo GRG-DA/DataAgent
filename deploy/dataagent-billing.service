@@ -1,0 +1,35 @@
+# DataAgent billing server — systemd unit (VPS / venv deployment).
+#
+#   sudo cp deploy/dataagent-billing.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dataagent-billing
+#   sudo systemctl status dataagent-billing
+#   sudo journalctl -u dataagent-billing -f
+#
+# Expects:
+#   /opt/dataagent-billing        repo subset (billing_server/ keygen_app/ .venv/)
+#   /etc/dataagent/billing.env    secrets + config (chmod 600, root:root)
+
+[Unit]
+Description=DataAgent billing server (uvicorn on 127.0.0.1:8090)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=dataagent
+Group=dataagent
+WorkingDirectory=/opt/dataagent-billing
+EnvironmentFile=/etc/dataagent/billing.env
+# Single worker on purpose: the SQLite fallback store and in-process rate
+# limits assume one process. The Turso-backed store is the hosted default.
+ExecStart=/opt/dataagent-billing/.venv/bin/uvicorn billing_server.main:app --host 127.0.0.1 --port 8090 --workers 1
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/dataagent-billing
+
+[Install]
+WantedBy=multi-user.target

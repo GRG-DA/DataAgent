@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<title>Terms of Service - [[COMPANY_NAME]]</title>
+<style>
+:root{--ink:#16202c;--muted:#5b6b7c;--line:#dfe6ee;--bg:#f7f9fc;--card:#fff;--accent:#1f5fa9;--accent-soft:#eaf1fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:48px 24px 96px}
+header.doc{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:34px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 10px}
+.meta{color:var(--muted);font-size:.92rem;margin:0}
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:0 0 34px}
+nav.toc h2{font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;border:0;padding:0}
+nav.toc ol{margin:0;padding-left:20px}
+nav.toc li{margin:4px 0}
+nav.toc a{color:var(--accent);text-decoration:none}
+nav.toc a:hover{text-decoration:underline}
+section{margin:0 0 34px}
+h2{font-size:1.24rem;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:1.02rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:5px 0}
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:.94rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:.88em}
+.callout{background:var(--accent-soft);border-left:4px solid var(--accent);padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 18px}
+footer.doc{border-top:1px solid var(--line);margin-top:48px;padding-top:20px;color:var(--muted);font-size:.9rem}
+@media (max-width:640px){.wrap{padding:28px 16px 64px}h1{font-size:1.55rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>Terms of Service</h1>
+  <p class="meta">[[COMPANY_NAME]] &middot; Effective: [[EFFECTIVE_DATE]] &middot; These terms govern your use of the hosted DataAgent service.</p>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#agreement">The agreement</a></li>
+    <li><a href="#service">The service</a></li>
+    <li><a href="#accounts">Accounts and access</a></li>
+    <li><a href="#customerdata">Your data</a></li>
+    <li><a href="#acceptable">Acceptable use</a></li>
+    <li><a href="#fees">Plans, fees and changes</a></li>
+    <li><a href="#ip">Intellectual property</a></li>
+    <li><a href="#availability">Availability and support</a></li>
+    <li><a href="#warranty">Disclaimers and liability</a></li>
+    <li><a href="#indemnity">Indemnity</a></li>
+    <li><a href="#term">Term and termination</a></li>
+    <li><a href="#law">Governing law</a></li>
+    <li><a href="#contact">Contact us</a></li>
+  </ol>
+</nav>
+
+<section id="agreement">
+  <h2>1. The agreement</h2>
+  <p>
+    These Terms of Service ("Terms") are the legal agreement between
+    [[COMPANY_NAME]] ("we", "us") and the person or organisation that uses the
+    hosted DataAgent service ("the Service"). By creating an account or using the
+    Service you accept these Terms. If you accept them on behalf of an
+    organisation, you confirm that you are authorised to bind that organisation.
+  </p>
+  <p>
+    These Terms, the <a href="privacy.html">Privacy Policy</a> and, where we
+    process personal data on your behalf, the <a href="dpa.html">Data Processing
+    Addendum</a> form the whole agreement between us. If a separate written
+    agreement signed by both of us says something different, that written
+    agreement wins.
+  </p>
+  <p>
+    [[COMPANY_NAME]] is established in [[JURISDICTION]] at [[COMPANY_ADDRESS]].
+  </p>
+</section>
+
+<section id="service">
+  <h2>2. The service</h2>
+  <p>
+    The Service lets you upload business data into an analytics warehouse, query it
+    with SQL, run an approved Python sandbox for analysis, ask natural-language
+    questions of the data, and publish dashboards and reports. Each account belongs
+    to a tenant, and each tenant's tables live in a dedicated schema that other
+    tenants cannot read.
+  </p>
+  <p>
+    We improve the Service continuously. We may add, change or retire features. We
+    will not materially reduce the core functionality of a plan you have paid for
+    during the term of that plan without giving you a comparable alternative or a
+    refund for the remainder of the term.
+  </p>
+  <p>
+    The Service is not a source of truth for your records. It is an analysis layer
+    over data you keep elsewhere. You remain responsible for the accuracy and the
+    completeness of what you upload.
+  </p>
+</section>
+
+<section id="accounts">
+  <h2>3. Accounts and access</h2>
+  <ul>
+    <li>You must be at least 16 years old and able to enter a binding contract.</li>
+    <li>You must give accurate registration details and keep them accurate.</li>
+    <li>You are responsible for everything done under your account and under API
+        keys you create. Tell us promptly if you think a key has leaked.</li>
+    <li>You must use a unique password, enable multi-factor authentication where
+        offered, and not share credentials.</li>
+    <li>You may not resell, sub-license or provide the Service to third parties as a
+        standalone offering, and you may not attempt to gain access to another
+        tenant's data.</li>
+  </ul>
+  <p>
+    We may suspend an account immediately where we reasonably believe it is being
+    used to attack the Service, to access another tenant's data, or to upload
+    unlawful material. We will tell you why as soon as it is safe to do so.
+  </p>
+</section>
+
+<section id="customerdata">
+  <h2>4. Your data</h2>
+  <p>
+    You keep ownership of everything you upload and everything you create in the
+    Service. You grant us the limited licence we need to host, process, transmit
+    and display it to you and to the people you share it with, and to run the
+    assistant on your behalf.
+  </p>
+  <p>
+    You are responsible for having the right to upload the data you upload, and for
+    complying with any law that applies to it. Do not upload personal data you are
+    not entitled to process, and do not upload special-category data unless we have
+    agreed in writing how it will be handled.
+  </p>
+  <p>
+    You can export your tables at any time, in CSV, Parquet or Excel. When your
+    account closes we keep your data for the retention window set out in the
+    <a href="privacy.html">Privacy Policy</a> and then delete it, including your
+    tenant schema and your raw uploads.
+  </p>
+</section>
+
+<section id="acceptable">
+  <h2>5. Acceptable use</h2>
+  <p>You must not use the Service to:</p>
+  <ul>
+    <li>break the law, or infringe the rights of anyone else;</li>
+    <li>store or distribute malware, or content that is unlawful or that you do not
+        have the right to share;</li>
+    <li>attempt to access another tenant's data, probe the Service for weaknesses
+        without our written permission, or circumvent rate limits;</li>
+    <li>reverse engineer the Service other than to the extent that law expressly
+        permits it;</li>
+    <li>use the assistant to produce unlawful content or to make decisions about
+        people that a human being must take responsibility for.</li>
+  </ul>
+  <p>
+    We enforce usage limits (requests per minute, uploads per hour, model calls per
+    day). The limits that apply to you are shown in the product. We may reduce a
+    limit for an account that is consuming the Service in a way that degrades it
+    for others.
+  </p>
+</section>
+
+<section id="fees">
+  <h2>6. Plans, fees and changes</h2>
+  <p>
+    The Service is sold in plans. The price, the included usage and the limits of
+    each plan are shown at the point of purchase. Checkout is completed on our
+    billing service; payment details are handled there and never reach the
+    analytics application.
+  </p>
+  <p>
+    Fees are invoiced in advance and are exclusive of tax. Where tax applies, it is
+    added at the point of sale. A plan renews at the same price unless we give you
+    at least 30 days' notice of a change.
+  </p>
+  <p>
+    If a plan includes a usage allowance and you exceed it, we will tell you. We
+    will not silently downgrade your data or delete your content. Where a hard
+    limit applies, the affected action is refused until the allowance resets or you
+    upgrade.
+  </p>
+</section>
+
+<section id="ip">
+  <h2>7. Intellectual property</h2>
+  <p>
+    The Service, including the software, the user interface, the documentation and
+    the trade marks, belongs to [[COMPANY_NAME]] and its licensors. We grant you a
+    limited, revocable, non-exclusive, non-transferable licence to use the Service
+    for your internal business purposes for as long as these Terms are in force.
+  </p>
+  <p>
+    Feedback you send us may be used to improve the Service without restriction or
+    obligation. If you want us not to use a specific idea, say so in writing before
+    you share it.
+  </p>
+</section>
+
+<section id="availability">
+  <h2>8. Availability and support</h2>
+  <p>
+    We aim for high availability and publish current status and incident history
+    for the hosted service. The Service may be unavailable for maintenance, and
+    maintenance windows are announced in advance where practicable.
+  </p>
+  <p>
+    Support is provided during business hours in [[JURISDICTION]] by email to
+    [[CONTACT_EMAIL]]. A plan may specify a response time; where it does not, we
+    aim to acknowledge a report within one business day.
+  </p>
+</section>
+
+<section id="warranty">
+  <h2>9. Disclaimers and liability</h2>
+  <p>
+    The Service is provided "as is" and "as available". Except as expressly stated
+    in these Terms, and to the extent permitted by law, [[COMPANY_NAME]] gives no
+    other warranty, express or implied, including any implied warranty of
+    merchantability, fitness for a particular purpose or non-infringement. We do
+    not warrant that the Service will be uninterrupted, that the assistant's output
+    will be accurate, or that the Service will meet your particular business
+    requirement.
+  </p>
+  <p>
+    Nothing in these Terms limits liability for death or personal injury caused by
+    negligence, for fraud, or for any other liability that cannot lawfully be
+    limited.
+  </p>
+  <p>
+    Subject to that, and to the fullest extent permitted by law, neither party is
+    liable for indirect or consequential loss, loss of profit, loss of revenue,
+    loss of anticipated savings, loss of data, or loss of goodwill. Each party's
+    total liability arising out of or in connection with the Service is limited to
+    the greater of the fees you paid to us for the Service in the twelve months
+    before the event giving rise to the claim, or one hundred United States
+    dollars (100 USD).
+  </p>
+  <p>
+    The limitations in this section apply to the maximum extent permitted by the
+    law of [[JURISDICTION]], and they apply whether the claim is in contract, tort
+    (including negligence), or otherwise.
+  </p>
+</section>
+
+<section id="indemnity">
+  <h2>10. Indemnity</h2>
+  <p>
+    You agree to indemnify [[COMPANY_NAME]] against claims, damages and reasonable
+    costs arising from your use of the Service in breach of these Terms, from data
+    you upload that infringes a third party's rights, or from your unlawful use of
+    the assistant.
+  </p>
+</section>
+
+<section id="term">
+  <h2>11. Term and termination</h2>
+  <p>
+    These Terms apply from the moment you accept them and continue until they are
+    terminated. We may terminate or suspend the Service, or an individual account,
+    for a material breach that we cannot remedy, for non-payment, or where
+    continued operation would be unlawful. Where the breach is remediable, we will
+    normally give you 30 days' notice and a chance to fix it.
+  </p>
+  <p>
+    You may close your account at any time from the account settings. Closing the
+    account ends the term immediately; fees already paid for the current period are
+    not refundable, except where the Service was materially unavailable, where we
+    failed to provide the service we sold you, or where the law says otherwise.
+  </p>
+  <p>
+    On termination, your access ends, your tenant schema is dropped, and your data
+    is deleted on the schedule in the <a href="privacy.html">Privacy Policy</a>.
+    Sections 4, 7, 9, 10, 11 and 12 survive termination.
+  </p>
+</section>
+
+<section id="law">
+  <h2>12. Governing law</h2>
+  <p>
+    These Terms and any dispute arising out of them are governed by the laws of
+    [[JURISDICTION]], and the courts of [[JURISDICTION]] have exclusive
+    jurisdiction, without prejudice to any mandatory consumer protections that
+    apply where you live. If you are a consumer, this choice does not remove the
+    protection of the mandatory law of your country of residence.
+  </p>
+  <p>
+    We will try to resolve a dispute informally first. If we cannot, either party
+    may take the matter to the courts of [[JURISDICTION]]. Nothing here prevents
+    you from raising a concern with your data protection authority.
+  </p>
+</section>
+
+<section id="contact">
+  <h2>13. Contact us</h2>
+  <p>
+    [[COMPANY_NAME]]<br>
+    [[COMPANY_ADDRESS]]<br>
+    Email: [[CONTACT_EMAIL]]<br>
+    Security contact: [[SECURITY_EMAIL]]
+  </p>
+  <p>
+    We may update these Terms. Material changes are announced at least 30 days
+    before they take effect, and the date at the top of this page always shows the
+    current version.
+  </p>
+</section>
+
+<footer class="doc">
+  <p>
+    [[COMPANY_NAME]] &mdash; Terms of Service. This page is a static document served
+    from the application's own origin; it loads no external scripts, styles or
+    images.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

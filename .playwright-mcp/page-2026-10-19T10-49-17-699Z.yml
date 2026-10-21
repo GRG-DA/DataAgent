@@ -1,0 +1,208 @@
+- generic [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link [ref=f1e4] [cursor=pointer]:
+        - /url: "#dashboard"
+      - navigation [ref=f1e6]:
+        - link " Home" [ref=f1e7] [cursor=pointer]:
+          - /url: "#dashboard"
+          - generic [ref=f1e8]: 
+          - generic [ref=f1e9]: Home
+        - button " Data " [ref=f1e11] [cursor=pointer]:
+          - generic [ref=f1e12]: 
+          - generic [ref=f1e13]: Data
+          - generic [ref=f1e14]: 
+        - button " Analyze " [ref=f1e16] [cursor=pointer]:
+          - generic [ref=f1e17]: 
+          - generic [ref=f1e18]: Analyze
+          - generic [ref=f1e19]: 
+        - button " Tools " [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: 
+          - generic [ref=f1e23]: Tools
+          - generic [ref=f1e24]: 
+        - link " Excel" [ref=f1e25] [cursor=pointer]:
+          - /url: "#excel"
+          - generic [ref=f1e26]: 
+          - generic [ref=f1e27]: Excel
+        - link " Settings" [ref=f1e28] [cursor=pointer]:
+          - /url: "#settings"
+          - generic [ref=f1e29]: 
+          - generic [ref=f1e30]: Settings
+      - generic [ref=f1e31]:
+        - text:  
+        - button "" [ref=f1e35]
+        - generic [ref=f1e37]:
+          - button "V" [ref=f1e38] [cursor=pointer]
+          - text:     
+        - button "" [ref=f1e40]
+        - text: 
+  - text:            
+  - main [ref=f1e42]:
+    - generic [ref=f1e645]:
+      - generic [ref=f1e646]:
+        - generic [ref=f1e647]:
+          - generic: File
+          - generic [ref=f1e648]:
+            - button " Open" [ref=f1e649] [cursor=pointer]:
+              - generic [ref=f1e650]: 
+              - generic [ref=f1e651]: Open
+            - button " Save" [ref=f1e652] [cursor=pointer]:
+              - generic [ref=f1e653]: 
+              - generic [ref=f1e654]: Save
+            - button " CSV" [ref=f1e655] [cursor=pointer]:
+              - generic [ref=f1e656]: 
+              - generic [ref=f1e657]: CSV
+        - generic [ref=f1e659]:
+          - generic: Export & Print
+          - generic [ref=f1e660]:
+            - button " Export" [ref=f1e661] [cursor=pointer]:
+              - generic [ref=f1e662]: 
+              - generic [ref=f1e663]: Export
+            - button " Print" [ref=f1e664] [cursor=pointer]:
+              - generic [ref=f1e665]: 
+              - generic [ref=f1e666]: Print
+            - button " Chart" [ref=f1e667] [cursor=pointer]:
+              - generic [ref=f1e668]: 
+              - generic [ref=f1e669]: Chart
+        - generic [ref=f1e671]:
+          - generic: Edit
+          - generic [ref=f1e672]:
+            - button "" [ref=f1e673] [cursor=pointer]
+            - button "" [ref=f1e675] [cursor=pointer]
+            - button " Find" [ref=f1e678] [cursor=pointer]:
+              - generic [ref=f1e679]: 
+              - generic [ref=f1e680]: Find
+        - generic [ref=f1e682]:
+          - generic: Cells
+          - generic [ref=f1e683]:
+            - button " Freeze" [ref=f1e684] [cursor=pointer]:
+              - generic [ref=f1e685]: 
+              - generic [ref=f1e686]: Freeze
+            - button "+ Add" [ref=f1e688] [cursor=pointer]:
+              - generic [ref=f1e689]: +
+              - generic [ref=f1e690]: Add
+            - button " Del" [ref=f1e691] [cursor=pointer]:
+              - generic [ref=f1e692]: 
+              - generic [ref=f1e693]: Del
+        - generic [ref=f1e695]:
+          - generic: Sort & Filter
+          - generic [ref=f1e696]:
+            - button "" [ref=f1e697] [cursor=pointer]
+            - button "" [ref=f1e699] [cursor=pointer]
+            - button "" [ref=f1e701] [cursor=pointer]
+            - button " Filter" [ref=f1e704] [cursor=pointer]:
+              - generic [ref=f1e705]: 
+              - generic [ref=f1e706]: Filter
+        - generic [ref=f1e708]:
+          - generic: Format
+          - generic [ref=f1e709]:
+            - button "" [ref=f1e710] [cursor=pointer]
+            - button "" [ref=f1e712] [cursor=pointer]
+            - button "" [ref=f1e714] [cursor=pointer]
+            - button "" [ref=f1e718] [cursor=pointer]
+            - button "" [ref=f1e721] [cursor=pointer]
+            - button "" [ref=f1e724] [cursor=pointer]
+            - button "" [ref=f1e726] [cursor=pointer]
+            - button "" [ref=f1e728] [cursor=pointer]
+            - combobox "Number format" [ref=f1e731] [cursor=pointer]:
+              - option "General" [selected]
+              - option "Number"
+              - option "Currency"
+              - option "Percent"
+              - option "Date"
+              - option "Comma"
+            - button "" [ref=f1e733] [cursor=pointer]
+            - button "" [ref=f1e735] [cursor=pointer]
+            - button "" [ref=f1e738] [cursor=pointer]
+            - button "" [ref=f1e741] [cursor=pointer]
+        - generic [ref=f1e744]:
+          - generic: Names
+          - generic [ref=f1e745]:
+            - combobox "Named ranges — select to jump" [ref=f1e746] [cursor=pointer]:
+              - option "(None)" [selected]
+            - button " Define" [ref=f1e748] [cursor=pointer]:
+              - generic [ref=f1e749]: 
+              - generic [ref=f1e750]: Define
+        - generic [ref=f1e752]:
+          - generic: Formula
+          - button "AutoSum" [ref=f1e754] [cursor=pointer]
+        - generic [ref=f1e757]:
+          - generic: Data
+          - generic [ref=f1e758]:
+            - combobox "Choose a warehouse table to open in the grid" [ref=f1e759] [cursor=pointer]:
+              - option "Choose a table..."
+              - option "key_redemptions - 1 rows"
+              - option "ppc_ads - 29 rows"
+              - option "premium_settings - 2 rows"
+              - option "smoke_sales - 8 rows"
+              - option "verify_orders - 8 rows" [selected]
+            - button "+ Sheet" [ref=f1e761] [cursor=pointer]:
+              - generic [ref=f1e762]: +
+              - generic [ref=f1e763]: Sheet
+        - generic [ref=f1e765]:
+          - generic: Data Tools
+          - generic [ref=f1e766]:
+            - button "" [ref=f1e767] [cursor=pointer]
+            - button "" [ref=f1e769] [cursor=pointer]
+            - button "" [ref=f1e772] [cursor=pointer]
+        - generic [ref=f1e775]:
+          - generic: Annotations
+          - generic [ref=f1e776]:
+            - button "" [ref=f1e777] [cursor=pointer]
+            - button "" [ref=f1e779] [cursor=pointer]
+        - generic [ref=f1e782]:
+          - generic: View
+          - generic [ref=f1e783]:
+            - button " AI" [ref=f1e784] [cursor=pointer]:
+              - generic [ref=f1e785]: 
+              - generic [ref=f1e786]: AI
+            - button " Tools" [ref=f1e787] [cursor=pointer]:
+              - generic [ref=f1e788]: 
+              - generic [ref=f1e789]: Tools
+      - text:     
+      - generic [ref=f1e790]:
+        - generic [ref=f1e791]:
+          - generic [ref=f1e792]:
+            - generic [ref=f1e794]:
+              - textbox "Cell reference — type a cell address to jump to (e.g. B5)" [ref=f1e795]: A1
+              - button "fx" [ref=f1e797] [cursor=pointer]
+              - textbox "Cell value (type = to enter a formula)" [ref=f1e798]:
+                - /placeholder: ""
+                - text: key_hash
+            - generic [ref=f1e800]:
+              - generic [ref=f1e801]:
+                - generic [ref=f1e802]:   
+                - generic [ref=f1e804]:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - textbox [active]
+              - list [ref=f1e809]:
+                - listitem [ref=f1e810] [cursor=pointer]
+                - listitem [ref=f1e818] [cursor=pointer]: key_redemptions
+            - text: 
+          - generic [ref=f1e819]:
+            - generic "key_redemptions" [ref=f1e821] [cursor=pointer]
+            - button "+" [ref=f1e823] [cursor=pointer]
+          - generic [ref=f1e825]:
+            - generic [ref=f1e826]: "\"key_redemptions\" -- 1 rows × 4 columns loaded. Edit cells, type formulas (=SUM(A1:A5)), add sheets."
+            - generic [ref=f1e827]:
+              - generic [ref=f1e828]: "Min: -"
+              - generic [ref=f1e829]: "Max: -"
+              - generic [ref=f1e830]: "Average: 0"
+              - generic [ref=f1e831]: "Count: 1"
+              - generic [ref=f1e832]: "Numeric: 0"
+              - generic [ref=f1e833]: "Sum: 0"
+          - generic [ref=f1e834]:
+            - generic [ref=f1e835]:
+              - generic [ref=f1e836]: 
+              - text: "Analysis sheet:"
+            - textbox "Clean / Pivot / Merge / AI results are appended here as labeled sections." [ref=f1e837]:
+              - /placeholder: analysis
+              - text: verify_orders_analysis
+            - generic [ref=f1e838]: All tasks append here with section labels.
+          - text:                            
+        - text:   
+      - text:   +   +                    
+  - generic [ref=f1e239]: Loading...

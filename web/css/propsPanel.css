@@ -1,0 +1,710 @@
+/* ============================================================
+   Dashboard Builder — Properties Panel & UI Controls
+   File: web/css/propsPanel.css
+   ============================================================ */
+
+/* ============================================================
+   1. PROPERTIES PANEL (dock)
+   ============================================================ */
+
+.bd-props {
+  position: fixed;
+  top: 80px;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  z-index: 500;
+  background: var(--color-card-bg);
+  border-left: 1px solid var(--color-card-border);
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: bd-props-in 0.16s ease;
+}
+
+.bd-props-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-card-border);
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.bd-props-type-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(123, 97, 255, 0.1);
+  color: #7B61FF;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.bd-props-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-content-text);
+}
+
+.bd-props-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   2. TAB BAR
+   ============================================================ */
+
+.bd-props-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-card-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.bd-props-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.bd-props-tab {
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-content-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bd-props-tab:hover {
+  color: var(--color-content-text);
+  background: var(--color-surface-hover);
+}
+
+.bd-props-tab.active {
+  color: #7B61FF;
+  border-bottom-color: #7B61FF;
+}
+
+.bd-props-tab i {
+  font-size: 10px;
+}
+
+/* ============================================================
+   3. TAB PANELS
+   ============================================================ */
+
+.bd-props-tab-panel {
+  display: none;
+  padding: 12px 14px;
+}
+
+.bd-props-tab-panel.active {
+  display: block;
+}
+
+/* ============================================================
+   4. SECTION HEADERS (collapsible)
+   ============================================================ */
+
+.bd-props-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  margin: 10px 0 6px;
+  border-bottom: 1px solid var(--color-card-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+.bd-props-section-header:first-child {
+  margin-top: 0;
+}
+
+.bd-props-section-header span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7B61FF;
+}
+
+.bd-props-section-header i {
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  transition: transform 0.2s;
+}
+
+.bd-props-section-header.collapsed i {
+  transform: rotate(-90deg);
+}
+
+.bd-props-section-body {
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+
+.bd-props-section-body.collapsed {
+  max-height: 0 !important;
+  padding: 0;
+}
+
+/* ============================================================
+   5. FIELDS AND CONTROLS
+   ============================================================ */
+
+.bd-props-field {
+  margin-bottom: 10px;
+}
+
+.bd-props-label {
+  display: block;
+  font-size: 11px;
+  color: var(--color-content-text-secondary);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.bd-props-ctrl .form-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.bd-props-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.bd-props-help {
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+/* ============================================================
+   6. TOGGLE SWITCH
+   ============================================================ */
+
+.bd-props-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.bd-props-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.bd-props-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  border-radius: 22px;
+  background: var(--color-card-border);
+  transition: 0.15s;
+}
+
+.bd-props-slider:before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.15s;
+}
+
+.bd-props-switch input:checked + .bd-props-slider {
+  background: #7B61FF;
+}
+
+.bd-props-switch input:checked + .bd-props-slider:before {
+  transform: translateX(18px);
+}
+
+/* ============================================================
+   7. COLOR PICKER COMPOUND CONTROL
+   ============================================================ */
+
+.bd-ctrl-color-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.bd-ctrl-color-hex {
+  flex: 1;
+}
+
+.bd-ctrl-color-pick {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-card-border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bd-ctrl-color-pick::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.bd-ctrl-color-pick::-webkit-color-swatch {
+  border-radius: 4px;
+  border: none;
+}
+
+/* ============================================================
+   8. SLIDER CONTROL
+   ============================================================ */
+
+.bd-ctrl-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bd-ctrl-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-card-border);
+  outline: none;
+}
+
+.bd-ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #7B61FF;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.bd-ctrl-slider-val {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: right;
+  color: var(--color-content-text);
+}
+
+/* ============================================================
+   9. ALIGNMENT CONTROL
+   ============================================================ */
+
+.bd-ctrl-align {
+  display: flex;
+  gap: 2px;
+}
+
+.bd-ctrl-align-btn {
+  border: 1px solid var(--color-card-border);
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-content-text-secondary);
+  font-size: 11px;
+  transition: all 0.12s;
+}
+
+.bd-ctrl-align-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.bd-ctrl-align-btn.active {
+  background: #7B61FF;
+  color: #fff;
+  border-color: #7B61FF;
+}
+
+/* ============================================================
+   10. SPACING CONTROL (box model)
+   ============================================================ */
+
+.bd-ctrl-spacing {
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.bd-ctrl-spacing-visual {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 4px;
+  align-items: center;
+}
+
+.bd-ctrl-spacing-cell {
+  text-align: center;
+}
+
+.bd-ctrl-spacing-cell label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--color-content-text-secondary);
+}
+
+.bd-ctrl-spacing-cell input {
+  width: 48px;
+  text-align: center;
+  font-size: 11px;
+  padding: 3px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 4px;
+}
+
+.bd-ctrl-spacing-center {
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  text-align: center;
+}
+
+/* ============================================================
+   11. BORDER CONTROL
+   ============================================================ */
+
+.bd-ctrl-border {
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.bd-ctrl-border-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bd-ctrl-border-row select {
+  width: auto;
+  min-width: 72px;
+}
+
+.bd-ctrl-border-row input[type="number"] {
+  width: 48px;
+}
+
+.bd-ctrl-border-label {
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* ============================================================
+   12. GRADIENT CONTROL
+   ============================================================ */
+
+.bd-ctrl-gradient {
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.bd-ctrl-gradient-preview {
+  height: 24px;
+  border-radius: 6px;
+  margin-top: 6px;
+  transition: background 0.2s;
+  border: 1px solid var(--color-card-border);
+}
+
+.bd-ctrl-gradient-angle {
+  width: 56px !important;
+}
+
+/* ============================================================
+   13. MULTICOLOR / SWATCH CONTROL
+   ============================================================ */
+
+.bd-ctrl-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.bd-ctrl-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.12s;
+}
+
+.bd-ctrl-swatch:hover {
+  transform: scale(1.15);
+}
+
+.bd-ctrl-swatch.active {
+  border-color: var(--color-content-text);
+  box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.3);
+}
+
+/* ============================================================
+   14. ICON PICKER CONTROL
+   ============================================================ */
+
+.bd-ctrl-icon-picker {
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.bd-ctrl-icon-search {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.bd-ctrl-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.bd-ctrl-icon-btn {
+  border: none;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-content-text-secondary);
+  font-size: 12px;
+  transition: all 0.1s;
+}
+
+.bd-ctrl-icon-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-content-text);
+}
+
+.bd-ctrl-icon-btn.active {
+  background: rgba(123, 97, 255, 0.1);
+  color: #7B61FF;
+}
+
+/* ============================================================
+   15. RADIO GROUP / SEGMENTED CONTROL
+   ============================================================ */
+
+.bd-ctrl-radio-group {
+  display: flex;
+  border: 1px solid var(--color-card-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bd-ctrl-radio-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-content-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+  border-right: 1px solid var(--color-card-border);
+}
+
+.bd-ctrl-radio-btn:last-child {
+  border-right: none;
+}
+
+.bd-ctrl-radio-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.bd-ctrl-radio-btn.active {
+  background: #7B61FF;
+  color: #fff;
+}
+
+/* ============================================================
+   16. ACTION BUTTONS (footer)
+   ============================================================ */
+
+.bd-props-actions {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--color-card-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.bd-props-actions .btn {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  font-size: 11px;
+  padding: 5px 8px;
+}
+
+.bd-props-actions .btn i {
+  margin-right: 3px;
+}
+
+/* ============================================================
+   17. RESPONSIVE PREVIEW TOOLBAR
+   ============================================================ */
+
+.bd-responsive-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 8px;
+  background: var(--color-card-bg);
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.bd-responsive-btn {
+  border: 1px solid var(--color-card-border);
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-content-text-secondary);
+  font-size: 12px;
+  transition: all 0.12s;
+}
+
+.bd-responsive-btn:hover {
+  background: var(--color-surface-hover);
+}
+
+.bd-responsive-btn.active {
+  background: #7B61FF;
+  color: #fff;
+  border-color: #7B61FF;
+}
+
+.bd-responsive-label {
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  margin-left: 8px;
+}
+
+/* ============================================================
+   18. PRESET CHIPS
+   ============================================================ */
+
+.bd-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--color-content-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.bd-preset-chip:hover {
+  background: var(--color-surface-hover);
+  border-color: #7B61FF;
+  color: #7B61FF;
+}
+
+.bd-preset-chip.active {
+  background: rgba(123, 97, 255, 0.1);
+  border-color: #7B61FF;
+  color: #7B61FF;
+}
+
+/* ============================================================
+   19. DARK THEME OVERRIDES
+   ============================================================ */
+
+[data-theme="dark"] .bd-props {
+  background: var(--color-card-bg);
+  border-left-color: var(--color-card-border);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .bd-ctrl-color-pick {
+  border-color: var(--color-card-border);
+}
+
+[data-theme="dark"] .bd-ctrl-spacing-cell input {
+  background: var(--color-card-bg);
+  border-color: var(--color-card-border);
+  color: var(--color-content-text);
+}
+
+/* ============================================================
+   20. ANIMATIONS
+   ============================================================ */
+
+@keyframes bd-props-in {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes bd-props-out {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+}

@@ -1,0 +1,9 @@
+order_date,region,product,units,unit_price,revenue
+2026-01-05,North,Widget,10,9.99,99.9
+2026-01-06,South,Gadget,5,19.99,99.95
+2026-02-11,North,Widget,7,12.5,87.5
+2026-02-15,West,Doohickey,12,8.0,96.0
+2026-03-02,South,Gadget,3,29.99,89.97
+2026-03-09,East,Widget,20,4.99,99.8
+2026-04-01,West,Doohickey,6,15.0,90.0
+2026-04-18,North,Widget,9,10.5,94.5

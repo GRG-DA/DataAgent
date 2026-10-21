@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<title>Security - [[COMPANY_NAME]]</title>
+<style>
+:root{--ink:#16202c;--muted:#5b6b7c;--line:#dfe6ee;--bg:#f7f9fc;--card:#fff;--accent:#1f5fa9;--accent-soft:#eaf1fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:48px 24px 96px}
+header.doc{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:34px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 10px}
+.meta{color:var(--muted);font-size:.92rem;margin:0}
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:0 0 34px}
+nav.toc h2{font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;border:0;padding:0}
+nav.toc ol{margin:0;padding-left:20px}
+nav.toc li{margin:4px 0}
+nav.toc a{color:var(--accent);text-decoration:none}
+nav.toc a:hover{text-decoration:underline}
+section{margin:0 0 34px}
+h2{font-size:1.24rem;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:1.02rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:5px 0}
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:.94rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:.88em}
+.callout{background:var(--accent-soft);border-left:4px solid var(--accent);padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 18px}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600;margin-right:6px}
+footer.doc{border-top:1px solid var(--line);margin-top:48px;padding-top:20px;color:var(--muted);font-size:.9rem}
+@media (max-width:640px){.wrap{padding:28px 16px 64px}h1{font-size:1.55rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>Security</h1>
+  <p class="meta">[[COMPANY_NAME]] &middot; Last reviewed: [[EFFECTIVE_DATE]] &middot; A summary of the controls that protect the hosted DataAgent service and the data it holds.</p>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#approach">Approach</a></li>
+    <li><a href="#isolation">Tenant isolation</a></li>
+    <li><a href="#encryption">Encryption and key management</a></li>
+    <li><a href="#access">Identity and access management</a></li>
+    <li><a href="#application">Application security</a></li>
+    <li><a href="#platform">Platform and infrastructure</a></li>
+    <li><a href="#audit">Audit trail</a></li>
+    <li><a href="#monitoring">Monitoring and metrics</a></li>
+    <li><a href="#incident">Incident response</a></li>
+    <li><a href="#vulnerability">Vulnerability management</a></li>
+    <li><a href="#backup">Backup and resilience</a></li>
+    <li><a href="#compliance">Compliance</a></li>
+    <li><a href="#report">Reporting a vulnerability</a></li>
+    <li><a href="#contact">Contact us</a></li>
+  </ol>
+</nav>
+
+<section id="approach">
+  <h2>1. Approach</h2>
+  <p>
+    The hosted service holds business data that our customers did not choose to
+    publish and did not choose to hand to a third party. We treat it that way. The
+    controls below are the ones we actually implement and test, not a wish list.
+  </p>
+  <div class="callout">
+    <strong>Reporting a vulnerability?</strong> Please read section 12 first. We
+    will not pursue legal action for good-faith research that respects customer
+    data and the privacy of other users.
+  </div>
+</section>
+
+<section id="isolation">
+  <h2>2. Tenant isolation</h2>
+  <p>
+    Every account belongs to a tenant, and every tenant's data tables live in a
+    dedicated DuckDB schema (<code>analytics_t_&lt;tenant&gt;</code>) inside the
+    warehouse. A query written without a schema qualifier resolves inside the
+    caller's own schema, so the application's own code path cannot read another
+    tenant's tables.
+  </p>
+  <p>
+    Because DuckDB has no per-session schema permissions, there is a second layer:
+    the SQL surface refuses any reference to another tenant's schema and to the
+    system catalogues, and identifiers taken from a request are validated against a
+    strict pattern before they reach SQL. The tenant schema name embeds a hash of
+    the tenant identifier, so it cannot be enumerated either.
+  </p>
+  <p>
+    Raw uploads are written to a directory per tenant. A deployment that must
+    defend against a hostile database client rather than a hostile query can run
+    each tenant in its own warehouse file; that mode is described in the
+    operations documentation.
+  </p>
+  <p>
+    Isolation is enforced by automated tests that fail the build if a tenant can
+    read, write, list or drop another tenant's table.
+  </p>
+</section>
+
+<section id="encryption">
+  <h2>3. Encryption and key management</h2>
+  <ul>
+    <li><strong>In transit</strong> &mdash; TLS 1.2 or higher for every connection
+        to the application and to the model provider.</li>
+    <li><strong>At rest</strong> &mdash; the hosting and storage providers encrypt
+        volumes and objects at rest.</li>
+    <li><strong>Application keys</strong> &mdash; the session-signing key and the
+        entitlement-signing key are generated locally, stored outside the data
+        tree, and never written to logs, exports or routine backups. A hosted
+        deployment can point the entitlement key at an external authority so that
+        the signing material never sits beside the data.</li>
+    <li><strong>Credentials in code</strong> &mdash; no secret is committed to the
+        repository. The release build excludes credential files and self-checks the
+        archive it produced.</li>
+  </ul>
+</section>
+
+<section id="access">
+  <h2>4. Identity and access management</h2>
+  <ul>
+    <li>Passwords are stored as salted bcrypt hashes, never in plain text and never
+        recoverable.</li>
+    <li>Sessions are signed and expire; a revoked token is rejected for the
+        remainder of its life.</li>
+    <li>Access control is role-based with a deny-by-default model for mutating
+        operations: a route that is not explicitly granted requires a permission
+        the caller's role does not hold.</li>
+    <li>Multi-factor authentication is available and required for administrator
+        accounts in hosted deployments.</li>
+    <li>The first account created on an instance must present a bootstrap token, so
+        a fresh deployment cannot be taken over by whoever registers first.</li>
+    <li>Administrative actions &mdash; role changes, account deletion, plan
+        changes &mdash; are recorded in the audit trail.</li>
+  </ul>
+</section>
+
+<section id="application">
+  <h2>5. Application security</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr><td>SQL injection</td><td>All statements are parameterised. Identifiers are matched against a strict allow-list pattern before they are interpolated. A dedicated read-only transaction wrapper is used for every path that builds SQL from a request.</td></tr>
+      <tr><td>Cross-tenant reads</td><td>Schema separation plus a query policy that refuses references to another tenant's schema or to the system catalogues. Fails closed when the tenant context is missing.</td></tr>
+      <tr><td>Python sandbox</td><td>The execution sandbox refuses filesystem access by capability rather than by file name, and the data-handling modules are proxied so that a raw module object never reaches user code.</td></tr>
+      <tr><td>Uploads</td><td>Content is sniffed and compared with the declared extension; the two must agree. Size and type are limited, and a rejected upload is not written.</td></tr>
+      <tr><td>Entitlements</td><td>Paid plans carry a signature over their own contents. Editing the warehouse directly cannot mint a paid plan, and an unsigned row is treated as free.</td></tr>
+      <tr><td>Rate limiting</td><td>Per-user and per-IP limits on the expensive paths, including the assistant, the SQL surface and the upload and load paths. A shared backend keeps the limits consistent across replicas.</td></tr>
+      <tr><td>Secrets in output</td><td>Error responses are generic; details are written to the server log. Credentials, tokens and raw tenant identifiers are redacted from logs and from the metrics endpoint.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="platform">
+  <h2>6. Platform and infrastructure</h2>
+  <ul>
+    <li>The service runs behind a reverse proxy or load balancer that enforces a
+        Host allow-list, so a forged Host header cannot reach the application.</li>
+    <li>Proxy headers are only trusted from networks on an explicit allow-list;
+        otherwise every client behind the proxy would share one rate-limit
+        bucket.</li>
+    <li>Headers are set on every response: a strict content security policy, the
+        frame options, the content type options, and the referrer policy. Static
+        legal and UI pages ship no external scripts, styles, fonts or images, so the
+        policy does not need to be relaxed for them.</li>
+    <li>The application server runs as a non-privileged user with no write access
+        outside its data directory.</li>
+  </ul>
+</section>
+
+<section id="audit">
+  <h2>7. Audit trail</h2>
+  <p>
+    Security-relevant actions &mdash; sign-in, sign-out, failed sign-in, role
+    change, account deletion, data export, query execution, entitlement change
+    &mdash; are recorded with a timestamp, the acting user, the tenant, the
+    resource, the action and the outcome.
+  </p>
+  <p>
+    The default sink is a local file, which is appropriate for a single-process
+    install. A hosted deployment points the sink at a shared, durable backend
+    (Redis or SQLite) so the trail survives the replacement of a container and is
+    consistent across replicas. A sink failure degrades to "the event was not
+    recorded"; it never fails the request that caused it.
+  </p>
+</section>
+
+<section id="monitoring">
+  <h2>8. Monitoring and metrics</h2>
+  <p>
+    The service exposes a Prometheus-format metrics endpoint and a deep health
+    endpoint that probes each dependency individually.
+  </p>
+  <ul>
+    <li><span class="badge">Metrics</span>request counts and latency by normalised
+        route, query outcomes, assistant usage by feature, rate-limit refusals by
+        bucket, row counts, and the number of tenants.</li>
+    <li><span class="badge">Deep health</span>the API process, the warehouse
+        (readable <em>and</em> writable), the identity store, the audit sink, the
+        model provider, the billing service, and the local model server, each with
+        a boolean and a short reason.</li>
+    <li><span class="badge">Liveness</span>process-only, so a slow dependency never
+        causes the process to be killed and restarted.</li>
+    <li><span class="badge">Readiness</span>the warehouse has to be usable before
+        traffic is routed to the instance.</li>
+  </ul>
+  <p>
+    Metrics never contain a customer identifier: routes are normalised so that an
+    identifier cannot create a new time series, and a tenant is represented by a
+    hash of its identifier rather than by the identifier itself.
+  </p>
+</section>
+
+<section id="incident">
+  <h2>9. Incident response</h2>
+  <p>
+    On becoming aware of a security incident or a personal data breach, we:
+  </p>
+  <ol>
+    <li>contain it &mdash; revoke credentials, disable the affected feature or stop
+        the affected instance;</li>
+    <li>preserve the evidence &mdash; logs, audit records and a snapshot of the
+        affected data are secured before anything is changed;</li>
+    <li>assess it &mdash; what data was affected, which tenants, and whether
+        personal data was involved;</li>
+    <li>notify &mdash; affected customers without undue delay and within 48 hours
+        of confirmation, and the supervisory authority where the law requires it;</li>
+    <li>remediate &mdash; fix the root cause, not only the symptom, and add a
+        regression test that fails without the fix.</li>
+  </ol>
+  <p>
+    Customers are told what happened in plain language, what data was involved,
+    what we have done and what we need them to do.
+  </p>
+</section>
+
+<section id="vulnerability">
+  <h2>10. Vulnerability management</h2>
+  <ul>
+    <li>Dependencies are pinned and reviewed; a release build never pulls an
+        unpinned package at install time.</li>
+    <li>Automated static analysis and a dependency vulnerability scan run on every
+        change.</li>
+    <li>Any change that touches authentication, authorisation, payments, SQL or
+        user input requires a security review before it is merged, and the
+        invariants it relies on are covered by regression tests that fail if the
+        behaviour regresses.</li>
+    <li>Findings are triaged by severity and exploitability, and a remediation
+        window is set accordingly.</li>
+  </ul>
+</section>
+
+<section id="backup">
+  <h2>11. Backup and resilience</h2>
+  <p>
+    The warehouse, the identity store, the configuration and the raw uploads are
+    backed up on a schedule. The backup tool takes a consistent snapshot of the
+    warehouse without competing with the running application's writer, verifies
+    every file against a manifest of hashes, and refuses to restore over a live
+    installation without an explicit confirmation.
+  </p>
+  <p>
+    Backup archives exclude credential material by default. A restore drill is run
+    on a schedule so that a backup is known to be restorable, not merely known to
+    exist. The full procedure is described in the backup and restore
+    documentation.
+  </p>
+</section>
+
+<section id="compliance">
+  <h2>12. Compliance</h2>
+  <p>
+    [[COMPANY_NAME]] processes personal data in accordance with the UK GDPR and
+    the EU GDPR where they apply. Our role allocation, the categories of data we
+    process, our sub-processors and the mechanism we use for international
+    transfers are set out in the <a href="dpa.html">Data Processing Addendum</a>
+    and the <a href="privacy.html">Privacy Policy</a>.
+  </p>
+</section>
+
+<section id="report">
+  <h2>13. Reporting a vulnerability</h2>
+  <p>
+    If you believe you have found a vulnerability, email
+    <strong>[[SECURITY_EMAIL]]</strong> with a description, the steps to
+    reproduce it and the impact you believe it has. Please do not access data that
+    is not yours, do not degrade the service for other users, and do not use
+    social engineering against our staff.
+  </p>
+  <p>
+    We acknowledge reports within two business days, keep you informed while we
+    investigate, and credit you in the release notes if you would like us to.
+  </p>
+</section>
+
+<section id="contact">
+  <h2>14. Contact us</h2>
+  <p>
+    Security questions: [[SECURITY_EMAIL]]<br>
+    General enquiries: [[CONTACT_EMAIL]]<br>
+    Data protection: [[DPO_EMAIL]]
+  </p>
+  <p>
+    [[COMPANY_NAME]]<br>
+    [[COMPANY_ADDRESS]]<br>
+    Established in [[JURISDICTION]]. Service region: [[DATA_REGION]].
+  </p>
+</section>
+
+<footer class="doc">
+  <p>
+    [[COMPANY_NAME]] &mdash; Security overview. This page is a static document
+    served from the application's own origin; it loads no external scripts, styles
+    or images.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

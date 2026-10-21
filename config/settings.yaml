@@ -1,0 +1,371 @@
+# Application Settings
+
+app:
+  name: "LLM Data Analytics Agent"
+  version: "1.0.0"
+  # debug: enables uvicorn auto-reload (two processes -> DuckDB single-writer
+  # conflicts on Windows). Keep false for shared/production deployments.
+  debug: false
+  # 0.0.0.0 exposes the app to the network; 127.0.0.1 is local-only.
+  host: "127.0.0.1"
+  port: 8002
+  # Deployment environment: "development" (default), "staging" or
+  # "production".  With "production" the app REFUSES to start unless the
+  # operator set an explicit CORS allow-list (API_CORS_ORIGINS) and a
+  # TRUSTED_HOSTS allow-list, and warns about development CORS origins.
+  # Env override: APP_ENV=production
+  env: "development"
+
+# API Configuration
+api:
+  title: "LLM Data Analytics Agent API"
+  description: "Local LLM-powered data analytics agent with SQL, pandas, and visualization tools"
+  version: "1.0.0"
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+    # website-react/ does not exist on disk (see docs/FRONTENDS.md) — the
+    # 8090 entries below are kept harmlessly for the dev billing mock in
+    # billing_server/dev_server.py, which also serves on 8090.
+    - "http://localhost:8090"
+    - "http://127.0.0.1:8090"
+  # Send cookies / Authorization on cross-origin requests.  OFF by default
+  # (unchanged behaviour).  A hosted deployment whose front end is served
+  # from another origin needs it ON together with an explicit
+  # `cors_origins` allow-list — a wildcard is refused in production.
+  # Env override: API_CORS_CREDENTIALS=1
+  cors_credentials: false
+
+# External billing site (checkout lives there, not in this app).
+# Leave empty until the separate billing website URL is known.
+billing:
+  external_url: ""
+  # Cloud entitlement sync — billing server base URL serving /v1/entitlements.
+  # Env overrides: BILLING_SYNC_URL / BILLING_SYNC_SECRET.
+  sync_url: ""
+  sync_secret: ""
+  # Per-tenant daily AI request budget (0 = unlimited). The aggregate AI
+  # usage of every account of a tenant is capped by this number.
+  # Env override: BILLING_TENANT_AI_DAILY_CAP.
+  tenant_ai_daily_cap: 0
+  # Path to the entitlement signing key, kept OUTSIDE the data directory in
+  # a hosted deployment (ADR-009 D6).
+  # Env override: DATAAGENT_GRANT_KEY_FILE.
+  grant_key_file: ""
+
+# PostgreSQL — the hosted identity / session store (optional).
+# Set DATABASE_URL (or POSTGRES_DSN) to point at the shared database a
+# multi-replica deployment runs against.  Without it the app stays on
+# SQLite (identity) and the in-memory session store.
+postgres:
+  url: ""
+  dsn: ""
+  pool_size: 10
+  connect_timeout: 10
+
+# LLM Configuration (Ollama local server)
+llm:
+  provider: "ollama"  # ollama | lmstudio | openai | openrouter | anthropic
+  base_url: "http://localhost:11434"
+  model: "qwen2.5:7b"
+  temperature: 0.1
+  max_tokens: 4096
+  timeout: 120
+  system_prompt: "config/model_config.yaml"
+
+# Agent Configuration
+agent:
+  max_iterations: 10
+  planning_enabled: true
+  tool_timeout: 60
+  max_rows_return: 1000
+  sql_dialect: "duckdb"
+  allowed_sql_operations:
+    - "SELECT"
+    - "WITH"
+    - "LIMIT"
+    - "ORDER BY"
+    - "GROUP BY"
+  forbidden_sql_keywords:
+    - "DROP"
+    - "DELETE"
+    - "UPDATE"
+    - "INSERT"
+    - "CREATE"
+    - "ALTER"
+    - "TRUNCATE"
+
+# Data Processing
+data:
+  max_upload_size_mb: 100
+  allowed_extensions:
+    - ".csv"
+    - ".xlsx"
+    - ".xls"
+    - ".parquet"
+    - ".json"
+    - ".jsonl"
+    - ".txt"
+    - ".tsv"
+  sample_rows: 100
+  date_formats:
+    - "%Y-%m-%d"
+    - "%d/%m/%Y"
+    - "%m/%d/%Y"
+    - "%Y-%m-%d %H:%M:%S"
+
+# Visualization
+viz:
+  default_engine: "plotly"  # plotly, matplotlib
+  default_theme: "plotly_white"
+  max_points: 10000
+  export_formats:
+    - "html"
+    - "png"
+    - "json"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/app.log"
+
+# Google OAuth - used by "Sign in with Google" for the Gemini provider.
+# Setup (one-time):
+#   1. Go to https://console.cloud.google.com/apis/credentials -> Create credentials
+#      -> OAuth client ID -> Application type: "Desktop app".
+#      (Or in Google AI Studio: Get API key -> Configure OAuth client.)
+#   2. Paste the client ID below (and the secret, if one is issued).
+#   3. Register this callback URI on that client:
+#        http://127.0.0.1:8002/auth/google/callback
+#      (change `redirect_uri` below if your host/port differs)
+#   Environment fallbacks: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
+#   Desktop clients don't need a secret - leaving it empty works.
+google:
+  client_id: ""                 # OAuth 2.0 Client ID (Desktop app type)
+  client_secret: ""             # optional for Desktop clients
+  redirect_uri: "http://127.0.0.1:8002/auth/google/callback"
+
+# Google Login - lets users sign in to the app with their Google account
+# (separate from the Gemini-provider sign-in above). On first login a user
+# account is auto-provisioned with the default role below.
+# Setup (one-time):
+#   1. Create an OAuth Client ID of type "Desktop app" at
+#      https://console.cloud.google.com/apis/credentials
+#   2. Paste the client ID (and secret, if issued) below. When left empty,
+#      the `google:` block above is used as a fallback.
+#   3. Register this callback URI on that client:
+#        http://127.0.0.1:8002/auth/google/login/callback
+#      (change `redirect_uri` below if your host/port differs)
+#   Environment fallbacks: GOOGLE_LOGIN_CLIENT_ID, GOOGLE_LOGIN_CLIENT_SECRET,
+#   GOOGLE_LOGIN_REDIRECT_URI
+google_login:
+  client_id: ""                 # defaults to google.client_id
+  client_secret: ""             # defaults to google.client_secret
+  redirect_uri: "http://127.0.0.1:8002/auth/google/login/callback"
+  auto_provision: true          # create a user account on first login
+  default_role: "viewer"        # role for auto-provisioned users
+
+# Feature Flags
+features:
+  enable_llm_agent: true
+  fallback_to_sql: true
+
+# Ads - REMOVED. The product is fully ad-free for all plans.
+ads:
+  enabled: false
+  network: "none"
+  client_id: ""
+  slots:
+    banner: ""
+    sidebar: ""
+    footer: ""
+  label: ""
+  exclude_pages: []
+
+# Security Configuration
+security:
+  # SSO Configuration
+  sso:
+    enabled: false
+    provider: "azure_ad"  # azure_ad, okta, keycloak, generic_oidc, generic_saml
+    oidc:
+      client_id: "${SSO_CLIENT_ID}"
+      client_secret: "${SSO_CLIENT_SECRET}"
+      issuer_url: "https://login.microsoftonline.com/{tenant}/v2.0"
+      redirect_uri: "http://localhost:8002/auth/callback"
+      scopes: ["openid", "profile", "email", "groups"]
+    saml:
+      entity_id: "https://analytics.company.com"
+      sso_url: "https://login.microsoftonline.com/{tenant}/saml2"
+      x509_cert: "${SSO_SAML_CERT}"
+      private_key: "${SSO_SAML_KEY}"
+
+  # RBAC Configuration
+  rbac:
+    enabled: true
+    default_role: "user"
+    roles:
+      admin:
+        permissions: ["*"]
+        description: "Full system access"
+      data_engineer:
+        permissions: ["data:read", "data:write", "pipeline:manage", "schema:manage", "query:execute", "dashboard:view", "export:csv", "export:parquet", "export:excel", "export:bi", "org:view"]
+        description: "Data engineering operations"
+      data_analyst:
+        permissions: ["data:read", "query:execute", "dashboard:view", "export:csv", "export:parquet", "export:excel", "org:view"]
+        description: "Analysis and reporting"
+      user:
+        permissions: ["data:read", "data:write", "query:execute", "dashboard:view", "dashboard:create", "dashboard:manage", "export:csv", "export:parquet", "export:excel", "export:bi", "catalog:read", "notification:read", "org:view"]
+        description: "Standard self-serve account: upload data, ask questions, build and export dashboards"
+      viewer:
+        permissions: ["data:read", "dashboard:view"]
+        description: "Read-only access"
+      auditor:
+        permissions: ["audit:read", "data:read", "org:view"]
+        description: "Compliance and audit"
+
+  # Row-Level Security
+  rls:
+    enabled: false
+    tenant_column: "tenant_id"
+    default_tenant: "default"
+
+  # Multi-tenancy (ADR-009 D1).
+  # Each tenant owns a dedicated DuckDB schema, so one customer can never
+  # read another's data. The `default` tenant owns the pre-existing
+  # `analytics` schema, which keeps a single-user install and the desktop
+  # build working exactly as before.
+  tenancy:
+    enabled: true
+    # Tenant that owns the `analytics` schema (bootstrap admin / local install).
+    default_tenant: "default"
+    # Give every signup its own tenant (and therefore its own schema).
+    # Turn OFF only for a single-user desktop install.
+    per_user_tenant: true
+    # Schema that holds the platform tables (billing, users, dashboards...).
+    platform_schema: "analytics"
+    # Prefix for a tenant-owned schema.
+    schema_prefix: "analytics_t_"
+    # Give every tenant its own DuckDB *file* as well as its own schema.
+    # DuckDB has no per-session schema ACLs, so a hostile DuckDB client
+    # (not a hostile SQL string) can still reach another tenant's schema
+    # inside the shared warehouse. With this on, a tenant's data lives in
+    # `data/tenants/<tenant-slug>/warehouse.duckdb` and the platform
+    # `analytics` schema stays in the shared file.
+    # OFF by default: an existing install must not change behaviour.
+    # Override with the environment variable DATAAGENT_PER_TENANT_DATABASE=1.
+    per_tenant_database: false
+
+  # Audit Logging
+  audit:
+    enabled: true
+    log_level: "INFO"
+    destinations:
+      - type: "file"
+        path: "logs/audit.log"
+        format: "json"
+    # Shared audit sink for a hosted deployment (ADR-009 D5). One of
+    # "file" (default, per-container), "sqlite" or "redis". A "redis"
+    # sink is selected automatically when REDIS_URL is set.
+    sink: "file"
+    events:
+      - "query_executed"
+      - "data_accessed"
+      - "data_modified"
+      - "user_login"
+      - "user_logout"
+      - "api_key_created"
+      - "api_key_revoked"
+      - "role_changed"
+      - "config_changed"
+
+  # Password Policy
+  password_policy:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_special: true
+    max_age_days: 90
+    history_count: 5
+    lockout_after_failures: 5
+    lockout_duration_minutes: 30
+
+  # Rate limiting (sliding window).
+  # The limiter keys on the authenticated user when there is one and falls
+  # back to the client IP, so one customer behind a shared NAT cannot be
+  # throttled by another. ADR-009 D5.
+  rate_limit:
+    login:
+      attempts: 10
+      window_seconds: 60
+    register:
+      attempts: 5
+      window_seconds: 60
+    accounts:
+      attempts: 10
+      window_seconds: 60
+    execute:
+      attempts: 30
+      window_seconds: 60
+    sql:
+      attempts: 120
+      window_seconds: 60
+    # The LLM path is the most expensive operation the app offers.
+    ask:
+      attempts: 20
+      window_seconds: 60
+    ask_sql:
+      attempts: 30
+      window_seconds: 60
+    upload:
+      attempts: 20
+      window_seconds: 60
+    load:
+      attempts: 20
+      window_seconds: 60
+    llm_test:
+      attempts: 10
+      window_seconds: 60
+    # Shared limiter for a multi-replica deployment (ADR-009 D5). When
+    # REDIS_URL is set the limiter is shared across replicas; otherwise the
+    # per-process in-memory limiter is used.
+    backend: "auto"
+
+  # API Key Management
+  api_keys:
+    default_expiry_days: 90
+    max_per_user: 5
+    scopes:
+      - "read"
+      - "write"
+      - "admin"
+    rotation_warning_days: 14
+
+  # Session Management (moved to a top-level `session:` block at the end of
+  # this file — apply_settings_config reads top-level sections, not the
+  # security.-nested ones below).
+  max_size_mb: 10
+  backup_count: 5
+
+# Session Management — top-level (read by apply_settings_config)
+session:
+  timeout_minutes: 60
+  absolute_timeout_hours: 12
+  secure_cookies: true
+  # Force the `Secure` attribute on the session cookie (and on its CSRF
+  # companion).  OFF by default so a local install over plain HTTP keeps
+  # working; a hosted deployment MUST turn it on — it cannot be
+  # downgraded by a spoofed `X-Forwarded-Proto` header.
+  # Env override: SECURITY_SESSION_FORCE_SECURE_COOKIE=1
+  force_secure_cookie: false
+  same_site: "lax"
+  # JWT lifetime for issued tokens. Production-appropriate value; for local
+  # testing convenience you can raise it via env (SECURITY_SESSION_TOKEN_EXPIRY_HOURS).
+  token_expiry_hours: 24
+  # Shared session backend for a multi-replica deployment:
+  # "auto" (default), "memory", "redis" or "postgres".
+  # Env override: SESSION_BACKEND.  With "auto", REDIS_URL selects redis
+  # and DATABASE_URL selects postgres.
+  backend: "auto"

@@ -1,0 +1,137 @@
+name: pytest
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pytest-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install ruff
+        run: python -m pip install --upgrade pip ruff
+      # ruff is not in requirements-test.txt (that file is frozen for the app
+      # environment), so it is installed here. The gate is the "critical"
+      # rule set - syntax errors, undefined names and redefinitions - which
+      # the tree is clean on today. The wider pycodestyle/pyflakes set is a
+      # separate, tracked backlog (E501/F401/E12xx are open) and must not
+      # be enabled here without fixing the tree first.
+      - name: Ruff (critical rules)
+        run: >
+          ruff check
+          --no-cache
+          --select E9,F63,F7,F82,F811
+          --exclude graphify-out,build,dist,web/vendor,website-react/node_modules,.venv-mcp,.venv-laya,.venv-strix,node_modules
+          api agent etl analysis warehouse config billing_server keygen_app lib mcp_servers scripts
+
+  dependency-audit:
+    name: dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+      # pip-audit has no severity tiers: every advisory in the PyPA/OSV
+      # database fails the job, which is stricter than "fail on high and
+      # critical only".
+      #
+      # EXCEPTIONS: none. As of 2026-10-21 `pip-audit --strict -r
+      # requirements.txt -r requirements-test.txt` reports "No known
+      # vulnerabilities found" and exits 0. If a dependency ever has to be
+      # exempted, add the narrow `--ignore-vuln <GHSA-id>` flag to the
+      # command below AND list the advisory id plus the reason in this
+      # comment. Never add a blanket `|| true`.
+      - name: Audit the pinned dependency set
+        run: |
+          python -m pip_audit \
+            --strict \
+            --progress-spinner off \
+            -r requirements.txt \
+            -r requirements-test.txt
+
+  tests:
+    name: pytest ${{ matrix.python-version }} (${{ matrix.identity-store }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        identity-store: ["session"]
+        include:
+          # An extra leg that pins the identity store to its own path and
+          # proves the repository copy (data/users.db) is never written.
+          - python-version: "3.13"
+            identity-store: "dedicated"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-test.txt
+      - name: Cache the pytest cache
+        uses: actions/cache@v4
+        with:
+          path: .pytest_cache
+          key: pytest-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pytest.ini', 'pyproject.toml') }}
+          restore-keys: |
+            pytest-${{ runner.os }}-py${{ matrix.python-version }}-
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-test.txt
+      - name: Run pytest with coverage
+        env:
+          # tests/conftest.py uses setdefault(), so this explicit value wins:
+          # the suite can never touch a checked-out data/users.db.
+          DATAAGENT_USER_DB: ${{ runner.temp }}/dataagent-ci/users-${{ matrix.python-version }}-${{ matrix.identity-store }}.db
+          DATAAGENT_USER_LEGACY_JSON: ${{ runner.temp }}/dataagent-ci/no-users-${{ matrix.python-version }}.json
+        run: |
+          python -m pytest -q -rs \
+            --cov=api --cov=agent --cov=etl --cov=analysis --cov=warehouse --cov=config \
+            --cov=billing_server --cov=keygen_app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=74
+      - name: Assert the repository identity store was not touched
+        run: |
+          if [ -e data/users.db ]; then
+            echo "::error::the test suite wrote to the repository identity store (data/users.db)"
+            exit 1
+          fi
+          echo "identity store isolated at $DATAAGENT_USER_DB"
+        env:
+          DATAAGENT_USER_DB: ${{ runner.temp }}/dataagent-ci/users-${{ matrix.python-version }}-${{ matrix.identity-store }}.db
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml-py${{ matrix.python-version }}-${{ matrix.identity-store }}
+          path: coverage.xml

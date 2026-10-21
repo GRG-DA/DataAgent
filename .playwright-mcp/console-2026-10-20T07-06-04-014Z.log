@@ -1,0 +1,6 @@
+[    1249ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:8002/notifications/unread/count:0
+[    1641ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://127.0.0.1:8002/:0
+[   94880ms] [LOG] [FormulaEngine] HyperFormula initialized OK — 0 custom functions registered. @ http://127.0.0.1:8002/js/pages/formula-engine.js?v=2:162
+[   94880ms] [LOG] [ExcelPage] Formula system loaded OK @ http://127.0.0.1:8002/js/pages/excel.js?v=1792480057639:3868
+[  186698ms] [LOG] [FormulaEngine] HyperFormula initialized OK — 0 custom functions registered. @ http://127.0.0.1:8002/js/pages/formula-engine.js?v=2:162
+[  186698ms] [LOG] [ExcelPage] Formula system loaded OK @ http://127.0.0.1:8002/js/pages/excel.js?v=1792480150140:3868

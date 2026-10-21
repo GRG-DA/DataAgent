@@ -1,0 +1,6 @@
+# Desktop shell (pywebview) dependencies — Windows-first.
+# Install with:  pip install -r requirements-desktop.txt
+pywebview>=5.1
+pystray>=0.19.5
+pillow>=10.0.0
+pythonnet>=3.0.1 ; sys_platform == "win32"

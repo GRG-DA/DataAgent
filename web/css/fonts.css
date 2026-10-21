@@ -1,0 +1,10 @@
+/* Self-hosted Inter (Google Fonts, latin subset, variable font) — no external dependency.
+   Downloader/version: Inter v20 from fonts.gstatic.com (variable woff2, weight axis 300-800). */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('fonts/inter-var.woff2') format('woff2-variations');
+  src: url('fonts/inter-var.woff2') format('woff2');
+}

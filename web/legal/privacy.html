@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<title>Privacy Policy - [[COMPANY_NAME]]</title>
+<style>
+:root{--ink:#16202c;--muted:#5b6b7c;--line:#dfe6ee;--bg:#f7f9fc;--card:#fff;--accent:#1f5fa9;--accent-soft:#eaf1fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:48px 24px 96px}
+header.doc{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:34px}
+h1{font-size:2rem;line-height:1.2;margin:0 0 10px}
+.meta{color:var(--muted);font-size:.92rem;margin:0}
+nav.toc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin:0 0 34px}
+nav.toc h2{font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;border:0;padding:0}
+nav.toc ol{margin:0;padding-left:20px}
+nav.toc li{margin:4px 0}
+nav.toc a{color:var(--accent);text-decoration:none}
+nav.toc a:hover{text-decoration:underline}
+section{margin:0 0 34px}
+h2{font-size:1.24rem;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:1.02rem;margin:22px 0 8px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:5px 0}
+table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:.94rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;font-size:.88em}
+.callout{background:var(--accent-soft);border-left:4px solid var(--accent);padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 18px}
+footer.doc{border-top:1px solid var(--line);margin-top:48px;padding-top:20px;color:var(--muted);font-size:.9rem}
+@media (max-width:640px){.wrap{padding:28px 16px 64px}h1{font-size:1.55rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <h1>Privacy Policy</h1>
+  <p class="meta">[[COMPANY_NAME]] &middot; Last updated: [[EFFECTIVE_DATE]] &middot; Applies to the hosted DataAgent service and to the desktop build where the hosted features are enabled.</p>
+</header>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#who">Who we are</a></li>
+    <li><a href="#collect">What we process</a></li>
+    <li><a href="#where">Where the data lives</a></li>
+    <li><a href="#llm">Artificial intelligence processing</a></li>
+    <li><a href="#legal">Legal bases</a></li>
+    <li><a href="#retention">Retention</a></li>
+    <li><a href="#subprocessors">Sub-processors</a></li>
+    <li><a href="#rights">Your rights</a></li>
+    <li><a href="#security">Security</a></li>
+    <li><a href="#transfers">International transfers</a></li>
+    <li><a href="#children">Children</a></li>
+    <li><a href="#contact">Contact us</a></li>
+  </ol>
+</nav>
+
+<section id="who">
+  <h2>1. Who we are</h2>
+  <p>
+    [[COMPANY_NAME]] ("we", "us") operates a hosted analytics service built on the
+    DataAgent application ("the Service"). The Service lets an organisation upload
+    its own business data, query it with SQL, ask natural-language questions of it
+    and publish dashboards and reports from the results.
+  </p>
+  <p>
+    When you create an account, [[COMPANY_NAME]] is normally the <strong>controller</strong>
+    of the personal data described in this policy, and our hosting, email and model
+    providers act as our <strong>sub-processors</strong>. Where we process data on
+    behalf of an organisation that has contracted with us, that organisation is the
+    controller and we are the processor; the terms of that processing are in the
+    <a href="dpa.html">Data Processing Addendum</a>.
+  </p>
+  <p>
+    [[COMPANY_NAME]] is registered at [[COMPANY_ADDRESS]] and is subject to the laws
+    of [[JURISDICTION]]. Our data protection contact is [[DPO_EMAIL]].
+  </p>
+</section>
+
+<section id="collect">
+  <h2>2. What we process</h2>
+  <p>We process three kinds of data. We do not sell any of it, and we do not use
+  customer content for advertising.</p>
+
+  <h3>2.1 Account data</h3>
+  <p>
+    Your email address, display name, password hash, role, organisation and tenant
+    membership. If you sign in through an identity provider, we also receive the
+    identifier and the profile attributes that provider chooses to release.
+  </p>
+
+  <h3>2.2 Customer content</h3>
+  <p>
+    The files you upload (spreadsheets, CSV and Parquet files, JSON) and the tables
+    they become. This is the business data you ask us to analyse. We store it in a
+    DuckDB warehouse, in a dedicated schema per tenant
+    (<code>analytics_t_&lt;tenant&gt;</code>), so that one tenant's tables are
+    physically separate from another's. We also store the queries you run, the
+    dashboards you build, the conversations you have with the assistant, and the
+    reports you export.
+  </p>
+
+  <h3>2.3 Operational data</h3>
+  <p>
+    Request logs (IP address, user agent, timestamp, path, status code), audit
+    records of security-relevant actions, error traces, and usage counters. These
+    records are used to operate, secure and improve the Service.
+  </p>
+
+  <h3>2.4 What we deliberately do not collect</h3>
+  <ul>
+    <li>No advertising or cross-context behavioural identifiers.</li>
+    <li>No payment card numbers. Payments are handled by a separate billing service that
+        we never see.</li>
+    <li>No contents of your private repositories, mailboxes or devices beyond what you
+        explicitly upload to the Service.</li>
+  </ul>
+</section>
+
+<section id="where">
+  <h2>3. Where the data lives</h2>
+  <p>
+    The Service is hosted in [[DATA_REGION]]. Your warehouse, your raw uploads and
+    the identity store are held on infrastructure operated by
+    [[SUBPROCESSOR_HOSTING]], with object storage for uploads provided by
+    [[SUBPROCESSOR_STORAGE]]. Raw uploads are addressed by an opaque tenant
+    identifier, never by a customer name.
+  </p>
+  <p>
+    Data at rest is encrypted by the infrastructure provider. Data in transit is
+    encrypted with TLS. The encryption keys used by the application itself (the
+    session-signing key and the entitlement-signing key) are stored separately from
+    the data and are never included in a backup unless an operator explicitly asks
+    for it.
+  </p>
+</section>
+
+<section id="llm">
+  <h2>4. Artificial intelligence processing</h2>
+  <div class="callout">
+    <strong>Read this before you enable the assistant.</strong> When you ask a
+    question, the Service builds a prompt from your question and, where relevant,
+    from schema metadata and query results. That prompt is sent to the model
+    provider configured for your deployment.
+  </div>
+  <p>
+    The model provider is [[SUBPROCESSOR_LLM]]. We send the minimum context needed
+    to answer the question: table and column names, and in most cases aggregate
+    results rather than row-level data. We do not send your account password, your
+    API keys, or other tenants' data. Where your deployment is configured for a
+    local or self-hosted model, the request never leaves the deployment.
+  </p>
+  <p>
+    Model providers are instructed not to use your content to train their models.
+    Prompts and responses are not retained by us beyond the operational logs
+    described in section 5.
+  </p>
+</section>
+
+<section id="legal">
+  <h2>5. Legal bases</h2>
+  <p>Where the GDPR or an equivalent regime applies, we rely on:</p>
+  <ul>
+    <li><strong>Contract</strong> &mdash; to provide the Service and answer support
+        requests.</li>
+    <li><strong>Legitimate interests</strong> &mdash; to keep the Service secure,
+        prevent abuse, and understand aggregate usage. We balance these against your
+        rights and expectations.</li>
+    <li><strong>Legal obligation</strong> &mdash; to keep audit records where the law
+        requires it.</li>
+    <li><strong>Consent</strong> &mdash; for optional marketing email, and where
+        required for a feature that is not necessary to run the Service.</li>
+  </ul>
+</section>
+
+<section id="retention">
+  <h2>6. Retention</h2>
+  <p>
+    We keep data for as long as your account is active, and then for the periods
+    below. The default retention window is [[RETENTION_DAYS]] days from the end of
+    the subscription.
+  </p>
+  <table>
+    <thead><tr><th>Data</th><th>Retention</th></tr></thead>
+    <tbody>
+      <tr><td>Customer content (uploaded files, tables, dashboards)</td><td>Until you delete it, then [[RETENTION_DAYS]] days</td></tr>
+      <tr><td>Query history and assistant conversations</td><td>[[RETENTION_DAYS]] days</td></tr>
+      <tr><td>Account data</td><td>Until you close the account, then [[RETENTION_DAYS]] days</td></tr>
+      <tr><td>Audit records</td><td>[[RETENTION_DAYS]] days</td></tr>
+      <tr><td>Operational logs and error traces</td><td>90 days</td></tr>
+      <tr><td>Backups</td><td>35 days, rolling</td></tr>
+    </tbody>
+  </table>
+  <p>
+    When we delete an account, its tenant schema is dropped, its platform rows are
+    removed and its raw uploads are deleted from object storage. Backups age out on
+    the rolling schedule above.
+  </p>
+</section>
+
+<section id="subprocessors">
+  <h2>7. Sub-processors</h2>
+  <p>
+    We use the following sub-processors. Each one processes data only on our
+    instructions and only for the purpose described. We give at least 30 days'
+    notice of a change and let customers object on reasonable data-protection
+    grounds.
+  </p>
+  <table>
+    <thead><tr><th>Sub-processor</th><th>Category</th><th>What it receives</th><th>Region</th></tr></thead>
+    <tbody>
+      <tr><td>[[SUBPROCESSOR_HOSTING]]</td><td>Compute and database hosting</td><td>Application runtime, warehouse, identity store</td><td>[[DATA_REGION]]</td></tr>
+      <tr><td>[[SUBPROCESSOR_STORAGE]]</td><td>Object storage</td><td>Raw uploaded files</td><td>[[DATA_REGION]]</td></tr>
+      <tr><td>[[SUBPROCESSOR_LLM]]</td><td>Language model inference</td><td>Prompts built from your questions and schema metadata</td><td>[[DATA_REGION]]</td></tr>
+      <tr><td>[[SUBPROCESSOR_EMAIL]]</td><td>Transactional email</td><td>Email address and message content for account and notification email</td><td>[[DATA_REGION]]</td></tr>
+      <tr><td>[[SUBPROCESSOR_MONITORING]]</td><td>Error and performance monitoring</td><td>Error traces and request metrics</td><td>[[DATA_REGION]]</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Our own sub-processor list is available on request. We do not sell data and we
+    do not share it for advertising.
+  </p>
+</section>
+
+<section id="rights">
+  <h2>8. Your rights</h2>
+  <p>Subject to the law that applies to you, you can ask us to:</p>
+  <ul>
+    <li><strong>Access</strong> &mdash; a copy of the personal data we hold about you,
+        and confirmation of whether we hold it.</li>
+    <li><strong>Rectification</strong> &mdash; correction of anything inaccurate.</li>
+    <li><strong>Erasure</strong> &mdash; deletion of your account and the data
+        attached to it. You can also delete your account yourself from the account
+        settings; deletion cascades to your tables, dashboards, conversations,
+        API keys and notification preferences.</li>
+    <li><strong>Restriction and objection</strong> &mdash; pause processing that you
+        rely on for a lawful interest, or object to it entirely.</li>
+    <li><strong>Portability</strong> &mdash; your data in a structured, commonly used,
+        machine-readable format. Every table can be exported as CSV, Parquet or
+        Excel from the dashboard, and the full account export is available on
+        request from [[CONTACT_EMAIL]].</li>
+    <li><strong>Withdraw consent</strong> &mdash; at any time, for any processing
+        that relies on it.</li>
+    <li><strong>Complain</strong> &mdash; to the supervisory authority in
+        [[JURISDICTION]].</li>
+  </ul>
+  <p>
+    We answer within 30 days. We may ask you to confirm your identity before we
+    release anything. We do not charge for a copy.
+  </p>
+</section>
+
+<section id="security">
+  <h2>9. Security</h2>
+  <p>
+    Access to customer content is restricted by role and, for administrative
+    operations, by tenant. Every tenant is isolated in its own schema and its own
+    raw-upload directory. Passwords are stored as salted bcrypt hashes. Sessions
+    are signed and expire. Roles are manageable over the API and every role change
+    is audited. Uploads are checked by content, not only by file extension, and
+    are limited in size and type.
+  </p>
+  <p>
+    We run a documented vulnerability-management programme and a
+    <a href="security.html">security overview</a> that describes the controls in
+    more detail.
+  </p>
+</section>
+
+<section id="transfers">
+  <h2>10. International transfers</h2>
+  <p>
+    [[COMPANY_NAME]] is established in [[JURISDICTION]]. Some of our sub-processors
+    operate outside the EEA/UK. Where personal data is transferred out of the UK or
+    the EEA, we rely on an adequacy decision where one exists and otherwise on the
+    UK International Data Transfer Addendum and the EU Standard Contractual
+    Clauses, together with a transfer risk assessment. Access from a support
+    engineer outside the primary region is limited to a named, logged account with
+    multi-factor authentication.
+  </p>
+</section>
+
+<section id="children">
+  <h2>11. Children</h2>
+  <p>
+    The Service is a business tool and is not directed at children. We do not
+    knowingly collect data from anyone under 16. If you believe a child has
+    provided us with personal data, contact [[CONTACT_EMAIL]] and we will delete it.
+  </p>
+</section>
+
+<section id="contact">
+  <h2>12. Contact us</h2>
+  <p>
+    Questions about this policy, a request to exercise a right, or a complaint
+    about how we handle personal data &mdash; write to
+    <strong>[[CONTACT_EMAIL]]</strong>. Include the tenant or organisation name so
+    that we can find the right records.
+  </p>
+  <p>
+    [[COMPANY_NAME]]<br>
+    [[COMPANY_ADDRESS]]<br>
+    Data protection contact: [[DPO_EMAIL]]
+  </p>
+  <p>
+    We keep this policy under review and publish every change. The date at the top
+    of this page is the date of the current version.
+  </p>
+</section>
+
+<footer class="doc">
+  <p>
+    [[COMPANY_NAME]] &mdash; Privacy Policy. This page is a static document served
+    from the application's own origin; it loads no external scripts, styles or
+    images.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

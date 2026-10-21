@@ -1,0 +1,4 @@
+[ 1567108ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8002/notifications/unread/count:0
+[ 1567755ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8002/health:0
+[ 1837092ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8002/notifications/unread/count:0
+[ 1837806ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8002/health:0
