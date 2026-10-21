@@ -114,6 +114,6 @@ class TestMiddlewareBinding:
         from api.middleware.auth_middleware import AuthMiddleware
 
         src = inspect.getsource(AuthMiddleware)
-        assert "context.tenant_id or user_info.get(\"tenant_id\")" in src, (
+        assert 'getattr(context, "tenant_id", None) or user_info.get("tenant_id")' in src, (
             "the API-key branch must prefer the key's own tenant"
         )

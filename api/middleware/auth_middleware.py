@@ -333,7 +333,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             # The key carries its own tenant (analytics.api_keys.tenant_id).
             # Prefer it and fall back to the owner's account record, so a key
             # issued for one tenant can never be used against another.
-            tenant_id=context.tenant_id or user_info.get("tenant_id"),
+            tenant_id=getattr(context, "tenant_id", None) or user_info.get("tenant_id"),
             auth_method="api_key",
             api_key_id=context.key_id,
             scopes=context.scopes,
@@ -375,7 +375,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     role=user_info["role"],
                     # Same as the X-API-Key branch above: the key's own
                     # tenant first, the owner's account record as a fallback.
-                    tenant_id=context.tenant_id or user_info.get("tenant_id"),
+                    tenant_id=getattr(context, "tenant_id", None) or user_info.get("tenant_id"),
                     auth_method="api_key",
                     api_key_id=context.key_id,
                     scopes=context.scopes,
