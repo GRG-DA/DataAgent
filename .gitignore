@@ -68,6 +68,10 @@ backups/
 # Browser-automation scratch (Playwright MCP console logs + page snapshots)
 .playwright-mcp/
 
+# A throwaway low-privilege copy of the Inno Setup script, used to verify the
+# installer's payload without elevation. Never shipped, never committed.
+installers/DataAgentTest.iss
+
 # Graphify analysis cache
 agent/graphify-out/
 # The graphify knowledge graph is a regenerable tool artifact (~233 MB, mostly
