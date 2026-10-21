@@ -250,7 +250,10 @@ def test_c6_every_page_scopes_the_telemetry_claim_to_the_app():
     """'No telemetry' is TRUE for the local app — but must not be an
     unqualified absolute across the whole product."""
     for path in _website_pages():
-        text = _read(path)
+        # A COMMENT is not a claim a visitor can read. Strip them, or a
+        # developer explaining the history trips a guard that is about the
+        # copy.
+        text = re.sub(r"<!--.*?-->", "", _read(path), flags=re.S)
         for line in text.splitlines():
             if "no telemetry" not in line.lower():
                 continue
