@@ -56,26 +56,44 @@ $collectPkgs = @("api", "agent", "warehouse", "config", "etl", "export")
 # package data (yaml configs, web assets, sql templates...) but NOT the
 # readable `.py` sources (they are compiled into the PYZ archive anyway, so
 # shipping them only exposes the source code next to the installed exe).
-# PyInstaller regenerates DataAgent.spec from these CLI flags on every run,
-# which would clobber the hand-maintained legacy spec (version/icon/codesign
-# wiring enforced by tests/test_packaging.py). Back it up and restore it.
+#
+# The hand-maintained DataAgent.spec must survive the build. PyInstaller
+# REGENERATES the spec file from these CLI flags, and the regenerated file
+# drops the version/icon wiring AND the credential-exclusion logic (which
+# keeps config/users.json, .env and friends out of the bundle). So:
+#   * --specpath sends the generated spec to a temp dir, so the tracked file
+#     is never written at all - not even if the build is killed, and
+#   * the backup/restore below is the belt-and-braces net for a failed run.
+# Because the spec now lives outside the repo, every path handed to
+# PyInstaller must be absolute (a relative one would be resolved against the
+# temp spec dir, not the repository).
 $specBackup = Join-Path ([IO.Path]::GetTempPath()) "DataAgent.spec.keep"
+$specOutDir = Join-Path ([IO.Path]::GetTempPath()) "DataAgent-specgen"
+New-Item -ItemType Directory -Force -Path $specOutDir | Out-Null
 Copy-Item "DataAgent.spec" $specBackup -Force
-python -m PyInstaller --noconfirm --onefile --windowed --name DataAgent `
-  --optimize=2 --strip `
-  --exclude-module tkinter --exclude-module pytest `
-  --exclude-module pdb --exclude-module doctest `
-  --exclude-module torch --exclude-module transformers --exclude-module pygame `
-  --exclude-module laya --exclude-module sklearn --exclude-module tensorboard `
-  --exclude-module triton `
-  --hidden-import api.main `
-  --add-data "web;web" `
-  --version-file "packaging\windows\version_info.txt" `
-  --icon "packaging\windows\app.ico" `
-  run.py `
-  $(($collectPkgs | ForEach-Object { "--collect-submodules", $_, "--collect-data", $_, "--collect-binaries", $_ }) -ne $null)
-if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
-Copy-Item $specBackup "DataAgent.spec" -Force  # restore legacy spec (see above)
+$webDir = Join-Path $Root "web"
+$versionFile = Join-Path $Root "packaging\windows\version_info.txt"
+$iconFile = Join-Path $Root "packaging\windows\app.ico"
+try {
+  python -m PyInstaller --noconfirm --specpath $specOutDir --onefile --windowed --name DataAgent `
+    --optimize=2 --strip `
+    --exclude-module tkinter --exclude-module pytest `
+    --exclude-module pdb --exclude-module doctest `
+    --exclude-module torch --exclude-module transformers --exclude-module pygame `
+    --exclude-module laya --exclude-module sklearn --exclude-module tensorboard `
+    --exclude-module triton `
+  --exclude-module playwright `
+    --hidden-import api.main `
+    --add-data "$webDir;web" `
+    --version-file $versionFile `
+    --icon $iconFile `
+    run.py `
+    $(($collectPkgs | ForEach-Object { "--collect-submodules", $_, "--collect-data", $_, "--collect-binaries", $_ }) -ne $null)
+  if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+} finally {
+  # The tracked spec must never be left regenerated.
+  Copy-Item $specBackup "DataAgent.spec" -Force
+}
 # Anti-crack: frozen builds verify against the baked public key only, so fail
 # the build if private key material was bundled in dist/.
 $leaked = Get-ChildItem -Path dist -Recurse -Filter "*.pem" -ErrorAction SilentlyContinue |

@@ -75,9 +75,20 @@ a = Analysis(
     # unittest is intentionally NOT excluded: pyparsing imports
     # pyparsing.testing (which needs unittest) at package init, so the
     # frozen app crashes on startup without it (ModuleNotFoundError).
+    # "playwright" is excluded on purpose: it is NOT in requirements.txt, and
+    # the bundle analyser pulls it in anyway - 102 MB of dead weight in a
+    # ~400 MB installer. Worse, the bundle does NOT contain the Chromium
+    # browser binaries (playwright downloads them to %LOCALAPPDATA%    # ms-playwright, not into the bundle), so the path would fail at runtime
+    # with "Executable doesn't exist". The PDF export falls back to reportlab
+    # and says so.
+    #
+    # "kaleido" and "plotly" are NOT excluded: the agent's chart tool
+    # (agent/tools_viz.py) writes PNGs through plotly's write_image, which
+    # needs kaleido.
     excludes=["tkinter", "pytest", "pdb", "doctest",
               "torch", "transformers", "pygame", "laya",
-              "sklearn", "tensorboard", "triton"],
+              "sklearn", "tensorboard", "triton",
+              "playwright"],
     noarchive=False,
     optimize=2,
 )

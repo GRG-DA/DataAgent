@@ -19,6 +19,8 @@ billing_server/keys/
 *.key
 *-service-account.json
 config/users.json
+config/revoked_jtis.json
+config/google_oauth_token.json
 config/db_connections.json
 config/llm_runtime.json
 config/google_login_pending.json

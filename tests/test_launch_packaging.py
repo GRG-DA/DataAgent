@@ -288,6 +288,26 @@ def test_linux_packaging_does_not_fetch_opencode_at_build_time():
     assert "github.com/anomalyco/opencode/releases/download" not in sh
 
 
+def test_build_never_clobbers_the_hand_maintained_spec():
+    """PyInstaller regenerates the spec from the CLI flags - the tracked one
+    must not be written.
+
+    The regenerated DataAgent.spec drops the version/icon wiring AND the
+    credential-exclusion logic (config/users.json, .env, ... would ship in
+    the onefile bundle), so a build that is killed between the PyInstaller
+    run and the restore leaves the tree in a dangerous state.
+    """
+    ps1 = _read(BUILD_PS1)
+    assert "--specpath" in ps1, (
+        "the generated spec must go to a temp dir (--specpath); otherwise the "
+        "CLI overwrites the hand-maintained DataAgent.spec"
+    )
+    assert re.search(r"(?s)try\s*\{.*PyInstaller.*?finally\s*\{", ps1), (
+        "the spec restore must sit in a finally block, so a failed build can "
+        "never leave the tracked spec regenerated"
+    )
+
+
 def test_dockerfile_uses_the_release_python_version():
     dockerfile = _read(DOCKERFILE)
     assert f"python:{RELEASE_PYTHON}-slim" in dockerfile, (

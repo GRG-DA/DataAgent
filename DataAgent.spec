@@ -69,9 +69,15 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
+    # 'playwright' is excluded on purpose: it is not in requirements.txt and
+    # the analyser pulls it in anyway (102 MB of dead weight in a ~400 MB
+    # installer) - and the bundle does not contain the Chromium binaries, so
+    # the path would fail at runtime anyway. 'kaleido' and 'plotly' are NOT
+    # excluded: agent/tools_viz.py writes PNGs through plotly's write_image.
     excludes=['tkinter', 'pytest', 'pdb', 'doctest',
               'torch', 'transformers', 'pygame', 'laya',
-              'sklearn', 'tensorboard', 'triton'],
+              'sklearn', 'tensorboard', 'triton',
+              'playwright'],
     noarchive=False,
     optimize=2,
 )

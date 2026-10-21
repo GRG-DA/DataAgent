@@ -49,9 +49,11 @@ anthropic>=0.40.0
 
 # Visualization
 plotly==5.24.1
+# `kaleido` is plotly's static-image exporter. It IS required: the agent's
+# chart tool (agent/tools_viz.py) writes PNGs through plotly's write_image.
+kaleido==0.2.1
 matplotlib==3.9.2
 seaborn==0.13.2
-kaleido==0.2.1
 
 
 # Utilities
