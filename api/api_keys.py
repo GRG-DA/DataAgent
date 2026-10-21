@@ -144,7 +144,14 @@ class DuckDBAPIKeyStore(APIKeyStore):
     def _get_conn(self):
         import duckdb
         conn = duckdb.connect(self.db_path)
-        conn.execute("SET search_path = 'analytics'")
+        try:
+            conn.execute("SET search_path = 'analytics'")
+        except Exception:  # noqa: BLE001
+            # The schema does not exist yet on a fresh warehouse. The queries
+            # in this module are schema-qualified, so the search_path is a
+            # convenience, not a requirement - and refusing to connect here
+            # made the store unusable on a brand-new database.
+            pass
         return conn
 
     def _init_table(self):
