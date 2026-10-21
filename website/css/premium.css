@@ -607,7 +607,7 @@ blockquote {
   border-top: 1px solid var(--line);
 }
 .footer-bottom { color: var(--text-muted); border-top-color: var(--line); }
-.footer-col h4 { color: var(--text-muted); }
+.footer-col h2 { color: var(--text-muted); }
 .footer-col a { color: var(--text-2); }
 .footer-col a:hover { color: var(--link-hover); }
 .footer-brand p { color: var(--text-muted); }

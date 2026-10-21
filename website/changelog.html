@@ -72,7 +72,7 @@
           </div>
           <p class="timeline-summary">This is the current state of the codebase. Work on DataAgent is recorded from 6 October 2026 and has been a single line of development since, so there is no dated public release history behind this entry &mdash; everything below ships in the build you download today.</p>
           <div class="change-group added">
-            <h4>What the app does</h4>
+            <h2>What the app does</h2>
             <ul>
               <li>Natural-language chat over your local warehouse &mdash; the query that produced the answer travels with it and is written to the audit log</li>
               <li>SQL workbench, file upload (CSV, TSV, TXT, JSON, JSONL, NDJSON, Parquet, XLSX, XLS) and live SQLite, PostgreSQL and MySQL connections</li>
@@ -86,7 +86,7 @@
             </ul>
           </div>
           <div class="change-group changed">
-            <h4>How it is built</h4>
+            <h3>How it is built</h3>
             <ul>
               <li>Warehouse opened read-only for analysis; ETL writes funnel through one dedicated process</li>
               <li>Web UI auto-reloads on change with <code class="code-inline">WAREHOUSE_RELOAD=1</code></li>
@@ -95,7 +95,7 @@
             </ul>
           </div>
           <div class="change-group fixed">
-            <h4>Hardened</h4>
+            <h3>Hardened</h3>
             <ul>
               <li>Windows file-lock errors when two processes opened the DuckDB warehouse</li>
               <li>Long-running queries no longer block the chat stream</li>
@@ -104,7 +104,7 @@
             </ul>
           </div>
           <div class="change-group changed">
-            <h4>What is not in this build</h4>
+            <h3>What is not in this build</h3>
             <ul>
               <li>Single sign-on and row-level security are implemented but <strong>ship disabled</strong> &mdash; switch them on in <code class="code-inline">config/settings.yaml</code> if you need them</li>
               <li>The PDF export is a plain text summary; the fully formatted exports are Excel, PowerPoint, HTML, Markdown, CSV, Parquet and <code class="code-inline">.pbix</code></li>
@@ -136,7 +136,7 @@
         <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
-        <h4>Product</h4>
+        <h2>Product</h4>
         <ul>
           <li><a href="features.html">Features</a></li>
           <li><a href="comparison.html">Comparison</a></li>
@@ -146,7 +146,7 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Resources</h4>
+        <h2>Resources</h4>
         <ul>
           <li><a href="docs.html">Getting Started</a></li>
           <li><a href="blog.html">Blog</a></li>
@@ -155,7 +155,7 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Connect</h4>
+        <h2>Connect</h4>
         <ul>
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>

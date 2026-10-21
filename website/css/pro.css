@@ -929,7 +929,7 @@ body::after {
 }
 .footer .nav-logo { color: var(--text); }
 .footer-brand p { color: rgba(238, 233, 255, 0.55); }
-.footer-col h4 { color: rgba(238, 233, 255, 0.45); }
+.footer-col h2 { color: rgba(238, 233, 255, 0.45); }
 .footer-col a { color: rgba(238, 233, 255, 0.75); }
 .footer-col a:hover { color: var(--link-hover); transform: translateX(3px); }
 .footer-bottom {
@@ -1710,7 +1710,7 @@ body::after {
 .timeline-date { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
 .timeline-summary { color: var(--text-2); font-size: 0.96rem; line-height: 1.65; margin-bottom: 14px; }
 .change-group { margin-bottom: 10px; }
-.change-group h4 { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.change-group h3 { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
 .change-group.added h4 { color: var(--success); }
 .change-group.changed h4 { color: var(--emphasis); }
 .change-group.fixed h4 { color: var(--primary-hi); }
@@ -1804,7 +1804,7 @@ body::after {
 }
 a.blog-card:hover { transform: translateY(-6px); box-shadow: 0 34px 64px -38px rgba(20, 11, 46, 0.65); }
 .blog-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
-.blog-card h3 { font-size: 1.18rem; font-weight: 800; line-height: 1.3; color: var(--text); }
+.blog-card h2 { font-size: 1.18rem; font-weight: 800; line-height: 1.3; color: var(--text); }
 .blog-excerpt { color: var(--text-2); font-size: 0.94rem; line-height: 1.65; flex: 1; }
 .blog-more { font-size: 0.86rem; font-weight: 700; color: var(--primary-hi); }
 a.blog-card:hover .blog-more { text-decoration: underline; }

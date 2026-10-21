@@ -1250,7 +1250,7 @@ a:focus-visible,
   border-radius: var(--radius-lg);
 }
 
-.docs-sidebar h4 {
+.docs-sidebar h2 {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1428,7 +1428,7 @@ a:focus-visible,
   flex-shrink: 0;
 }
 
-.contact-link-card .link-info h4 {
+.contact-link-card .link-info h3 {
   font-size: 1rem;
   font-weight: 700;
   margin-bottom: 2px;
@@ -1462,7 +1462,7 @@ a:focus-visible,
   line-height: 1.7;
 }
 
-.footer-col h4 {
+.footer-col h2 {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
