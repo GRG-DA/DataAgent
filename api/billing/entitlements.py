@@ -49,7 +49,7 @@ _FALLBACK = {
     "pro": {
         "ads_visible": False,
         "ip_rotation": True,
-        "ai_unlimited": True,
+        "ai_unlimited": False,
         "recreate_from_image": True,
         "dashboard_export": True,
         "alerts_thresholds": True,
@@ -74,7 +74,7 @@ _FALLBACK = {
     "lifetime": {
         "ads_visible": False,
         "ip_rotation": True,
-        "ai_unlimited": True,
+        "ai_unlimited": False,
         "recreate_from_image": True,
         "dashboard_export": True,
         "alerts_thresholds": True,
@@ -210,7 +210,7 @@ def get_entitlements(user_id: str, plan: Optional[str] = None) -> dict:
             "plan": "pro",
             "ads_visible": False,
             "ip_rotation": True,
-            "ai_unlimited": True,
+            "ai_unlimited": False,
             "max_dashboards": 50,
             "max_chat_history_days": 365,
         }

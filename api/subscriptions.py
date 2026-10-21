@@ -346,12 +346,26 @@ async def sync_subscription(user: User = Depends(get_current_user)):
         )
     else:
         try:
-            from api.billing.cloud_sync import sync_user
+            from api.billing.cloud_sync import is_configured, sync_user
 
-            plan = sync_user(user.user_id, email, sso_subject)
-            synced = bool(plan)
-            if not plan:
-                detail = "The billing server did not return a plan for this account."
+            if not is_configured():
+                # The shipped default: no billing server is configured. That
+                # is not a failure - the app is a self-hosted free plan.
+                detail = (
+                    "No billing server is configured on this install, so there "
+                    "is nothing to sync. The plan shown is your local plan."
+                )
+            else:
+                plan = sync_user(user.user_id, email, sso_subject)
+                if plan:
+                    synced = True
+                else:
+                    # sync_user returns None both when the plan is unchanged
+                    # and when there is no purchase. Neither is a failure.
+                    detail = (
+                        "The billing server has no newer plan for this "
+                        "account. The plan shown is your current plan."
+                    )
         except Exception as e:  # noqa: BLE001 — never downgrade the local plan
             logger.warning("entitlement sync failed: %s", e)
             detail = "The billing server could not be reached."

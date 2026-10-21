@@ -125,7 +125,14 @@ def _parse_tag(tag: str) -> tuple[int, ...]:
 
 
 def latest_version(timeout: float = TIMEOUT_S) -> Optional[str]:
-    """Fetch the latest release tag.  None on any failure (offline-safe)."""
+    """Fetch the latest release tag.
+
+    Returns ``None`` when the check could not be completed (offline, DNS
+    failure, rate limit, timeout) and ``""`` when the repository exists but
+    has **no published release** — the normal state of a project whose
+    release repo has not been published yet.  The two are different
+    situations and must not be reported the same way.
+    """
     try:
         req = urllib.request.Request(
             releases_api_url(), headers={"User-Agent": "DataAgent"}
@@ -138,7 +145,7 @@ def latest_version(timeout: float = TIMEOUT_S) -> Optional[str]:
         # 404 == the repository has no published release (or does not exist yet).
         # That is a normal state, not a failure.
         if exc.code == 404:
-            return None
+            return ""
         return None
     except Exception:  # noqa: BLE001
         return None
@@ -164,6 +171,19 @@ def check_for_update(timeout: float = TIMEOUT_S) -> UpdateResult:
         lat = latest_version(timeout=timeout)
     except Exception:  # noqa: BLE001 — the check must never take the app down
         lat = None
+    if lat == "":
+        # The repository exists but has no published release yet. That is the
+        # normal state before the first release - it is NOT an outage.
+        return UpdateResult(
+            available=False,
+            current=cur,
+            latest=cur,
+            status=STATUS_NO_RELEASE,
+            detail=(
+                f"You are running the latest build (v{cur}). No newer release "
+                "has been published yet."
+            ),
+        )
     if not lat:
         return UpdateResult(
             available=False,

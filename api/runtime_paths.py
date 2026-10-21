@@ -94,6 +94,48 @@ def _cwd() -> Path:
         return Path.home()
 
 
+def project_root() -> Path:
+    """The source checkout's root (the directory that holds ``config/``).
+
+    In a frozen build this is the BUNDLE directory, so it is only meaningful
+    for a source checkout.
+    """
+    return Path(__file__).resolve().parent.parent
+
+
+def runtime_dir_warning() -> str:
+    """A warning when a source run's working directory is not the project root.
+
+    In a source checkout the runtime state (the warehouse, ``config/users.json``
+    and the key files) is resolved against the CURRENT WORKING DIRECTORY, so
+    running ``python C:\\repo\\run.py`` from somewhere else starts a SECOND,
+    empty install: a different warehouse, different accounts, and a re-minted
+    JWT secret and grant key.
+
+    The shipped ``.exe`` is not affected - a frozen build always uses the
+    per-user directory.  This only matters for a developer, but a silent
+    second install is confusing, so it is reported.
+    """
+    if is_frozen() or (os.environ.get(DATA_DIR_ENV) or "").strip():
+        return ""
+    try:
+        cwd = _cwd().resolve()
+        root = project_root().resolve()
+    except OSError:  # pragma: no cover
+        return ""
+    if cwd == root:
+        return ""
+    if (root / "config" / "settings.yaml").exists() and not (cwd / "config").exists():
+        return (
+            f"DataAgent is running from {cwd} but the project is at {root}. "
+            "A source run keeps its data (warehouse, accounts, key files) in "
+            "the working directory, so this starts a SEPARATE, empty install. "
+            "Run it from the project root, or set "
+            f"{DATA_DIR_ENV} to the directory that holds the existing data."
+        )
+    return ""
+
+
 def runtime_data_dir() -> Path:
     """The WRITABLE per-user runtime directory.
 

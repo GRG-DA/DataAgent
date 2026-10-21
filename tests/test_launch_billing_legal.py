@@ -319,9 +319,12 @@ def test_invite_does_not_claim_a_mail_it_could_not_send(
         headers=_headers("c1_admin", role="admin"),
     )
 
-    assert response.status_code == 503
+    # The ACCOUNT WAS CREATED, so the answer is 201 - not 503.  A 503 tells
+    # the client to retry, and a retry creates a duplicate account.  The
+    # delivery state is reported honestly in the body instead.
+    assert response.status_code == 201
     body = response.json()
-    assert body["success"] is False
+    assert body["success"] is True
     assert body["delivery"] == "unconfigured"
     assert "sent" not in body["message"].lower().replace("not sent", "")
     assert "not configured" in body["message"].lower()

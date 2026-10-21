@@ -77,3 +77,29 @@ def validate_column_name(name: Optional[str]) -> str:
     if not name or not _VALID_IDENT.fullmatch(str(name)):
         raise HTTPException(status_code=400, detail="Invalid column name")
     return str(name)
+
+
+def sanitize_table_name(name: Optional[str], fallback: str = "upload") -> str:
+    """Return a table name that satisfies :func:`validate_table_name`.
+
+    Used wherever a table name is DERIVED rather than supplied: a CSV
+    called ``2024-sales.csv`` becomes ``2024_sales``, which starts with a
+    digit and is not a valid identifier, and a pipeline step called
+    ``Load sales`` produces ``Load sales``.
+
+    Without this, a valid upload produced a table that every read route
+    then rejected with "Invalid table name" — the identifier is rejected
+    everywhere, not just at the point it was created.
+    """
+    import re as _re
+
+    raw = str(name or "").strip()
+    cleaned = _re.sub(r"[^A-Za-z0-9_]", "_", raw)
+    cleaned = _re.sub(r"_+", "_", cleaned).strip("_")
+    if not cleaned:
+        cleaned = fallback
+    # An identifier may not start with a digit.
+    if not cleaned[0].isalpha() and cleaned[0] != "_":
+        cleaned = "_" + cleaned
+    # The identifier is capped at 63 characters.
+    return cleaned[:63]

@@ -132,7 +132,7 @@ def test_ask_returns_429_when_free_cap_exhausted(billing_db, monkeypatch):
 
     assert resp.status_code == 429
     assert resp.headers.get("X-Upgrade-Required") == "true"
-    assert resp.headers.get("X-Required-Feature") == "ai_unlimited"
+    assert resp.headers.get("X-Required-Feature") == "ai_requests_daily"
     assert "Daily AI request limit" in resp.json()["detail"]
 
 

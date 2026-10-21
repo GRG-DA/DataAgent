@@ -349,6 +349,19 @@ def main():
     # a writable per-user dir, so launching by double-click or from any cwd works.
     if getattr(sys, "frozen", False):
         _frozen_bootstrap()
+    else:
+        # A source run keeps its data in the working directory. Running it
+        # from somewhere other than the project root starts a SECOND, empty
+        # install (a different warehouse, different accounts, a re-minted JWT
+        # secret and grant key), so say so instead of failing silently.
+        try:
+            from api.runtime_paths import runtime_dir_warning
+
+            _warning = runtime_dir_warning()
+            if _warning:
+                print(f"WARNING: {_warning}")
+        except Exception:  # noqa: BLE001 — the warning must never block a run
+            pass
 
     parser = argparse.ArgumentParser(
         description="LLM Data Analytics Agent",

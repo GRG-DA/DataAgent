@@ -81,12 +81,11 @@ def start_tray(app_url: str, on_quit):
                     0x10,
                 )
                 return
-            title = "DataAgent update"
-            if result.available:
-                _message(title, result.detail, 0x40)
-            else:
-                _message(title, result.detail, 0x40)
-
+            # The detail already says what happened ("Version 1.2 is
+            # available", "You are on the latest version", "No newer release
+            # has been published yet"), so the message is the same either
+            # way.
+            _message("DataAgent update", result.detail, 0x40)
         threading.Thread(target=_run, daemon=True).start()
 
     try:

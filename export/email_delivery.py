@@ -57,7 +57,26 @@ _URL_ATTRS = frozenset({"href", "src", "action", "formaction", "background",
                         "poster", "data", "codebase", "cite"})
 
 #: URL schemes that are never allowed.
-_DANGEROUS_SCHEMES = ("javascript:", "vbscript:", "data:text/html")
+_DANGEROUS_SCHEMES = ("javascript:", "vbscript:", "data:text/html", "data:application/")
+
+#: URL schemes a report body may link to.
+_SAFE_URL_SCHEMES = ("http:", "https:", "mailto:", "#", "/")
+
+#: Data-URI image types a report body may embed.  SVG is EXCLUDED: an SVG can
+#: carry <script> and event handlers, so it is a script vector, not a picture.
+_SAFE_DATA_IMAGES = ("data:image/png;base64,", "data:image/jpeg;base64,", "data:image/gif;base64,")
+
+#: CSS constructs that can execute or fetch.  A style attribute is kept (the
+#: report is styled), but these are removed from it.
+_DANGEROUS_CSS = re.compile(
+    r"(expression\s*\(|url\s*\(|javascript\s*:|vbscript\s*:|@import|behaviou?r\s*:|-moz-binding)",
+    re.IGNORECASE,
+)
+
+#: Whitespace and control characters are stripped from a URL before its
+#: scheme is tested: every HTML and URL parser removes them, so
+#: "java\nscript:" IS "javascript:".
+_URL_NOISE = re.compile(r"[\s\x00-\x20]+")
 
 #: A conservative address shape: one @, no whitespace, no header characters.
 _EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
@@ -87,16 +106,26 @@ class _EmailHtmlSanitizer(HTMLParser):
             lname = (name or "").lower()
             if lname.startswith("on"):
                 continue  # event handler
-            if lname in ("style",):
-                # A style attribute can carry `expression(...)` in old IE and
-                # `background:url(...)` in modern clients.
-                continue
-            if lname in _URL_ATTRS and value:
-                lowered = value.strip().lower()
-                if lowered.startswith(_DANGEROUS_SCHEMES):
+            if lname in ("style",) and value:
+                # Keep the formatting, drop the constructs that can execute
+                # or fetch (expression(), url(), @import, behaviour:).
+                value = _DANGEROUS_CSS.sub("", value)
+                if not value.strip():
                     continue
-                if lname == "src" and lowered.startswith(("http://", "https://")):
-                    continue  # remote image == tracking pixel
+            if lname in _URL_ATTRS and value:
+                # Strip every whitespace/control char first: browsers do the
+                # same before resolving a URL, so "java\nscript:alert(1)" IS
+                # "javascript:alert(1)".  Testing the raw value let it through.
+                probe = _URL_NOISE.sub("", value).lower()
+                if probe.startswith(_DANGEROUS_SCHEMES):
+                    continue
+                if probe.startswith("data:"):
+                    # An SVG data URI can carry <script> - only real raster
+                    # images are allowed.
+                    if not probe.startswith(_SAFE_DATA_IMAGES):
+                        continue
+                elif not probe.startswith(_SAFE_URL_SCHEMES):
+                    continue
             if value is None:
                 out.append(f' {name}')
             else:
@@ -117,12 +146,13 @@ class _EmailHtmlSanitizer(HTMLParser):
         if tag in _STRIP_TAGS_ONLY:
             return
         if tag == "img":
-            # Keep the element only for a data: image; otherwise drop it.
+            # Keep the element only for an embedded raster image; drop a
+            # remote one (a tracking pixel) and an SVG (a script vector).
             src = ""
             for name, value in attrs:
                 if (name or "").lower() == "src" and value:
                     src = value.strip().lower()
-            if not src.startswith("data:image/"):
+            if not src.startswith(_SAFE_DATA_IMAGES):
                 return
         self._parts.append(f"<{tag}{self._attrs(tag, attrs)}>")
 
@@ -135,7 +165,7 @@ class _EmailHtmlSanitizer(HTMLParser):
             for name, value in attrs:
                 if (name or "").lower() == "src" and value:
                     src = value.strip().lower()
-            if not src.startswith("data:image/"):
+            if not src.startswith(_SAFE_DATA_IMAGES):
                 return
         self._parts.append(f"<{tag}{self._attrs(tag, attrs)}>")
 

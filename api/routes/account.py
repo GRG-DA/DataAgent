@@ -556,10 +556,13 @@ async def invite_user(body: InviteRequest, request_ctx: Request, admin=Depends(_
             "invitation, so it was not delivered. Check the mail server, or "
             "hand the invite link below to the user directly."
         )
+    # The ACCOUNT WAS CREATED.  Answering 503 would tell the client to
+    # retry, and a retry creates a duplicate account.  The delivery state
+    # is reported honestly in the body instead.
     return JSONResponse(
-        status_code=503,
+        status_code=201,
         content={
-            "success": False,
+            "success": True,
             "message": message,
             "delivery": delivery,
             "invite_link": _link("/accept-invite", token),

@@ -1088,7 +1088,7 @@ def _meter_ai_request(req: Request) -> None:
             # upgrade overlay reacts identically to a metered block.
             headers={
                 "X-Upgrade-Required": "true",
-                "X-Required-Feature": "ai_unlimited",
+                "X-Required-Feature": "ai_requests_daily",
             },
         )
     except Exception:  # noqa: BLE001
@@ -2437,21 +2437,6 @@ def _share_link_tenant(link: Dict[str, Any]) -> str:
     return str((link or {}).get("tenant_id") or "").strip() or "default"
 
 
-def _set_share_link_tenant(link_id: str, tenant_id: str) -> None:
-    """Stamp the tenant onto a freshly created share link."""
-    try:
-        conn = duckdb.connect(settings.duckdb.database_path)
-        try:
-            conn.execute(
-                "UPDATE analytics.share_links SET tenant_id = ? WHERE id = ?",
-                [tenant_id, link_id],
-            )
-        finally:
-            conn.close()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not stamp the tenant on a share link: %s", exc)
-
-
 @app.post("/share")
 async def create_share_link(payload: Dict[str, Any], request: Request):
     """Create a share link.
@@ -2481,8 +2466,13 @@ async def create_share_link(payload: Dict[str, Any], request: Request):
             permission=payload.get("permission", "view"),
             shared_with=payload.get("shared_with", ""),
             expires_in_days=payload.get("expires_in_days"),
+            # The tenant is written WITH the link, in the same statement. A
+            # separate stamp was a second RW connection: if it failed (the
+            # warehouse is locked by the ETL process) the link stayed in the
+            # "default" tenant and became invisible to the account that
+            # created it.
+            tenant_id=tenant_id,
         )
-        _set_share_link_tenant(link.id, tenant_id)
         return {"success": True, "share_link": link.__dict__}
     except Exception as e:
         logger.error(f"Create share link failed: {e}")
@@ -2523,16 +2513,15 @@ async def revoke_share_link(link_id: str, request: Request, shared_by: str = "")
     """Revoke a share link.
 
     The owner is the **session** user: a client-supplied ``shared_by`` may
-    not be used to revoke somebody else's link.  The query parameter is
-    kept for backwards compatibility and is only consulted when there is
-    no session (which the auth middleware does not allow).
+    not be used to revoke somebody else's link, and it is never used as a
+    fallback either — the owner comes from the session or from nowhere.
     """
     try:
         from api.collaboration import get_collaboration_manager
         user = getattr(request.state, "user", None)
         owner = str(getattr(user, "username", "") or getattr(user, "user_id", "")) if user else ""
         if not owner:
-            owner = shared_by
+            return {"success": False, "error": "Share link not found"}
         mgr = get_collaboration_manager()
         if mgr.revoke_share_link(link_id, owner):
             return {"success": True, "message": "Share link revoked"}
@@ -5778,10 +5767,24 @@ def _escape_untrusted_values(document: str, values: List[str]) -> str:
     escaped twice.  If a value ever reaches the document unescaped, it is
     escaped here, so the route owns the guarantee even if the builder
     regresses.
+
+    Two rules keep the net from corrupting the document:
+
+    * only a value that can CREATE MARKUP is escaped — a value with no
+      ``<`` in it cannot open a tag, and escaping it would rewrite the
+      document's own entities (``&times;`` -> ``&amp;times;``). A one
+      character value like ``&`` would otherwise rewrite every entity in
+      the page;
+    * the replacement targets the WHOLE raw value, so the document's own
+      already-escaped copy (``&lt;script&gt;``) is never touched and
+      nothing is escaped twice.
     """
     out = document
     for value in sorted(set(values), key=len, reverse=True):
-        if value and value in out:
+        if not value or "<" not in value:
+            # No "<" means no markup can be created by this value.
+            continue
+        if value in out:
             out = out.replace(value, _html_escape(value))
     return out
 
@@ -8568,8 +8571,8 @@ async def email_report(
             return {
                 "success": False,
                 "error": (
-                    "Reports can only be sent to your own address "
-                    f"({', '.join(sorted(allowed))}). Ask an administrator to "
+                    "Reports can only be sent to your own address, or to one "
+                    "your administrator has allowed. Ask an administrator to "
                     "allow other recipients."
                 ),
             }
@@ -8589,23 +8592,58 @@ async def email_report(
         else:
             return {"success": False, "error": f"Unsupported format: {fmt}"}
 
-        smtp_config = {"host": "localhost", "port": 25, "from_address": "reports@example.com"}
-        try:
-            import yaml
-            from pathlib import Path
-            cfg_path = Path("config/settings.yaml")
-            if cfg_path.exists():
-                with open(cfg_path) as f:
-                    cfg = yaml.safe_load(f)
-                smtp_config.update(cfg.get("email", {}))
-        except Exception:
-            pass
+        smtp_config = _report_smtp_config()
 
         result = send_report_email(recipient, subject, message or f"Report: {table} attached.",
                                    [(filename, report_bytes, mime)], smtp_config)
         return {"success": result.get("success", False), "message": result.get("message", "Sent")}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _report_smtp_config() -> dict:
+    """The SMTP settings the report mailer uses.
+
+    Read from the SAME source as the account-lifecycle mailer
+    (``api/mailer.py``): the ``notifications:`` block of
+    ``config/settings.yaml`` plus the ``NOTIFICATION_SMTP_*`` environment
+    variables.  The old code read a ``email:`` section that the shipped
+    config does not have, so a configured install could never deliver a
+    report and the From: stayed a placeholder domain.
+    """
+    def _env(name: str, fallback: str = "") -> str:
+        return (os.getenv(name) or fallback or "").strip()
+
+    host = _env("NOTIFICATION_SMTP_HOST")
+    port = _env("NOTIFICATION_SMTP_PORT")
+    user = _env("NOTIFICATION_SMTP_USER")
+    password = _env("NOTIFICATION_SMTP_PASSWORD")
+    sender = _env("NOTIFICATION_SMTP_FROM")
+
+    try:
+        from config import settings
+
+        n = settings.notifications
+        host = host or str(getattr(n, "smtp_host", "") or "").strip()
+        port = port or str(getattr(n, "smtp_port", "") or "").strip()
+        user = user or str(getattr(n, "smtp_user", "") or "").strip()
+        password = password or str(getattr(n, "smtp_password", "") or "").strip()
+        sender = sender or str(getattr(n, "smtp_from", "") or "").strip()
+    except Exception:  # noqa: BLE001 — the config is optional
+        pass
+
+    try:
+        port_number = int(port) if port else 587
+    except (TypeError, ValueError):
+        port_number = 587
+
+    return {
+        "host": host,
+        "port": port_number,
+        "username": user,
+        "password": password,
+        "from_address": sender or "reports@localhost",
+    }
 
 
 def _allowed_email_recipients(req: Request) -> set:

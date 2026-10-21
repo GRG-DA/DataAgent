@@ -366,6 +366,16 @@ class ETLPipeline:
                     if df is None:
                         raise ValueError(f"Input data '{input_key}' not found")
                     table_name = step.params.get("table_name", step.name)
+                    # A step name ("Load sales") is not a valid SQL
+                    # identifier, and a table created under a name the read
+                    # routes reject is unusable. Sanitise it to the same
+                    # rule every read route enforces.
+                    try:
+                        from api.security_paths import sanitize_table_name
+
+                        table_name = sanitize_table_name(table_name, fallback="loaded_data")
+                    except Exception:  # noqa: BLE001 — the fallback keeps it working
+                        table_name = re.sub(r"[^A-Za-z0-9_]", "_", str(table_name)).strip("_") or "loaded_data"
                     file_format = str(step.params.get("format", "") or "").strip().lower()
 
                     if file_format:

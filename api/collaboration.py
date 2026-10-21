@@ -298,7 +298,8 @@ class CollaborationManager:
     def create_share_link(self, target_type: str, target_id: str,
                           shared_by: str, permission: str = "view",
                           shared_with: str = "",
-                          expires_in_days: Optional[int] = None) -> ShareLink:
+                          expires_in_days: Optional[int] = None,
+                          tenant_id: str = "") -> ShareLink:
         import secrets
         link_id = str(uuid.uuid4())
         token = secrets.token_urlsafe(16)
@@ -309,12 +310,26 @@ class CollaborationManager:
             expires_at = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=expires_in_days)).isoformat()
 
         with self._get_conn() as conn:
-            conn.execute("""
-                INSERT INTO analytics.share_links
-                (id, target_type, target_id, shared_by, shared_with, permission, token, expires_at, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, [link_id, target_type, target_id, shared_by, shared_with,
-                  permission, token, expires_at, now])
+            # The tenant is written WITH the link, in the same statement.
+            # Stamping it afterwards meant a second RW connection, and a
+            # failed stamp (the warehouse is locked by the ETL process) left
+            # the link in the "default" tenant - invisible to the very
+            # account that created it.
+            columns = [
+                "id", "target_type", "target_id", "shared_by", "shared_with",
+                "permission", "token", "expires_at", "created_at",
+            ]
+            values = [link_id, target_type, target_id, shared_by, shared_with,
+                      permission, token, expires_at, now]
+            if tenant_id:
+                columns.append("tenant_id")
+                values.append(tenant_id)
+            placeholders = ", ".join(["?"] * len(columns))
+            conn.execute(
+                f"INSERT INTO analytics.share_links ({', '.join(columns)}) "
+                f"VALUES ({placeholders})",
+                values,
+            )
 
         return ShareLink(id=link_id, target_type=target_type, target_id=target_id,
                          shared_by=shared_by, shared_with=shared_with,

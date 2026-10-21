@@ -410,7 +410,7 @@ async def load_to_warehouse(request: LoadRequest, http_request: Request):
                 ),
             )
 
-        from api.security_paths import validate_table_name
+        from api.security_paths import sanitize_table_name, validate_table_name
 
         table_name = request.table_name
         if table_name:
@@ -419,9 +419,10 @@ async def load_to_warehouse(request: LoadRequest, http_request: Request):
             table_name = Path(request.filename).stem.lower().replace(" ", "_")
             if len(data) > 1:
                 table_name = f"{table_name}_{sheet_name}"
-            import re as _re
-
-            table_name = _re.sub(r"[^A-Za-z0-9_]", "_", table_name).strip("_") or "upload"
+            # A name derived from a filename can start with a digit
+            # ("2024-sales.csv" -> "2024_sales"), which is not a valid
+            # identifier - and every read route would then reject it.
+            table_name = sanitize_table_name(table_name)
             validate_table_name(table_name)
 
         try:

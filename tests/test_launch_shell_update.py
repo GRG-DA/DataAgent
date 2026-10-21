@@ -80,7 +80,9 @@ class TestLatestVersion:
             raise _http_error(404)
 
         monkeypatch.setattr(upd.urllib.request, "urlopen", _raise)
-        assert upd.latest_version() is None
+        # An empty string means "the repository exists but has no published
+        # release" - a normal state, distinct from an outage (None).
+        assert upd.latest_version() == ""
 
     def test_network_error_is_swallowed(self, monkeypatch):
         def _raise(req, timeout=None):
@@ -116,6 +118,16 @@ class TestCheckForUpdate:
         # The message must not leak an internal URL or an exception repr.
         assert "http" not in result.detail.lower()
         assert "Traceback" not in result.detail
+
+    def test_a_repository_with_no_release_is_not_an_outage(self, monkeypatch):
+        """404 == "no release published yet", which is NOT "offline"."""
+        monkeypatch.setattr(upd, "current_version", lambda: "1.0.0")
+        monkeypatch.setattr(upd, "latest_version", lambda timeout=5: "")
+        result = upd.check_for_update()
+        assert result.available is False
+        assert result.status == upd.STATUS_NO_RELEASE
+        assert result.status != upd.STATUS_UNAVAILABLE
+        assert "no newer release" in result.detail.lower()
 
     def test_legacy_tuple_contract_is_preserved(self, monkeypatch):
         monkeypatch.setattr(upd, "current_version", lambda: "2.0.0")

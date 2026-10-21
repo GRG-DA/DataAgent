@@ -64,7 +64,7 @@ def _sanitize_series(series: pd.Series) -> pd.Series:
     return series
 
 
-def _sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of ``df`` with formula-like strings neutralised.
 
     Column names are sanitised as well — a header called ``=cmd|...`` is a
@@ -79,6 +79,8 @@ def _sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+#: Backwards-compatible alias for the private name.
+_sanitize_dataframe = sanitize_dataframe
 def _escape_markdown_cell(value: Any) -> str:
     """Escape a value for use inside a Markdown table cell.
 

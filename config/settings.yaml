@@ -87,6 +87,21 @@ notifications:
   # built-in default.
   smtp_from: ""
 
+# Report e-mail (POST /export/email).
+#
+# The SMTP settings are the SAME as the account-lifecycle ones above
+# (`notifications:` / NOTIFICATION_SMTP_*). This block only holds the
+# recipient allow-list.
+#
+# A report is sent with the OPERATOR's SMTP identity, so the recipient may
+# only be the signed-in account's own address unless it is listed here.
+# Without an allow-list entry, a report can only go to the sender.
+email:
+  # Addresses a report may be sent to, in addition to the signed-in
+  # account's own address.  The env var DATAAGENT_EMAIL_ALLOWED_RECIPIENTS
+  # (comma-separated) is merged with this list.
+  allowed_recipients: []
+
 # PostgreSQL — the hosted identity / session store (optional).
 # Set DATABASE_URL (or POSTGRES_DSN) to point at the shared database a
 # multi-replica deployment runs against.  Without it the app stays on

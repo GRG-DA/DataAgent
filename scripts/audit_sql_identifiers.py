@@ -18,16 +18,19 @@ from pathlib import Path
 
 TARGET = Path("api/main.py")
 
+VALIDATORS = {"validate_table_name", "validate_column_name"}
+
 SQL_FUNCS = {"execute", "executemany", "sql"}
 IDENT_NAMES = {"table_name", "table"}
 
 
 class HandlerAudit(ast.NodeVisitor):
-    def __init__(self) -> None:
+    def __init__(self, helper_validated=None) -> None:
         self.issues = []
         self._fn = None
         self._validated = set()
         self._sources = {}
+        self._helper_validated = helper_validated or set()
 
     # -- helpers ---------------------------------------------------------
     def _is_route(self, node) -> bool:
@@ -40,6 +43,26 @@ class HandlerAudit(ast.NodeVisitor):
     def _args(self, node):
         a = node.args
         return [x.arg for x in (list(a.args) + list(a.kwonlyargs))]
+
+    def _validated_helpers(self, tree: ast.Module) -> set:
+        """Names of module-level helpers that validate a table identifier.
+
+        ``api/main.py::_detect_best_table()`` validates the name it returns,
+        so a caller that takes the table from that helper is safe. The audit
+        only tracks validations performed inside a handler body, so it needs
+        to be told about the helpers too.
+        """
+        helpers = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for sub in ast.walk(node):
+                if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name) \
+                        and sub.func.id in VALIDATORS:
+                    for a in sub.args:
+                        if isinstance(a, ast.Name):
+                            helpers.add(a.id)
+        return helpers
 
     def visit_FunctionDef(self, node):
         self._visit_fn(node)
@@ -69,6 +92,17 @@ class HandlerAudit(ast.NodeVisitor):
                     self._sources[tgt] = "body"
                 elif isinstance(val, ast.Name):
                     self._sources[tgt] = self._sources.get(val.id, "local")
+                elif isinstance(val, ast.Call):
+                    # `table, _, col, _ = _detect_best_table()` - the value
+                    # comes from a server-side helper.
+                    self._sources[tgt] = "local"
+            if isinstance(sub, ast.Assign) and len(sub.targets) == 1 \
+                    and isinstance(sub.targets[0], ast.Tuple):
+                # A tuple unpack: `table, _, col, _ = helper()`.
+                if isinstance(sub.value, ast.Call):
+                    for elt in sub.targets[0].elts:
+                        if isinstance(elt, ast.Name) and elt.id in IDENT_NAMES:
+                            self._sources[elt.id] = "local"
             if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name) \
                     and sub.func.id in {"validate_table_name", "validate_column_name"}:
                 for a in sub.args:
@@ -113,7 +147,11 @@ class HandlerAudit(ast.NodeVisitor):
                 if name in self._validated:
                     continue
                 if source == "local":
-                    continue  # computed server-side (a catalog lookup, a scheduler)
+                    # The name comes from a helper that validates it (e.g.
+                    # _detect_best_table()).
+                    if name in self._helper_validated:
+                        continue
+                    continue  # computed server-side
                 self.issues.append((node.name, name, source, sub.lineno))
 
         self._fn, self._validated, self._sources = prev_fn, prev_val, prev_src
@@ -123,7 +161,7 @@ class HandlerAudit(ast.NodeVisitor):
 def main() -> int:
     src = TARGET.read_text(encoding="utf-8")
     tree = ast.parse(src)
-    audit = HandlerAudit()
+    audit = HandlerAudit(helper_validated=HandlerAudit()._validated_helpers(tree))
     audit.visit(tree)
 
     # de-duplicate

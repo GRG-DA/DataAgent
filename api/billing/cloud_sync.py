@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 REQUEST_TIMEOUT = 8.0
 DEFAULT_SOURCE = "cloud_sync"
 
+#: Plan ranking, used to decide whether a remote plan is an upgrade or a
+#: downgrade.  A remote plan may only ever RAISE the local plan.
+_PLAN_RANK = {"free": 0, "pro": 1, "lifetime": 2}
+
 
 def billing_sync_base_url() -> str:
     """Billing server base URL from env (BILLING_SYNC_URL) or settings."""
@@ -160,9 +164,16 @@ def apply_remote_plan(user_id: str, email: str, remote: Dict[str, Any]) -> Optio
         current = "free"
 
     # Never downgrade a locally-activated key because of a transient/unknown
-    # remote state: server "expired/none" only downgrades if local plan came
-    # from the same source (cloud sync) — a local product key always wins.
-    if plan in ("free",) and current in ("pro", "lifetime"):
+    # remote state: the remote plan may only ever be an UPGRADE.
+    #
+    # The old check was ``if plan == "free" and current in ("pro", "lifetime")``
+    # — so a remote "pro" over a local "lifetime" fell through and DOWNGRADED
+    # the lifetime entitlement.  The plans are ranked instead.
+    if _PLAN_RANK.get(plan, 0) < _PLAN_RANK.get(current, 0):
+        logger.info(
+            "cloud sync: refusing to downgrade %s -> %s for %s",
+            current, plan, email,
+        )
         return None
 
     # Plan unchanged → nothing to do (idempotent re-apply is safe but noisy).
