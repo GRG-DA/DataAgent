@@ -794,6 +794,25 @@ def test_extract_file_convenience(tmp_path):
 
 # ------------------------------------------------- extract_from_api
 
+@pytest.fixture
+def public_api_host(monkeypatch):
+    """Let the extractor's egress check pass for the fake host used here.
+
+    ``DataExtractor.extract_from_api`` refuses a URL whose host cannot be
+    resolved or that points into a private range (SSRF protection), so a
+    parsing test has to pretend its host is a public one.
+    """
+    import ipaddress
+
+    from api import security_egress
+
+    monkeypatch.setattr(
+        security_egress, "_resolve",
+        lambda host: [ipaddress.ip_address("93.184.216.34")],
+    )
+    return "http://x"
+
+
 class _FakeResp:
     def __init__(self, payload):
         self._payload = payload
@@ -805,72 +824,72 @@ class _FakeResp:
         return self._payload
 
 
-def test_extract_from_api_get_list(monkeypatch):
+def test_extract_from_api_get_list(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     monkeypatch.setattr(requests, "get", lambda *a, **k: _FakeResp([{"a": 1}, {"a": 2}]))
-    out = DataExtractor().extract_from_api("http://x")
+    out = DataExtractor().extract_from_api(public_api_host)
     assert out["api_data"].shape[0] == 2
 
 
-def test_extract_from_api_post_and_json_path(monkeypatch):
+def test_extract_from_api_post_and_json_path(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     monkeypatch.setattr(requests, "post", lambda *a, **k: _FakeResp({"data": {"items": [{"a": 1}]}}))
-    out = DataExtractor().extract_from_api("http://x", method="POST", json_path="data.items")
+    out = DataExtractor().extract_from_api(public_api_host, method="POST", json_path="data.items")
     assert out["api_data"].shape[0] == 1
 
 
-def test_extract_from_api_dict_result_and_list_index_path(monkeypatch):
+def test_extract_from_api_dict_result_and_list_index_path(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     monkeypatch.setattr(requests, "get", lambda *a, **k: _FakeResp({"a": 5}))
-    assert DataExtractor().extract_from_api("http://x")["api_data"].shape[0] == 1
+    assert DataExtractor().extract_from_api(public_api_host)["api_data"].shape[0] == 1
 
     monkeypatch.setattr(requests, "get", lambda *a, **k: _FakeResp([{"a": 9}, {"a": 10}]))
-    out = DataExtractor().extract_from_api("http://x", json_path="0")
+    out = DataExtractor().extract_from_api(public_api_host, json_path="0")
     assert out["api_data"].shape[0] == 1
 
 
-def test_extract_from_api_bad_index_returns_empty(monkeypatch):
+def test_extract_from_api_bad_index_returns_empty(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     monkeypatch.setattr(requests, "get", lambda *a, **k: _FakeResp([{"a": 1}]))
-    assert DataExtractor().extract_from_api("http://x", json_path="99") == {}
-    assert DataExtractor().extract_from_api("http://x", json_path="nope.deeper") == {}
+    assert DataExtractor().extract_from_api(public_api_host, json_path="99") == {}
+    assert DataExtractor().extract_from_api(public_api_host, json_path="nope.deeper") == {}
 
 
-def test_extract_from_api_page_pagination(monkeypatch):
+def test_extract_from_api_page_pagination(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_get(url, headers=None, params=None, timeout=None, **kwargs):
         if (params or {}).get("page", 1) == 1:
             return _FakeResp([{"a": 1}])
         return _FakeResp([])
 
     monkeypatch.setattr(requests, "get", fake_get)
-    out = DataExtractor().extract_from_api("http://x", pagination={"type": "page", "param": "page", "max_pages": 3})
+    out = DataExtractor().extract_from_api(public_api_host, pagination={"type": "page", "param": "page", "max_pages": 3})
     assert out["api_data"].shape[0] == 1
 
 
-def test_extract_from_api_next_url_pagination(monkeypatch):
+def test_extract_from_api_next_url_pagination(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     calls = {"n": 0}
 
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_get(url, headers=None, params=None, timeout=None, **kwargs):
         calls["n"] += 1
         if calls["n"] == 1:
             return _FakeResp({"a": 1, "next": "http://x/2"})
@@ -878,13 +897,13 @@ def test_extract_from_api_next_url_pagination(monkeypatch):
 
     monkeypatch.setattr(requests, "get", fake_get)
     out = DataExtractor().extract_from_api(
-        "http://x",
+        public_api_host,
         pagination={"type": "next_url", "max_pages": 5, "next_key": "next"},
     )
     assert out["api_data"].shape[0] == 2
 
 
-def test_extract_from_api_error_returns_empty(monkeypatch):
+def test_extract_from_api_error_returns_empty(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
@@ -893,7 +912,7 @@ def test_extract_from_api_error_returns_empty(monkeypatch):
         raise RuntimeError("net down")
 
     monkeypatch.setattr(requests, "get", boom)
-    assert DataExtractor().extract_from_api("http://x") == {}
+    assert DataExtractor().extract_from_api(public_api_host) == {}
 
 
 # ------------------------------------------------- second-pass gap closers
@@ -947,30 +966,30 @@ def test_try_parse_dates_inference_fallback():
     assert str(parsed.dtype).startswith("datetime64")
 
 
-def test_extract_from_api_scalar_json_path_returns_empty(monkeypatch):
+def test_extract_from_api_scalar_json_path_returns_empty(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     monkeypatch.setattr(requests, "get", lambda *a, **k: _FakeResp({"a": 5}))
-    assert DataExtractor().extract_from_api("http://x", json_path="a.b") == {}
+    assert DataExtractor().extract_from_api(public_api_host, json_path="a.b") == {}
 
 
-def test_extract_from_api_page_pagination_empty_dict(monkeypatch):
+def test_extract_from_api_page_pagination_empty_dict(monkeypatch, public_api_host):
     import requests
 
     from etl.extract import DataExtractor
 
     calls = {"n": 0}
 
-    def fake_get(url, headers=None, params=None, timeout=None):
+    def fake_get(url, headers=None, params=None, timeout=None, **kwargs):
         calls["n"] += 1
         if (params or {}).get("page", 1) == 1:
             return _FakeResp([{"a": 1}])
         return _FakeResp({})
 
     monkeypatch.setattr(requests, "get", fake_get)
-    out = DataExtractor().extract_from_api("http://x", pagination={"type": "page", "param": "page", "max_pages": 3})
+    out = DataExtractor().extract_from_api(public_api_host, pagination={"type": "page", "param": "page", "max_pages": 3})
     # empty-dict page still appended, but pagination stops (2 fetches, not 3)
     assert calls["n"] == 2
     assert out["api_data"].shape[0] == 2

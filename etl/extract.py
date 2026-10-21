@@ -215,7 +215,7 @@ class DataExtractor:
         Returns:
             Dict of table_name -> DataFrame
         """
-        import requests
+        from api.security_egress import EgressBlocked, safe_request
 
         all_results = []
         page = 1
@@ -233,10 +233,17 @@ class DataExtractor:
                 req_headers = headers or {}
                 req_headers.setdefault("Accept", "application/json")
 
+                # Every hop is validated: the URL itself, the ``next_url``
+                # taken from the response body, and each redirect.  A
+                # blocked address raises EgressBlocked, which is re-raised
+                # so the caller can report the refusal instead of silently
+                # importing a partial page.
                 if method.upper() == "GET":
-                    resp = requests.get(current_url, headers=req_headers, params=req_params, timeout=30)
+                    resp = safe_request("GET", current_url, headers=req_headers,
+                                        params=req_params, timeout=30)
                 else:
-                    resp = requests.post(current_url, headers=req_headers, json=data or {}, timeout=30)
+                    resp = safe_request("POST", current_url, headers=req_headers,
+                                        json=data or {}, timeout=30)
 
                 resp.raise_for_status()
                 result = resp.json()
@@ -278,6 +285,12 @@ class DataExtractor:
 
                 page += 1
 
+            except EgressBlocked:
+                # A blocked address (loopback, private network, cloud
+                # metadata, a redirect into one of those) aborts the whole
+                # import — it must not degrade into a partial page.
+                logger.error(f"API request blocked at page {page}: refusing the address")
+                raise
             except Exception as e:
                 logger.error(f"API request failed at page {page}: {e}")
                 break

@@ -396,10 +396,19 @@ def test_c9_sync_button_calls_an_endpoint_that_exists():
 def test_c9_sync_button_does_not_invent_a_route():
     """No invented URL: the frontend may only call routes that exist."""
     api_js = _read(WEB / "js" / "api.js")
-    for invented in ("/subscriptions/sync", "/billing/sync", "/entitlements/sync"):
+    # Every sync-ish route the SPA calls must exist in the backend. The
+    # backend is the authority: read the route table and compare.
+    backend = _read(ROOT / "api" / "subscriptions.py")
+    for invented in ("/billing/sync", "/entitlements/sync"):
         assert invented not in api_js, (
-            f"{invented} does not exist in the backend — do not ship a "
+            f"{invented} does not exist in the backend - do not ship a "
             "half-wired button"
+        )
+    # /subscriptions/sync exists (api/subscriptions.py), so the SPA may use it.
+    if "/subscriptions/sync" in api_js:
+        assert '"/subscriptions/sync"' in backend, (
+            "the SPA calls /subscriptions/sync but the backend does not "
+            "define it"
         )
 
 

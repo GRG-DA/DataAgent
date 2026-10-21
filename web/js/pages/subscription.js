@@ -110,12 +110,22 @@ const SubscriptionPage = {
                 syncBtn.disabled = true;
                 syncStatus.textContent = 'Syncing…';
                 try {
-                    // GET /subscriptions/me re-reads the plan and asks the billing
-                    // server for the plan attached to this account's email.
-                    const sub = await API.mySubscription();
+                    // POST /subscriptions/sync forces the billing server to be
+                    // asked unconditionally. GET /subscriptions/me only phones
+                    // home when the renewal snapshot is older than 24 hours,
+                    // so a customer who bought a licence a minute ago would
+                    // otherwise see no change.
+                    let sub = null;
+                    try {
+                        sub = await API.syncSubscription();
+                    } catch (e) {
+                        // An older build without the route still answers.
+                        sub = await API.mySubscription();
+                    }
                     const plan = (sub && sub.plan) || 'free';
                     planLineEl.innerHTML = `Current plan: <strong>${App.escapeHtml(plan)}</strong>`;
-                    syncStatus.textContent = `Synced — the plan attached to your account is "${plan}".`;
+                    const detail = (sub && sub.detail) ? ` ${sub.detail}` : '';
+                    syncStatus.textContent = `Synced — the plan attached to your account is "${plan}".${detail}`;
                 } catch (e) {
                     syncStatus.textContent = `Sync failed: ${App.escapeHtml(e.message || 'could not reach the billing server')}`;
                 } finally {

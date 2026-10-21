@@ -223,7 +223,10 @@ class ReportGenerator:
             sections.append(ReportSection(title="Recommendations", content=rec_text))
 
         return self.generate_html_report(
-            title=f"Executive Analysis Report: {_esc(table_name)}",
+            # NOT escaped here: the title is escaped once, at render time
+            # (Jinja autoescape / _esc(title) in the fallback). Escaping it
+            # twice renders `tbl & co` as `tbl &amp;amp; co`.
+            title=f"Executive Analysis Report: {table_name}",
             sections=sections,
             table_name=table_name,
             row_count=profile.get("row_count", 0),

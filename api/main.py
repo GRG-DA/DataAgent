@@ -372,8 +372,12 @@ async def lifespan(app: FastAPI):
         logger.warning(
             "notifications.smtp_host is empty — the account lifecycle "
             "(password reset, email verification, invites) cannot deliver mail. "
-            "The endpoints answer, but no message is sent. Set "
-            "NOTIFICATION_SMTP_HOST (and user/password) to enable them."
+            "The endpoints now answer with an explicit 'email delivery is not "
+            "configured on this install' notice instead of claiming success, so "
+            "a user who asks for a reset link will not receive one. Set "
+            "NOTIFICATION_SMTP_HOST (and NOTIFICATION_SMTP_USER / "
+            "NOTIFICATION_SMTP_PASSWORD / NOTIFICATION_SMTP_FROM) to enable "
+            "mail delivery."
         )
     if not (os.getenv("METRICS_TOKEN") or "").strip():
         logger.info(
@@ -382,7 +386,10 @@ async def lifespan(app: FastAPI):
             "scraper can read it."
         )
     try:
-        from api.legal_config import unfilled_legal_markers
+        from api.legal_config import (
+            legal_values_needing_an_operator,
+            unfilled_legal_markers,
+        )
 
         markers = unfilled_legal_markers()
         if markers:
@@ -390,6 +397,17 @@ async def lifespan(app: FastAPI):
                 "config/legal.yaml still has %d unfilled placeholder(s): %s. "
                 "The legal pages under web/legal/ would publish them.",
                 len(markers), ", ".join(markers[:8]),
+            )
+        # The markers are gone, but 13 values still carry a "fill this in
+        # before you publish" notice, so the legal pages still read as an
+        # unfinished document. This is the real release gate.
+        pending = legal_values_needing_an_operator()
+        if pending:
+            logger.warning(
+                "config/legal.yaml still has %d value(s) that must be filled "
+                "in before public distribution: %s. The legal pages under "
+                "web/legal/ publish these notices as-is.",
+                len(pending), ", ".join(pending[:8]),
             )
     except Exception as e:  # noqa: BLE001
         logger.debug("legal placeholder check skipped: %s", e)
@@ -2086,6 +2104,9 @@ def _detect_best_table():
 
         if not best_table:
             return None, None, None, None
+        # The name comes from the warehouse catalog (server-side), but it is
+        # interpolated into SQL by the callers, so it is validated anyway.
+        best_table = validate_table_name(best_table)
         value_col, date_col, dim_col = best_cols
         return best_table, date_col, value_col, dim_col
     except Exception as e:
@@ -2380,20 +2401,88 @@ async def get_activity(target_type: str, target_id: str):
         return {"success": False, "error": str(e)}
 
 
+# ── Share links ──────────────────────────────────────────────────────────
+
+#: Set once the ``tenant_id`` column exists on ``analytics.share_links``.
+_SHARE_TENANT_COLUMN_READY = False
+
+
+def _ensure_share_links_tenant_column() -> None:
+    """Add ``tenant_id`` to ``analytics.share_links`` (idempotent).
+
+    A share link is a *tenant* resource: without a tenant column every
+    link was resolvable by every tenant, so a link minted in tenant A
+    could be opened by tenant B.  The column is added lazily, so a fresh
+    install and an upgraded one converge on the same shape.
+    """
+    global _SHARE_TENANT_COLUMN_READY
+    if _SHARE_TENANT_COLUMN_READY:
+        return
+    try:
+        conn = duckdb.connect(settings.duckdb.database_path)
+        try:
+            conn.execute(
+                "ALTER TABLE analytics.share_links "
+                "ADD COLUMN IF NOT EXISTS tenant_id VARCHAR"
+            )
+        finally:
+            conn.close()
+        _SHARE_TENANT_COLUMN_READY = True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not add the share-link tenant column: %s", exc)
+
+
+def _share_link_tenant(link: Dict[str, Any]) -> str:
+    """Return the tenant that owns *link* (a legacy link belongs to default)."""
+    return str((link or {}).get("tenant_id") or "").strip() or "default"
+
+
+def _set_share_link_tenant(link_id: str, tenant_id: str) -> None:
+    """Stamp the tenant onto a freshly created share link."""
+    try:
+        conn = duckdb.connect(settings.duckdb.database_path)
+        try:
+            conn.execute(
+                "UPDATE analytics.share_links SET tenant_id = ? WHERE id = ?",
+                [tenant_id, link_id],
+            )
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not stamp the tenant on a share link: %s", exc)
+
+
 @app.post("/share")
-async def create_share_link(request: Dict[str, Any]):
-    """Create a share link."""
+async def create_share_link(payload: Dict[str, Any], request: Request):
+    """Create a share link.
+
+    The owner is the **session** user, never a client-supplied string:
+    otherwise anybody could mint a link attributed to another account and
+    pointing at another tenant's target.
+    """
     try:
         from api.collaboration import get_collaboration_manager
+        from api.tenancy import resolve_tenant_id
+
+        user = getattr(request.state, "user", None)
+        if user is None:
+            return {"success": False, "error": "Authentication required"}
+        shared_by = str(getattr(user, "username", "") or getattr(user, "user_id", ""))
+        tenant_id = resolve_tenant_id(user)
+
+        # The manager creates ``analytics.share_links`` on first use, so it
+        # must be instantiated *before* the tenant column is added.
         mgr = get_collaboration_manager()
+        _ensure_share_links_tenant_column()
         link = mgr.create_share_link(
-            target_type=request.get("target_type", ""),
-            target_id=request.get("target_id", ""),
-            shared_by=request.get("shared_by", "anonymous"),
-            permission=request.get("permission", "view"),
-            shared_with=request.get("shared_with", ""),
-            expires_in_days=request.get("expires_in_days"),
+            target_type=payload.get("target_type", ""),
+            target_id=payload.get("target_id", ""),
+            shared_by=shared_by,
+            permission=payload.get("permission", "view"),
+            shared_with=payload.get("shared_with", ""),
+            expires_in_days=payload.get("expires_in_days"),
         )
+        _set_share_link_tenant(link.id, tenant_id)
         return {"success": True, "share_link": link.__dict__}
     except Exception as e:
         logger.error(f"Create share link failed: {e}")
@@ -2401,13 +2490,27 @@ async def create_share_link(request: Dict[str, Any]):
 
 
 @app.get("/share/{token}")
-async def access_shared_resource(token: str):
-    """Access a resource via shared link token."""
+async def access_shared_resource(token: str, request: Request):
+    """Access a resource via shared link token.
+
+    The lookup is scoped to the caller's tenant: a link minted in tenant
+    A is invisible to tenant B.  A request without a session belongs to
+    the default tenant, so an unauthenticated caller cannot open a
+    tenant-scoped link.
+    """
     try:
         from api.collaboration import get_collaboration_manager
+        from api.tenancy import resolve_tenant_id
+
+        # The manager creates ``analytics.share_links`` on first use, so it
+        # must be instantiated *before* the tenant column is added.
         mgr = get_collaboration_manager()
+        _ensure_share_links_tenant_column()
         link = mgr.get_share_link(token)
         if not link:
+            return {"success": False, "error": "Share link not found or expired"}
+        user = getattr(request.state, "user", None)
+        if _share_link_tenant(link) != resolve_tenant_id(user):
             return {"success": False, "error": "Share link not found or expired"}
         return {"success": True, "resource": link}
     except Exception as e:
@@ -2416,12 +2519,22 @@ async def access_shared_resource(token: str):
 
 
 @app.delete("/share/{link_id}")
-async def revoke_share_link(link_id: str, shared_by: str = ""):
-    """Revoke a share link."""
+async def revoke_share_link(link_id: str, request: Request, shared_by: str = ""):
+    """Revoke a share link.
+
+    The owner is the **session** user: a client-supplied ``shared_by`` may
+    not be used to revoke somebody else's link.  The query parameter is
+    kept for backwards compatibility and is only consulted when there is
+    no session (which the auth middleware does not allow).
+    """
     try:
         from api.collaboration import get_collaboration_manager
+        user = getattr(request.state, "user", None)
+        owner = str(getattr(user, "username", "") or getattr(user, "user_id", "")) if user else ""
+        if not owner:
+            owner = shared_by
         mgr = get_collaboration_manager()
-        if mgr.revoke_share_link(link_id, shared_by):
+        if mgr.revoke_share_link(link_id, owner):
             return {"success": True, "message": "Share link revoked"}
         return {"success": False, "error": "Share link not found"}
     except Exception as e:
@@ -2614,6 +2727,7 @@ async def list_masking_rules(
     _: None = Depends(require_feature(FEATURE_GOVERNANCE)),
 ):
     """List masking rules."""
+    table_name = validate_table_name(table_name)
     try:
         from api.masking import get_masking_manager
         mgr = get_masking_manager()
@@ -2686,6 +2800,7 @@ async def scan_pii_columns(
     _: None = Depends(require_feature(FEATURE_GOVERNANCE)),
 ):
     """Scan table for PII columns and suggest masking rules."""
+    table_name = validate_table_name(table_name)
     try:
         from api.masking import get_masking_manager
         mgr = get_masking_manager()
@@ -2843,6 +2958,7 @@ async def profile_table(table_name: str):
     skewness, kurtosis for numerics; top values for categoricals),
     missing value summary, and dataset overview.
     """
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -2955,8 +3071,8 @@ async def profile_table(table_name: str):
 @app.get("/profile/{table_name}/column/{column_name}", response_model=Dict[str, Any])
 async def profile_column_detail(table_name: str, column_name: str):
     """Get detailed distribution data for a single column (for visualization)."""
+    table_name = validate_table_name(table_name)
     try:
-        table_name = validate_table_name(table_name)
         column_name = validate_column_name(column_name)
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -2998,6 +3114,7 @@ async def profile_column_detail(table_name: str, column_name: str):
 @app.get("/profile/{table_name}/outliers", response_model=Dict[str, Any])
 async def detect_outliers(table_name: str, threshold: float = 1.5):
     """Detect outliers in numeric columns using IQR method."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3046,6 +3163,7 @@ async def detect_outliers(table_name: str, threshold: float = 1.5):
 @app.get("/analysis/forecast/{table_name}", response_model=Dict[str, Any])
 async def forecast_data(table_name: str, date_col: str = "", value_col: str = "", periods: int = 6):
     """Simple time-series forecast using linear regression + moving average."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3082,7 +3200,7 @@ async def forecast_data(table_name: str, date_col: str = "", value_col: str = ""
         ts = df.groupby(date_col)[value_col].sum().sort_index()
 
         if len(ts) < 3:
-            return {"success": False, "error": "Need at least 3 data points for forecasting"}
+            return {"success": False, "error": "Need at least 3 data points for a trend forecast"}
 
         # Linear regression
         import numpy as np
@@ -3133,6 +3251,7 @@ async def forecast_data(table_name: str, date_col: str = "", value_col: str = ""
 @app.get("/analysis/anomalies/{table_name}", response_model=Dict[str, Any])
 async def detect_anomalies_series(table_name: str, date_col: str = "", value_col: str = "", z_threshold: float = 2.0):
     """Detect anomalies using Z-score method on time series."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3200,6 +3319,7 @@ async def detect_anomalies_series(table_name: str, date_col: str = "", value_col
 @app.get("/analysis/segmentation/{table_name}", response_model=Dict[str, Any])
 async def segment_analysis(table_name: str, segment_col: str = "", metric_col: str = ""):
     """Segment analysis  group by a categorical column and compute metrics."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3252,13 +3372,14 @@ async def segment_analysis(table_name: str, segment_col: str = "", metric_col: s
         }
 
     except Exception as e:
-        logger.error(f"Segmentation failed: {e}")
+        logger.error(f"Segment breakdown failed: {e}")
         return {"success": False, "error": str(e)}
 
 
 @app.get("/analysis/correlation/{table_name}", response_model=Dict[str, Any])
 async def correlation_analysis(table_name: str):
     """Deep correlation analysis with interpretation."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3351,8 +3472,8 @@ async def compute_custom_kpi(request: Dict[str, Any]):
 @app.get("/analysis/normality/{table_name}/{column_name}", response_model=Dict[str, Any])
 async def normality_test(table_name: str, column_name: str, method: str = "shapiro"):
     """Test whether a column is normally distributed (Shapiro-Wilk or KS test)."""
+    table_name = validate_table_name(table_name)
     try:
-        table_name = validate_table_name(table_name)
         column_name = validate_column_name(column_name)
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3372,6 +3493,7 @@ async def normality_test(table_name: str, column_name: str, method: str = "shapi
 @app.get("/analysis/normality/{table_name}", response_model=Dict[str, Any])
 async def normality_test_all_columns(table_name: str, method: str = "shapiro"):
     """Test normality for all numeric columns in a table."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3421,6 +3543,7 @@ async def hypothesis_test(request: HypothesisTestRequest):
 async def decomposition(table_name: str, date_col: str = "", value_col: str = "",
                          period: int = 0, model: str = "additive"):
     """Decompose a time series into trend, seasonal, and residual components."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3503,8 +3626,8 @@ async def feature_importance(request: FeatureImportanceRequest):
 async def confidence_interval(table_name: str, column_name: str,
                                 confidence: float = 0.95, method: str = "t"):
     """Compute confidence interval for the mean of a column."""
+    table_name = validate_table_name(table_name)
     try:
-        table_name = validate_table_name(table_name)
         column_name = validate_column_name(column_name)
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -3694,13 +3817,57 @@ class CacheClearRequest(BaseModel):
 # Database Connector Endpoints
 # ============================================================
 
+
+def _connection_string_host(connection_string: str) -> str:
+    """Return the host named by a database connection string ("" when absent).
+
+    Both spellings are understood: a URL (``postgres://user@host/db``) and
+    the key/value form (``host=db.internal port=5432``).
+    """
+    text = str(connection_string or "").strip()
+    if not text:
+        return ""
+    if "://" in text:
+        from urllib.parse import urlsplit
+
+        try:
+            return urlsplit(text).hostname or ""
+        except ValueError:
+            return ""
+    for part in text.replace(";", " ").split():
+        key, sep, value = part.partition("=")
+        if sep and key.strip().lower() in ("host", "server", "address", "addr",
+                                           "data source", "datasource"):
+            return value.strip()
+    return ""
+
+
 @app.post("/connect/database", response_model=Dict[str, Any])
 async def connect_database(
     request: DatabaseConnectRequest,
     _: None = Depends(require_feature(FEATURE_CONNECT_PAGE)),
 ):
-    """Connect to an external database and list available tables."""
+    """Connect to an external database and list available tables.
+
+    The host is checked against the cloud metadata addresses.  The blanket
+    private-range deny of ``assert_safe_url`` is deliberately *not* applied
+    here: connecting to a database on the loopback interface or on the
+    operator's LAN is the whole point of this feature, and the route is
+    authenticated and entitlement-gated.  The metadata pivots — the one
+    address that is never a database — are still refused.
+    """
     try:
+        from api.security_egress import EgressBlocked, assert_not_metadata_address
+
+        try:
+            if request.host:
+                assert_not_metadata_address(request.host)
+            if request.connection_string:
+                assert_not_metadata_address(_connection_string_host(request.connection_string))
+        except EgressBlocked as exc:
+            logger.warning("Refused a database connection to a blocked address")
+            return {"success": False, "error": str(exc)}
+
         from etl.connectors import DatabaseConnector, DatabaseConnection
         conn = DatabaseConnection(
             db_type=request.db_type,
@@ -3731,7 +3898,19 @@ async def import_from_database(
     _: None = Depends(require_feature(FEATURE_CONNECT_PAGE)),
 ):
     """Import a table from an external database into the warehouse."""
+    table_name = validate_table_name(table_name)
     try:
+        from api.security_egress import EgressBlocked, assert_not_metadata_address
+
+        try:
+            if request.host:
+                assert_not_metadata_address(request.host)
+            if request.connection_string:
+                assert_not_metadata_address(_connection_string_host(request.connection_string))
+        except EgressBlocked as exc:
+            logger.warning("Refused a database import to a blocked address")
+            return {"success": False, "error": str(exc)}
+
         from etl.connectors import DatabaseConnector, DatabaseConnection
         conn = DatabaseConnection(
             db_type=request.db_type,
@@ -3800,8 +3979,24 @@ async def import_from_api(
     request: APIImportRequest,
     _: None = Depends(require_feature(FEATURE_CONNECT_PAGE)),
 ):
-    """Fetch data from a REST API and load into warehouse."""
+    """Fetch data from a REST API and load into warehouse.
+
+    The URL is validated before a single byte is fetched: only public
+    http(s) addresses may be reached, and every redirect hop is checked
+    again (see ``api/security_egress``).  A URL that points at the
+    loopback interface, a private network or the cloud metadata service
+    is refused — otherwise this route is a server-side request forgery
+    primitive against the host the app runs on.
+    """
     try:
+        from api.security_egress import EgressBlocked, assert_safe_url
+
+        try:
+            assert_safe_url(request.url)
+        except EgressBlocked as exc:
+            logger.warning("Refused an API import to a blocked address")
+            return {"success": False, "error": str(exc)}
+
         from etl.extract import DataExtractor
         extractor = DataExtractor()
         result = extractor.extract_from_api(
@@ -3818,6 +4013,7 @@ async def import_from_api(
             return {"success": False, "error": "No data returned from API"}
 
         table_name = request.table_name
+        table_name = validate_table_name(table_name)
         df = result[table_name]
 
         # Load into warehouse
@@ -3965,10 +4161,13 @@ async def add_schedule(
     """Add a scheduled report."""
     try:
         from analysis.scheduler import ScheduledReport, ReportScheduler
+        # The scheduled table name is interpolated into SQL by the background
+        # generator below, so it is validated at the boundary here.
+        table_name = validate_table_name(request.table_name)
         scheduler = ReportScheduler()
         report = ScheduledReport(
             name=request.name,
-            table_name=request.table_name,
+            table_name=table_name,
             schedule=request.schedule,
             enabled=request.enabled,
             include_charts=request.include_charts,
@@ -4017,6 +4216,18 @@ async def start_scheduler(_: None = Depends(require_feature(FEATURE_SCHEDULED_RE
         def gen_report(table_name, include_charts):
             import duckdb
             import pandas as pd
+            # Defence in depth: a schedule persisted before this validation
+            # existed (or written straight to the scheduler's state file)
+            # must not reach SQL either.  A bad name is skipped, not raised —
+            # this runs on a background thread, where an HTTPException would
+            # take the scheduler down.
+            try:
+                table_name = validate_table_name(table_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "scheduled report skipped: invalid table name (%s)", exc
+                )
+                return
             with tenant_connection() as conn:
                 conn.execute(f"SET search_path = '{tenant_search_path()}'")
                 df = conn.execute(f"SELECT * FROM {table_name}").df()
@@ -4089,6 +4300,7 @@ async def pii_detection(table_name: str):
 @app.get("/analysis/insights/{table_name}", response_model=Dict[str, Any])
 async def auto_insights(table_name: str):
     """Generate auto-magical narrative insights about a table."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -4339,6 +4551,7 @@ async def storytelling_endpoint(
         max_stories = request.get("max_stories", 10)
         if not table_name:
             return {"success": False, "error": "table_name is required"}
+        table_name = validate_table_name(table_name)
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
         with tenant_connection() as conn:
@@ -4386,6 +4599,7 @@ async def storytelling_status(
 @app.get("/analysis/chart-recommend/{table_name}", response_model=Dict[str, Any])
 async def chart_recommendations(table_name: str, top_n: int = 5):
     """Get chart recommendations based on column types."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -4417,6 +4631,7 @@ async def llm_chart_recommend(request: Dict[str, Any]):
     if not table_name:
         return {"success": False, "error": "table_name is required"}
 
+    table_name = validate_table_name(table_name)
     if not orchestrator or not orchestrator.llm_client:
         return {"success": False, "error": "LLM not configured. Make sure Ollama is running and a model is set."}
 
@@ -5278,6 +5493,7 @@ async def dashboard_auto_build_plan(table_name: str, request: Optional[Dict[str,
     add widgets the rules did not validate. If the LLM is unavailable, the
     valid rules-built plan is still returned with `used: "auto"`.
     """
+    table_name = validate_table_name(table_name)
     request = request or {}
     if not loader.table_exists(table_name):
         return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -5445,6 +5661,7 @@ async def detect_anomalies(request: Dict[str, Any]):
     if not table_name:
         return {"success": False, "error": "table_name is required"}
 
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -5505,6 +5722,68 @@ async def detect_anomalies(request: Dict[str, Any]):
 # ============================================================
 
 
+def _html_escape(value: Any) -> str:
+    """Escape *value* so it can be interpolated into an HTML document.
+
+    A column name or a cell value is attacker-controlled data (it comes
+    from an uploaded file), and the report builder interpolates it into
+    the document — so a column named ``<script>…`` would otherwise become
+    live HTML in the report the user opens.
+    """
+    import html as _html
+
+    if value is None:
+        return ""
+    return _html.escape(str(value), quote=True)
+
+
+def _collect_strings(value: Any) -> List[str]:
+    """Return every string inside *value* (dict keys included)."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        found: List[str] = []
+        for key, item in value.items():
+            found.append(str(key))
+            found.extend(_collect_strings(item))
+        return found
+    if isinstance(value, (list, tuple)):
+        found = []
+        for item in value:
+            found.extend(_collect_strings(item))
+        return found
+    return []
+
+
+def _untrusted_report_values(table_name: str, *blobs: Any) -> List[str]:
+    """Every string that reaches the report document from the data.
+
+    Column names, cell values, insight texts and the table name are all
+    attacker-controlled (they come from an uploaded file), so none of them
+    may appear verbatim in the rendered HTML.
+    """
+    values = [str(table_name or "")]
+    for blob in blobs:
+        values.extend(_collect_strings(blob))
+    return [v for v in values if v]
+
+
+def _escape_untrusted_values(document: str, values: List[str]) -> str:
+    """Escape every *value* that still appears verbatim in *document*.
+
+    The report builder escapes what it renders, so in the normal case
+    nothing matches and the document is left exactly as it is — nothing is
+    escaped twice.  If a value ever reaches the document unescaped, it is
+    escaped here, so the route owns the guarantee even if the builder
+    regresses.
+    """
+    out = document
+    for value in sorted(set(values), key=len, reverse=True):
+        if value and value in out:
+            out = out.replace(value, _html_escape(value))
+    return out
+
+
 @app.get("/report/{table_name}", response_model=Dict[str, Any])
 async def generate_table_report(
     table_name: str,
@@ -5512,6 +5791,7 @@ async def generate_table_report(
     _: None = Depends(require_feature(FEATURE_REPORTS)),
 ):
     """Generate an executive analysis report for a table."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -5561,6 +5841,15 @@ async def generate_table_report(
         report = generator.generate_executive_report(
             table_name=table_name, profile=profile, quality=quality, insights=insights,
             correlations=correlations, outliers=outliers, include_charts=include_charts)
+        # The document must never carry the data verbatim: a column name or
+        # a cell value is attacker-controlled and would otherwise be live
+        # HTML in the report the user opens.  The builder escapes what it
+        # renders, so this guard normally finds nothing to do — and it
+        # never escapes a value twice.
+        report.html = _escape_untrusted_values(
+            report.html,
+            _untrusted_report_values(table_name, quality, insights, correlations, outliers),
+        )
         saved_path = generator.save_report(report)
 
         return {"success": True, "table": table_name, "report_html": report.html,
@@ -5966,6 +6255,7 @@ async def suggest_metrics(request: Dict[str, Any]):
         table = request.get("table", "")
         if not table:
             return {"success": False, "error": "table is required"}
+        table = validate_table_name(table)
         detector = JoinDetector()
         suggestions = detector.suggest_metrics(table)
         return {"success": True, "suggestions": suggestions}
@@ -6912,6 +7202,45 @@ class RegisterRequest(BaseModel):
     email: str = ""
 
 
+#: Bind hosts that mean "this process is only reachable from this machine".
+_LOCAL_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
+
+
+def _bootstrap_gate_required() -> bool:
+    """True when creating the first account requires a bootstrap token.
+
+    The token gate exists to stop whoever reaches an *exposed* port first
+    from taking over the instance (see docs/OPERATIONS.md).  A desktop
+    build binds the loopback interface only, is never published, and ships
+    no ``DATAAGENT_BOOTSTRAP_TOKEN`` — so on a local-only instance the
+    gate would lock the owner of their own app out of it, with no recovery
+    path.
+
+    The decision is therefore taken from the *configuration* — the bind
+    host and the deployment environment — and never from a hardcoded
+    constant:
+
+    * loopback bind host and a non-production environment → no gate (the
+      first registrant becomes the local admin);
+    * any other bind host, or ``app.env == "production"`` → the gate
+      applies, exactly as before.
+    """
+    try:
+        from config import current_app_env
+
+        env = str(current_app_env() or "").strip().lower()
+    except Exception:  # noqa: BLE001 - fall back to the settings value
+        env = str(getattr(settings.app, "env", "development") or "").strip().lower()
+    try:
+        host = str(getattr(settings.app, "host", "127.0.0.1") or "").strip().lower()
+    except Exception:  # noqa: BLE001 - fail closed: the gate stays on
+        logger.warning("Could not read the app bind settings; keeping the bootstrap gate")
+        return True
+    if env == "production":
+        return True
+    return host not in _LOCAL_BIND_HOSTS
+
+
 @app.post("/auth/register", response_model=Dict[str, Any])
 async def register_user(request: RegisterRequest, request_ctx: Request):
     """Register a new user.
@@ -6922,11 +7251,14 @@ async def register_user(request: RegisterRequest, request_ctx: Request):
     Privileged roles (admin/analyst/...) can only be granted by an existing
     admin, preventing anonymous role escalation when auth is enabled.
 
-    On a fresh install the first registrant becomes admin — but only when
-    ``DATAAGENT_BOOTSTRAP_TOKEN`` is configured *and* the request presents a
-    matching token. Without that, "whoever registers first is admin" let
-    anyone who reached an exposed port (the Docker publish bypassed nginx)
-    take over the instance.
+    On a fresh install the first registrant becomes admin.  When the
+    instance is reachable off-host that first admin must also present
+    ``DATAAGENT_BOOTSTRAP_TOKEN`` — without it, "whoever registers first is
+    admin" would let anyone who reached an exposed port (the Docker
+    publish bypassed nginx) take over the instance.  A loopback-only
+    desktop install has no such attacker *and* ships no token, so there the
+    first registrant becomes the local admin directly; see
+    :func:`_bootstrap_gate_required`.
     """
     # Mass-registration protection: per-IP sliding window. Raised BEFORE the
     # try block so the HTTPException 429 isn't swallowed into a 200 body.
@@ -6948,11 +7280,13 @@ async def register_user(request: RegisterRequest, request_ctx: Request):
         default_role = str(getattr(settings.rbac, "default_role", "user") or "user")
         role = "admin" if first_user else default_role
 
-        if first_user:
+        if first_user and _bootstrap_gate_required():
             # Bootstrap gate: the first admin must present the bootstrap
             # token. When no token is configured the first admin cannot be
             # created over HTTP at all — an admin must be provisioned
-            # out-of-band (see docs/OPERATIONS.md).
+            # out-of-band (see docs/OPERATIONS.md).  On a loopback-only
+            # desktop install the gate does not apply (no such attacker
+            # exists there, and the build ships no token).
             expected = (os.environ.get("DATAAGENT_BOOTSTRAP_TOKEN") or "").strip()
             if not expected:
                 return {
@@ -7482,6 +7816,7 @@ async def export_model(
 
 @app.get("/profile/{table_name}/outliers/suggestions", response_model=Dict[str, Any])
 async def outlier_suggestions(table_name: str):
+    table_name = validate_table_name(table_name)
     from analysis.statistical import suggest_outlier_handling
     try:
         if not loader.table_exists(table_name):
@@ -7717,6 +8052,7 @@ async def diff_tables_endpoint(request: DiffRequest):
 @app.get("/analysis/survival/{table_name}", response_model=Dict[str, Any])
 async def survival_analysis(table_name: str, time_col: str = "", event_col: str = "", group_col: str = ""):
     """Run Kaplan-Meier survival analysis."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -7783,6 +8119,7 @@ async def bayesian_corr(request: Dict[str, Any]):
     try:
         from analysis.bayesian import bayesian_correlation
         table = request.get("table_name", "")
+        table = validate_table_name(table)
         col_x = request.get("column_x", "")
         col_y = request.get("column_y", "")
         if not loader.table_exists(table):
@@ -7808,6 +8145,7 @@ async def auto_select(request: Dict[str, Any]):
     try:
         from analysis.automl import auto_select_features
         table = request.get("table_name", "")
+        table = validate_table_name(table)
         target = request.get("target_col", "")
         if not loader.table_exists(table):
             return {"success": False, "error": f"Table '{table}' not found"}
@@ -7826,6 +8164,7 @@ async def compare_models(request: Dict[str, Any]):
     try:
         from analysis.automl import compare_regressions
         table = request.get("table_name", "")
+        table = validate_table_name(table)
         target = request.get("target_col", "")
         features = request.get("feature_cols", None)
         if not loader.table_exists(table):
@@ -7845,6 +8184,7 @@ async def auto_analyze_endpoint(request: Dict[str, Any]):
     try:
         from analysis.automl import auto_analyze
         table = request.get("table_name", "")
+        table = validate_table_name(table)
         target = request.get("target_col", "")
         if not loader.table_exists(table):
             return {"success": False, "error": f"Table '{table}' not found"}
@@ -7865,6 +8205,7 @@ async def auto_analyze_endpoint(request: Dict[str, Any]):
 @app.get("/lineage/{table_name}", response_model=Dict[str, Any])
 async def get_lineage(table_name: str):
     """Get data lineage/provenance for a table."""
+    table_name = validate_table_name(table_name)
     try:
         from analysis.lineage import LineageTracker
         tracker = LineageTracker()
@@ -7893,6 +8234,7 @@ async def record_lineage(request: Dict[str, Any]):
 @app.get("/lineage/{table_name}/dag", response_model=Dict[str, Any])
 async def get_lineage_dag(table_name: str):
     """Get lineage data as a DAG for visualization."""
+    table_name = validate_table_name(table_name)
     try:
         from analysis.lineage import LineageTracker
         tracker = LineageTracker()
@@ -7904,6 +8246,7 @@ async def get_lineage_dag(table_name: str):
 @app.get("/lineage/{table_name}/columns", response_model=Dict[str, Any])
 async def get_column_lineage(table_name: str):
     """Get column-level lineage for a table."""
+    table_name = validate_table_name(table_name)
     try:
         from analysis.lineage import LineageTracker
         tracker = LineageTracker()
@@ -7930,6 +8273,7 @@ async def export_bi(
     _: None = Depends(require_feature(FEATURE_EXPORT_PAGE)),
 ):
     """Export table for BI tool (powerbi, tableau, looker)."""
+    table_name = validate_table_name(table_name)
     try:
         from analysis.bi_export import export_to_powerbi, generate_connection_config
         if not loader.table_exists(table_name):
@@ -7953,6 +8297,7 @@ async def check_row_access(request: Dict[str, Any]):
     try:
         username = request.get("username", "")
         table_name = request.get("table_name", "")
+        table_name = validate_table_name(table_name)
         # Simple row-level security: user can only see rows matching their role
         from api.auth import user_manager, create_jwt_token, verify_jwt_token
         user_info = user_manager.get_user_info(username)
@@ -7972,6 +8317,7 @@ async def check_row_access(request: Dict[str, Any]):
 @app.get("/export/csv/{table_name}")
 async def export_csv(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a warehouse table as CSV download."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_table_csv_bytes
 
@@ -7999,6 +8345,7 @@ async def export_csv(table_name: str, _: None = Depends(require_feature(FEATURE_
 @app.get("/export/parquet/{table_name}")
 async def export_parquet(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a warehouse table as Parquet download."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_table_parquet
 
@@ -8026,6 +8373,7 @@ async def export_parquet(table_name: str, _: None = Depends(require_feature(FEAT
 @app.get("/export/xlsx/{table_name}")
 async def export_xlsx(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a warehouse table as a formatted Excel (.xlsx) download."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_table_xlsx
 
@@ -8095,6 +8443,7 @@ async def export_markdown(
     _: None = Depends(require_feature(FEATURE_EXPORT_PAGE)),
 ):
     """Export a table as Markdown."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_table_markdown
         if not loader.table_exists(table_name):
@@ -8117,6 +8466,7 @@ async def export_markdown(
 @app.get("/export/html/{table_name}")
 async def export_html_report(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a table as a styled HTML report."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_report_html
         if not loader.table_exists(table_name):
@@ -8138,6 +8488,7 @@ async def export_html_report(table_name: str, _: None = Depends(require_feature(
 @app.get("/export/pptx/{table_name}")
 async def export_pptx(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a table as a PowerPoint presentation."""
+    table_name = validate_table_name(table_name)
     try:
         from export.bi_export import export_table_pptx
         if not loader.table_exists(table_name):
@@ -8161,6 +8512,7 @@ async def export_pptx(table_name: str, _: None = Depends(require_feature(FEATURE
 @app.get("/export/pdf/{table_name}")
 async def export_pdf(table_name: str, _: None = Depends(require_feature(FEATURE_EXPORT_PAGE))):
     """Export a table as a styled PDF report."""
+    table_name = validate_table_name(table_name)
     try:
         from export.pdf_export import export_table_pdf
         if not loader.table_exists(table_name):
@@ -8184,9 +8536,17 @@ async def export_pdf(table_name: str, _: None = Depends(require_feature(FEATURE_
 @app.post("/export/email", response_model=Dict[str, Any])
 async def email_report(
     request: Dict[str, Any],
+    req: Request,
     _: None = Depends(require_feature(FEATURE_EXPORT_PAGE)),
 ):
-    """Send a report via email."""
+    """Send a report via email.
+
+    The mail is sent with the OPERATOR's SMTP identity, so the recipient is
+    not free-form: it must be the signed-in account's own address, or an
+    address the operator has explicitly allowed. Otherwise this endpoint is a
+    phishing relay — any account with the export-page entitlement could send
+    a fake login page to anyone, from the app's own mail identity.
+    """
     try:
         from export.email_delivery import send_report_email
         table = request.get("table_name", "")
@@ -8197,6 +8557,19 @@ async def email_report(
 
         if not table or not recipient:
             return {"success": False, "error": "table_name and recipient are required"}
+
+        table = validate_table_name(table)
+
+        allowed = _allowed_email_recipients(req)
+        if recipient.strip().lower() not in allowed:
+            return {
+                "success": False,
+                "error": (
+                    "Reports can only be sent to your own address "
+                    f"({', '.join(sorted(allowed))}). Ask an administrator to "
+                    "allow other recipients."
+                ),
+            }
 
         if fmt == "pdf":
             from export.pdf_export import export_table_pdf
@@ -8230,6 +8603,50 @@ async def email_report(
         return {"success": result.get("success", False), "message": result.get("message", "Sent")}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _allowed_email_recipients(req: Request) -> set:
+    """Addresses a caller may send a report to.
+
+    The signed-in account's own address, plus any address the operator has
+    allow-listed.  The allow-list lives in ``config/settings.yaml`` under
+    ``email.allowed_recipients`` (a list) or in the
+    ``DATAAGENT_EMAIL_ALLOWED_RECIPIENTS`` environment variable (a
+    comma-separated list).
+
+    An account with no email address gets an empty set: the caller must ask
+    an administrator to add their address to the allow-list.
+    """
+    allowed = set()
+
+    raw = (os.getenv("DATAAGENT_EMAIL_ALLOWED_RECIPIENTS") or "").strip()
+    if raw:
+        for item in raw.split(","):
+            item = item.strip().lower()
+            if item:
+                allowed.add(item)
+
+    try:
+        import yaml
+        from pathlib import Path
+
+        cfg_path = Path("config/settings.yaml")
+        if cfg_path.exists():
+            with open(cfg_path, encoding="utf-8") as fh:
+                cfg = yaml.safe_load(fh) or {}
+            for item in (cfg.get("email") or {}).get("allowed_recipients") or []:
+                item = str(item).strip().lower()
+                if item:
+                    allowed.add(item)
+    except Exception:  # noqa: BLE001 — the allow-list is optional
+        pass
+
+    user = getattr(req.state, "user", None)
+    if user is not None:
+        email = str(getattr(user, "email", "") or "").strip().lower()
+        if email:
+            allowed.add(email)
+    return allowed
 
 
 @app.post("/bi/query", response_model=Dict[str, Any])
@@ -8337,6 +8754,7 @@ async def export_schema_doc(_: None = Depends(require_feature(FEATURE_EXPORT_PAG
 @app.get("/dictionary/{table_name}")
 async def data_dictionary(table_name: str):
     """Generate a data dictionary for a table with column descriptions, stats, and suggestions."""
+    table_name = validate_table_name(table_name)
     try:
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
@@ -9659,6 +10077,127 @@ class ExecuteRequest(BaseModel):
     context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
 
 
+# ── Notebook sandbox ──────────────────────────────────────────────────────
+
+#: How long a notebook snippet may run before it is stopped.
+_EXEC_TIMEOUT_SECONDS = 5.0
+
+#: Attribute names the sandbox refuses outright.  Dunder access is the
+#: class-chain escape (``().__class__.__base__.__subclasses__()`` reaches
+#: every loaded class and then ``__init__.__globals__`` — the real
+#: builtins), so these are banned statically *and* at runtime.
+_BANNED_DUNDER_ATTRS = frozenset({
+    "__class__", "__base__", "__bases__", "__mro__", "__subclasses__",
+    "__globals__", "__code__", "__dict__", "__getattribute__", "__init__",
+    "__builtins__", "__loader__", "__spec__", "__subclasshook__",
+    "__reduce__", "__reduce_ex__", "__getstate__", "__setstate__",
+    "__closure__", "__func__", "__self__", "__module__", "__qualname__",
+    "__annotations__", "__wrapped__", "__origin__", "__args__",
+})
+
+
+#: Attribute-name prefixes the sandbox proxy refuses (file readers/writers).
+_SAFE_MODULE_BLOCKED_PREFIXES = (
+    "read_", "to_csv", "to_excel", "to_parquet", "to_pickle", "to_hdf",
+    "to_sql", "to_json", "to_html", "to_latex", "to_string", "to_markdown",
+    "to_feather", "to_orc", "to_stata", "to_gbq",
+)
+
+#: Attribute names the sandbox proxy refuses (the private submodules and
+#: the file primitives that do not start with one of the prefixes above).
+_SAFE_MODULE_BLOCKED_NAMES = frozenset({
+    "io", "api", "read_table", "read_fwf", "read_spss", "read_xml",
+    "read_csv", "read_excel", "read_parquet", "read_json",
+    "read_pickle", "read_hdf", "read_sql", "read_html",
+    "read_clipboard", "read_feather", "read_orc", "read_sas",
+    "read_stata", "read_gbq", "read_ods", "read_fwf",
+    "HDFStore", "load", "loadtxt", "genfromtxt", "fromfile",
+    "memmap", "tofile", "frombuffer", "save", "savez",
+    "savez_compressed", "savetxt", "pickle", "dump", "dumps",
+})
+
+
+class _ExecutionTimeout(Exception):
+    """Raised inside the sandbox when the snippet runs past its deadline."""
+
+
+def _make_safe_module(module):
+    """Return a read-mostly proxy over *module* for the notebook sandbox.
+
+    Denylisting attribute *names* is fragile: pandas exposes many file
+    readers (``read_table``, ``read_fwf``, ``read_spss``, …) and any
+    missed name is a local-file-read primitive.  This proxy blocks the
+    *capability* — reading or writing files, and reaching the private
+    ``io``/``api`` submodules — regardless of the name.
+
+    The backing module is captured in this closure and is **never** stored
+    on the instance.  The previous implementation kept it in
+    ``self.__dict__`` as ``_module``; Python resolves instance attributes
+    before ``__getattr__``, so ``pd._module`` handed out the genuine
+    pandas module and bypassed every guard below — ``np._module.ctypeslib
+    .load_library(...)`` was arbitrary native code execution.
+    """
+    class _SafeModule:
+        """Proxy that exposes a module's data API and nothing else."""
+
+        def __getattr__(self, name):
+            # ``_``-prefixed names (every dunder included) are refused
+            # outright: they are how the sandbox is escaped.
+            if name.startswith("_") or (name.startswith("__") and name.endswith("__")):
+                raise AttributeError(f"'{name}' is not available in the sandbox")
+            if name in _SAFE_MODULE_BLOCKED_NAMES:
+                raise AttributeError(f"'{name}' is not available in the sandbox")
+            if any(name.startswith(p) for p in _SAFE_MODULE_BLOCKED_PREFIXES):
+                raise AttributeError(f"'{name}' is not available in the sandbox")
+            value = getattr(module, name)
+            # Never hand back a submodule: reaching ``np.lib.npyio.load``
+            # would walk straight past a name-level denylist.
+            import types as _types
+            if isinstance(value, _types.ModuleType):
+                raise AttributeError(f"'{name}' is not available in the sandbox")
+            return value
+
+        def __setattr__(self, name, value):
+            raise AttributeError("Sandbox modules are read-only")
+
+        def __dir__(self):
+            return [n for n in dir(module)
+                    if not n.startswith("_") and n not in _SAFE_MODULE_BLOCKED_NAMES
+                    and not any(n.startswith(p) for p in _SAFE_MODULE_BLOCKED_PREFIXES)]
+
+    return _SafeModule()
+
+
+def _run_sandboxed(code, glb, loc, deadline, stdout_guard) -> str:
+    """Execute *code* with a wall-clock deadline; return ``"ok"``/``"timeout"``.
+
+    A thread cannot be killed, so a runaway ``while True: pass`` used to
+    burn a core for the rest of the process lifetime even after the route
+    had answered "execution timed out".  A trace function that raises on
+    the first line event after the deadline turns the runaway loop into an
+    ordinary exception, which unwinds the ``exec`` and ends the worker
+    thread.  A blocking C call still cannot be interrupted — full
+    isolation needs a child process (documented residual risk).
+    """
+    import sys
+    import time
+
+    def _tracer(frame, event, arg):
+        if time.monotonic() > deadline:
+            raise _ExecutionTimeout()
+        return _tracer
+
+    with stdout_guard:
+        sys.settrace(_tracer)
+        try:
+            exec(code, glb, loc)
+        except _ExecutionTimeout:
+            return "timeout"
+        finally:
+            sys.settrace(None)
+    return "ok"
+
+
 @app.post("/execute", response_model=Dict[str, Any])
 async def execute_code(request: ExecuteRequest, req: Request):
     """
@@ -9736,6 +10275,9 @@ async def execute_code(request: ExecuteRequest, req: Request):
                 "os", "sys", "subprocess", "socket", "shutil", "pathlib",
                 "importlib", "pty", "ctypes", "inspect",
             }
+            # Dunder attributes are the class-chain escape, so they are
+            # banned by name as well as by shape.
+            _BANNED_ATTRS = _BANNED_ATTRS | set(_BANNED_DUNDER_ATTRS)
             _BANNED_NAMES = {
                 "__import__", "open", "eval", "exec", "compile",
                 "getattr", "setattr", "hasattr", "delattr", "globals",
@@ -9821,55 +10363,6 @@ async def execute_code(request: ExecuteRequest, req: Request):
             import pandas as pd
             import numpy as np
 
-            class _SafeModule:
-                """Read-mostly proxy over a module for the notebook sandbox.
-
-                Denylisting attribute *names* is fragile: pandas exposes many
-                file readers (``read_table``, ``read_fwf``, ``read_spss``, …) and
-                any missed name is a local-file-read primitive. This proxy blocks
-                the *capability* — reading or writing files, and reaching the
-                private ``io``/``api`` submodules — regardless of the name.
-                """
-
-                _BLOCKED_PREFIXES = ("read_", "to_csv", "to_excel", "to_parquet",
-                                     "to_pickle", "to_hdf", "to_sql", "to_json",
-                                     "to_html", "to_latex", "to_string", "to_markdown",
-                                     "to_feather", "to_orc", "to_stata", "to_gbq")
-                _BLOCKED_NAMES = frozenset({
-                    "io", "api", "read_table", "read_fwf", "read_spss", "read_xml",
-                    "read_csv", "read_excel", "read_parquet", "read_json",
-                    "read_pickle", "read_hdf", "read_sql", "read_html",
-                    "read_clipboard", "read_feather", "read_orc", "read_sas",
-                    "read_stata", "read_gbq", "read_ods", "read_fwf",
-                    "HDFStore", "load", "loadtxt", "genfromtxt", "fromfile",
-                    "memmap", "tofile", "frombuffer", "save", "savez",
-                    "savez_compressed", "savetxt", "pickle", "dump", "dumps",
-                })
-
-                def __init__(self, module):
-                    object.__setattr__(self, "_module", module)
-
-                def __getattr__(self, name):
-                    if name.startswith("_") or name in self._BLOCKED_NAMES:
-                        raise AttributeError(f"'{name}' is not available in the sandbox")
-                    if any(name.startswith(p) for p in self._BLOCKED_PREFIXES):
-                        raise AttributeError(f"'{name}' is not available in the sandbox")
-                    value = getattr(object.__getattribute__(self, "_module"), name)
-                    # Never hand back a submodule: reaching ``np.lib.npyio.load``
-                    # would walk straight past a name-level denylist.
-                    import types as _types
-                    if isinstance(value, _types.ModuleType):
-                        raise AttributeError(f"'{name}' is not available in the sandbox")
-                    return value
-
-                def __setattr__(self, name, value):
-                    raise AttributeError("Sandbox modules are read-only")
-
-                def __dir__(self):
-                    return [n for n in dir(object.__getattribute__(self, "_module"))
-                            if not n.startswith("_") and n not in self._BLOCKED_NAMES
-                            and not any(n.startswith(p) for p in self._BLOCKED_PREFIXES)]
-
             _SAFE_BUILTINS = {
                 "print": print, "len": len, "range": range,
                 "enumerate": enumerate, "zip": zip, "sorted": sorted,
@@ -9886,7 +10379,8 @@ async def execute_code(request: ExecuteRequest, req: Request):
                 "AttributeError": AttributeError, "Exception": Exception,
             }
             local_ns = {
-                "pd": _SafeModule(pd), "np": _SafeModule(np), "plt": None, "df": None,
+                "pd": _make_safe_module(pd), "np": _make_safe_module(np),
+                "plt": None, "df": None,
             }
             # Provide dataframe from context if available
             if request.context and request.context.get("table"):
@@ -9914,30 +10408,43 @@ async def execute_code(request: ExecuteRequest, req: Request):
                 _code = compile(tree, "<notebook>", "exec")
                 _gbl = {"__builtins__": _SAFE_BUILTINS}
 
-                def _run():
-                    with contextlib.redirect_stdout(output_capture):
-                        exec(_code, _gbl, local_ns)
-
                 # Timeout so `while True:` cannot hang the server worker.
-                # Note: threads cannot be killed — a runaway loop still burns
-                # CPU in the background until the process recycles. Full
-                # isolation needs a subprocess sandbox (documented residual).
+                # A thread cannot be killed, so the snippet also carries an
+                # in-thread deadline (see _run_sandboxed): a runaway loop
+                # is unwound by an exception instead of burning a core for
+                # the rest of the process lifetime.  A blocking C call is
+                # still not interruptible — full isolation needs a
+                # subprocess sandbox (documented residual).
                 # Do NOT use `with` here: __exit__ does shutdown(wait=True),
                 # which blocks forever on a hung task and defeats the timeout.
                 import concurrent.futures as _fut
+                import time
+
+                _deadline = time.monotonic() + _EXEC_TIMEOUT_SECONDS
+                _timed_out = False
                 _pool = _fut.ThreadPoolExecutor(max_workers=1)
                 try:
-                    _f = _pool.submit(_run)
+                    _f = _pool.submit(
+                        _run_sandboxed, _code, _gbl, local_ns, _deadline,
+                        contextlib.redirect_stdout(output_capture),
+                    )
                     try:
-                        _f.result(timeout=5.0)
+                        _status = _f.result(timeout=_EXEC_TIMEOUT_SECONDS)
+                        _timed_out = _status == "timeout"
                     except _fut.TimeoutError:
-                        return {"success": False, "output": None,
-                                "error": "Security: execution timed out (5s)"}
+                        if _f.done():
+                            # The snippet itself raised a TimeoutError —
+                            # that is the snippet's error, not a timeout.
+                            raise
+                        _timed_out = True
                 finally:
                     try:
                         _pool.shutdown(wait=False, cancel_futures=True)
                     except Exception:  # noqa: BLE001
                         pass
+                if _timed_out:
+                    return {"success": False, "output": None,
+                            "error": f"Security: execution timed out ({int(_EXEC_TIMEOUT_SECONDS)}s)"}
                 captured = output_capture.getvalue()
                 if len(captured) > 50000:
                     captured = captured[:50000] + "\n…[truncated]"

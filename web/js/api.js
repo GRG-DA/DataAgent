@@ -473,6 +473,7 @@
     // Subscriptions / plans (admin/self-serve offline grants; no in-app checkout)
     subscriptionPlans: () => GET("/subscriptions/plans"),
     mySubscription: () => GET("/subscriptions/me"),
+    syncSubscription: () => POST("/subscriptions/sync", {}),
     setMyPlan: (plan, durationDays) => POST("/subscriptions/me", { plan, duration_days: durationDays }),
     adminSetPlan: (userId, plan, durationDays) =>
       POST(`/subscriptions/${encodeURIComponent(userId)}`, { plan, duration_days: durationDays }),

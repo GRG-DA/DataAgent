@@ -24,12 +24,15 @@ in requests; the arithmetic behind the numbers is documented in
 ``api/billing/seed.py`` (C3).
 """
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.middleware.auth_middleware import get_current_user, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -313,6 +316,52 @@ async def my_subscription(user: User = Depends(get_current_user)):
     sub = ensure_subscription(user.user_id)
     sub["plan_details"] = PLANS.get(sub["plan"], PLANS["free"])
     sub["renewal"] = snap if (snap and snap.get("is_subscription")) else None
+    return sub
+
+
+@router.post("/subscriptions/sync")
+async def sync_subscription(user: User = Depends(get_current_user)):
+    """Force an entitlement sync against the billing server.
+
+    ``GET /subscriptions/me`` only phones home when the renewal snapshot is
+    older than 24 hours, so a customer who bought a licence a minute ago
+    sees no change. This route calls the sync **unconditionally**.
+
+    The identity comes from the session, never from the request body. The
+    local plan is never downgraded: if the billing server is unreachable the
+    current plan is returned unchanged.
+    """
+    from datetime import datetime, timezone
+
+    email, sso_subject = _trial_identity(user)
+    synced = False
+    detail = ""
+
+    if not email:
+        # The keyless entitlement path resolves the plan BY EMAIL. An account
+        # without one cannot be matched to a purchase.
+        detail = (
+            "This account has no email address, so the billing server cannot "
+            "match it to a purchase. Add your email address first."
+        )
+    else:
+        try:
+            from api.billing.cloud_sync import sync_user
+
+            plan = sync_user(user.user_id, email, sso_subject)
+            synced = bool(plan)
+            if not plan:
+                detail = "The billing server did not return a plan for this account."
+        except Exception as e:  # noqa: BLE001 — never downgrade the local plan
+            logger.warning("entitlement sync failed: %s", e)
+            detail = "The billing server could not be reached."
+
+    sub = ensure_subscription(user.user_id)
+    sub["plan_details"] = PLANS.get(sub["plan"], PLANS["free"])
+    sub["synced"] = synced
+    sub["synced_at"] = datetime.now(timezone.utc).isoformat()
+    if detail:
+        sub["detail"] = detail
     return sub
 
 
