@@ -1,0 +1,292 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DataAgent — PAGES MOTION  (v1)
+   Per-page motion for index.html · features.html · comparison.html.
+
+   Loads AFTER style.css + pro.css + premium.css, so it is the last
+   word on the three showcase pages.
+
+   Everything here is an ENHANCEMENT, never a requirement:
+     · without JavaScript the page is complete, readable and static
+     · with prefers-reduced-motion: reduce, or with ?fx=off, nothing
+       moves and nothing is hidden
+   Only `opacity`, `transform`, `translate` and paint-only properties
+   are animated — never `top`, `height`, `width`, `margin` or `padding`
+   — so the page never reflows and the layout shift stays at zero.
+   ═══════════════════════════════════════════════════════════════════ */
+
+
+/* ── 1. Hand the legacy reveal vocabulary back to the FX engine ──────
+   style.css and pro.css shipped a fade-up keyed on `.animate-on-scroll`
+   plus `.animate-delay-N`. premium.css retired that older system with
+
+       .animate-on-scroll, .animate-delay-N {
+         opacity: 1 !important; transform: none !important;
+         transition: none !important;
+       }
+
+   so the old fade-up and the new engine would never animate the same
+   element twice. The markup kept the classes, so every element that
+   carried them ended up FROZEN: permanently visible, never revealed,
+   and with its GSAP tilt killed by `transform: none !important` as
+   well. The reveal those classes promised simply did not happen.
+
+   This file loads last, so it can hand them back to the engine:
+
+     .animate-on-scroll  → opt in to the engine reveal
+     .animate-delay-N     → stagger that reveal by N × 70 ms
+
+   Two deliberate choices:
+
+   1. The offset rides on the independent `translate` property, never on
+      `transform`. `translate` is a separate, compositor-friendly
+      property that composes with `transform`, so the reveal never has
+      to fight anything else for the same slot.
+   2. `transform` itself stays frozen (through `--fx-self-transform`,
+      so a component can still opt back in). An `!important`
+      declaration always beats GSAP's inline transform, so a tilted
+      element and a frozen one cannot coexist — but the freeze is
+      already the state of every element that carries these classes
+      (premium.css has killed their tilt too), so keeping it changes
+      nothing and leaves the engine's 24-element tilt budget to the
+      elements that do not carry the legacy classes.
+
+   Without JavaScript the engine never adds `.fx-reveal`, none of these
+   rules match, and premium.css keeps the page static and complete.  */
+html.fx-ready
+:is(.animate-on-scroll,
+    .animate-delay-1, .animate-delay-2, .animate-delay-3,
+    .animate-delay-4, .animate-delay-5, .animate-delay-6).fx-reveal {
+  opacity: 0 !important;
+  translate: 0 28px;
+  transform: var(--fx-self-transform, none) !important;
+  transition: opacity 900ms var(--px-ease), translate 1050ms var(--px-ease) !important;
+  transition-delay: var(--fx-delay, 0ms) !important;
+  will-change: opacity, translate;
+}
+
+html.fx-ready
+:is(.animate-on-scroll,
+    .animate-delay-1, .animate-delay-2, .animate-delay-3,
+    .animate-delay-4, .animate-delay-5, .animate-delay-6).fx-reveal.is-in {
+  opacity: 1 !important;
+  translate: none;
+  will-change: auto;
+}
+
+/* The stagger. fx-core.js also computes a per-sibling-group delay, but
+   an explicit class in the markup wins: an author-written stagger beats
+   a computed one. N × 70 ms matches the rhythm pro.css used. */
+.animate-delay-1 { --fx-delay: 70ms !important; }
+.animate-delay-2 { --fx-delay: 140ms !important; }
+.animate-delay-3 { --fx-delay: 210ms !important; }
+.animate-delay-4 { --fx-delay: 280ms !important; }
+.animate-delay-5 { --fx-delay: 350ms !important; }
+.animate-delay-6 { --fx-delay: 420ms !important; }
+
+/* premium.css froze `transform` on every element carrying these
+   classes, which also killed the stat panels' hover lift. The freeze is
+   kept (see above) but it is now open to a component that wants to
+   move itself on hover. */
+.stat-panel:hover { --fx-self-transform: translateY(-6px); }
+
+
+/* ── 2. Reading rail — scroll progress under the header ─────────────
+   The engine already ships a 2 px `.fx-progress` bar, but it lives at
+   z-index 60 — behind the fixed, translucent 72 px navbar — so the bar
+   that is supposed to show how far you have read is invisible.
+
+   This rail hangs off the bottom edge of the navbar instead, where it
+   can actually be seen, and it is driven by the `--fx-scroll` property
+   fx-core.js publishes on :root (throttled to ~8 Hz; the short
+   transition smooths the steps). It travels with the navbar, so it
+   retracts with it when the header hides on scroll-down.  */
+.fx-read-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--px-grad-hot);
+  transform: scaleX(var(--fx-scroll, 0));
+  transform-origin: left center;
+  opacity: 0.9;
+  pointer-events: none;
+  transition: transform 180ms linear;
+}
+
+
+/* ── 3. index.html — the stats band and the hero ───────────────────
+   3a. A sheen crosses the four stat panels once, as the band lands:
+       the numbers read as if they were lit by the data arriving.
+   3b. The hero mock drifts a little slower than the page, so the hero
+       reads as a separate plane that the visitor scrolls away from.
+       `--fx-scroll` is the only input.  */
+.stats-grid { position: relative; }
+
+.stats-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(105deg,
+      transparent 38%,
+      rgba(167, 139, 250, 0.22) 50%,
+      rgba(244, 114, 182, 0.16) 56%,
+      transparent 66%) 0 0 / 200% 100% no-repeat;
+}
+
+.stats-grid:has(.stat-panel.is-in)::after {
+  animation: fx-sheen 1500ms var(--px-ease) 120ms both;
+}
+
+@keyframes fx-sheen {
+  0%   { background-position: 150% 0; opacity: 0; }
+  22%  { opacity: 1; }
+  78%  { opacity: 1; }
+  100% { background-position: 0% 0; opacity: 0; }
+}
+
+.hero-stack {
+  transform: translate3d(0, calc(var(--fx-scroll, 0) * -4vh), 0);
+}
+
+
+/* ── 4. The section rail — features.html and comparison.html ─────────
+   Both pages are one long column of groups: four feature groups on
+   features.html, one very long comparison table on comparison.html.
+   A hairline in the left gutter of each group carries a lit segment
+   that runs through the group as it passes through the viewport, so a
+   visitor can see which group they are in and how far through it they
+   are.
+
+   The segment is driven by a view timeline — scroll-driven CSS — with a
+   plain hairline as the fallback. Where the browser does not support
+   scroll-driven animations the line simply stays unlit: the page is
+   complete either way, and nothing is ever hidden behind it.  */
+.feature-group,
+.comparison-table-section {
+  position: relative;
+}
+
+@supports (animation-timeline: view()) {
+  .feature-group {
+    view-timeline-name: --fx-group;
+    view-timeline-axis: block;
+  }
+
+  .comparison-table-section {
+    view-timeline-name: --fx-table;
+    view-timeline-axis: block;
+  }
+
+  .feature-group::before,
+  .comparison-table-section::before {
+    content: "";
+    position: absolute;
+    inset-block: 12px;
+    inset-inline-start: -14px;
+    width: 2px;
+    border-radius: 2px;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg,
+        transparent 0%,
+        rgba(167, 139, 250, 0.9) 44%,
+        rgba(244, 114, 182, 0.95) 54%,
+        transparent 100%) 0 0 / 100% 260% no-repeat;
+  }
+
+  .feature-group::before {
+    animation: fx-rail-scan linear both;
+    animation-timeline: --fx-group;
+    animation-range: cover 0% cover 100%;
+  }
+
+  .comparison-table-section::before {
+    animation: fx-rail-scan linear both;
+    animation-timeline: --fx-table;
+    animation-range: contain 0% contain 100%;
+  }
+}
+
+@keyframes fx-rail-scan {
+  from { background-position: 0% 0%; }
+  to   { background-position: 0% 100%; }
+}
+
+
+/* ── 5. comparison.html — the table has to be readable on a phone ────
+   style.css gives `.comparison-wrapper` `overflow-x: auto` so the
+   900 px-wide table can be scrolled sideways on a narrow screen.
+   premium.css later set `overflow: hidden` on the same rule to clip
+   the rounded corners — and that silently killed the scroll: the table
+   was clipped at the viewport edge with no way to reach the columns
+   beyond it. `overflow-x: auto` + `overflow-y: hidden` keeps the
+   rounded clip and gives the table its scroll back.  */
+.comparison-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+
+/* ── 6. Reduced motion ───────────────────────────────────────────────
+   Two switches have to be honoured, and they are not the same thing:
+   the media query covers the OS preference, the `html.fx-reduced`
+   class covers `?fx=off` (which the media query cannot see).
+   fx-core.js sets `html.fx-reduced` before it paints, so a static
+   page is static from the very first frame.  */
+html.fx-reduced .fx-read-rail {
+  display: none !important;
+}
+
+html.fx-reduced .hero-stack {
+  transform: none !important;
+}
+
+html.fx-reduced .stats-grid::after {
+  display: none !important;
+}
+
+html.fx-reduced .feature-group::before,
+html.fx-reduced .comparison-table-section::before {
+  display: none !important;
+}
+
+html.fx-reduced
+:is(.animate-on-scroll,
+    .animate-delay-1, .animate-delay-2, .animate-delay-3,
+    .animate-delay-4, .animate-delay-5, .animate-delay-6).fx-reveal {
+  opacity: 1 !important;
+  translate: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-read-rail {
+    display: none !important;
+  }
+
+  .hero-stack {
+    transform: none !important;
+  }
+
+  .stats-grid::after {
+    display: none !important;
+  }
+
+  .feature-group::before,
+  .comparison-table-section::before {
+    display: none !important;
+  }
+
+  html.fx-ready
+  :is(.animate-on-scroll,
+      .animate-delay-1, .animate-delay-2, .animate-delay-3,
+      .animate-delay-4, .animate-delay-5, .animate-delay-6).fx-reveal {
+    opacity: 1 !important;
+    translate: none !important;
+    transition: none !important;
+  }
+}

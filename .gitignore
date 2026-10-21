@@ -89,6 +89,20 @@ linux-install/
 # Third-party binaries fetched at build time, never committed.
 installers/opencode/
 
+# An archive OF this project is never a source artefact. A .rar/.zip of the
+# working tree carries config/users.json (password hashes + plaintext API
+# keys), data/.jwt_secret, data/.grant_key, the warehouse and .env - every
+# file the list above exists to keep out of git. A 1.9 GB
+# DataAgent-public.rar was found sitting in the working tree during the
+# pre-launch review; it is deleted, and these patterns stop it coming back.
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+/DataAgent-public.*
+/shots/
+
 # Runtime config state (keep *.yaml config seeds)
 config/users.json
 config/db_connections.json

@@ -40,20 +40,70 @@ def _strip_comments(text: str, kind: str) -> str:
     return re.sub(r"<!--.*?-->", "", text, flags=re.S)
 
 
-def _third_party_refs() -> list:
-    """Every reference to a non-local origin in the site, with its file."""
-    found = []
+#: XML namespace URIs.  They look like origins but are identifiers - a
+#: browser NEVER fetches them.  "http://www.w3.org/2000/svg" is the SVG
+#: namespace and appears in every inline <svg>.
+XML_NAMESPACES = (
+    "http://www.w3.org/2000/svg",
+    "http://www.w3.org/1999/xhtml",
+    "http://www.w3.org/1999/xlink",
+    "http://www.w3.org/XML/1998/namespace",
+    "http://www.w3.org/2000/xmlns/",
+)
+
+
+def _scan() -> tuple:
+    """Return (subresources, anchors) that point at a non-local origin.
+
+    The distinction matters.  A SUBRESOURCE (a script, a stylesheet, an
+    image, an iframe, a CSS url()) is fetched automatically the moment the
+    page loads - that is the leak this project cares about.  An ANCHOR href is
+    only fetched if the visitor clicks it, which is a deliberate navigation
+    to a documented external site (Ollama's download page, the GitHub
+    release).  A page that links out is normal; a page that silently
+    phones home is not.
+    """
+    subresources = []
+    anchors = []
     for path in list(PAGES) + sorted(SITE.glob("js/*.js")) + sorted(SITE.glob("css/*.css")):
         text = path.read_text(encoding="utf-8", errors="replace")
         kind = "css" if path.suffix == ".css" else "html"
         text = _strip_comments(text, kind)
-        for match in re.finditer(r"https?://[^\s\"'()<>]+", text):
-            url = match.group(0).rstrip("\"'`,;")
-            if url.startswith("http://127.0.0.1") or url.startswith("http://localhost"):
-                continue
-            rel = path.relative_to(ROOT).as_posix()
-            found.append((url, rel))
-    return found
+        rel = path.relative_to(ROOT).as_posix()
+
+        if kind == "css":
+            for m in re.finditer(r"url\(\s*[\"']?(https?://[^\s\"')]+)", text):
+                subresources.append((m.group(1), rel))
+            continue
+
+        for m in re.finditer(
+            r"<(script|img|iframe|source|video|audio|embed)\b[^>]*\bsrc\s*=\s*[\"\']([^\"\']+)",
+            text, re.I,
+        ):
+            subresources.append((m.group(2), rel))
+        for m in re.finditer(
+            r"<link\b[^>]*\brel\s*=\s*[\"\']?stylesheet[\"\']?[^>]*\bhref\s*=\s*[\"\']([^\"\']+)",
+            text, re.I,
+        ):
+            subresources.append((m.group(1), rel))
+        for m in re.finditer(r"\bfrom\s+[\"\'](https?://[^\"\']+)", text):
+            subresources.append((m.group(1), rel))
+        for m in re.finditer(r"\bhref\s*=\s*[\"\'](https?://[^\"\']+)", text, re.I):
+            anchors.append((m.group(1), rel))
+
+    def _local(u):
+        # A RELATIVE url is same-origin by definition.
+        if not u.startswith(("http://", "https://", "//")):
+            return True
+        return u.startswith(("http://127.0.0.1", "http://localhost", "https://127.0.0.1"))
+
+    def _ns(u):
+        return u in XML_NAMESPACES or u.startswith(XML_NAMESPACES)
+
+    subresources = [(u, r) for u, r in subresources if not _local(u) and not _ns(u)]
+    anchors = [(u, r) for u, r in anchors if not _local(u) and not _ns(u)]
+    return subresources, anchors
+
 
 
 def test_no_page_loads_a_font_from_google():
@@ -113,10 +163,16 @@ def test_fonts_css_declares_every_vendored_face():
         assert name in css, f"{name} is vendored but never declared"
 
 
-def test_the_only_third_party_script_is_the_payment_hand_off():
-    """Razorpay's checkout is a deliberate, user-initiated hand-off."""
+def test_no_subresource_is_loaded_from_a_third_party():
+    """A page must fetch NOTHING from another origin while it loads.
+
+    Razorpay's checkout is the one documented exception: it is injected by
+    website/js/billing.js on a click, and only on a deployment that has a
+    billing server configured.
+    """
+    subresources, _anchors = _scan()
     offenders = []
-    for url, rel in _third_party_refs():
+    for url, rel in subresources:
         if url in ALLOWED_THIRD_PARTY:
             assert rel == ALLOWED_THIRD_PARTY[url], (
                 f"{url} is only allowed in {ALLOWED_THIRD_PARTY[url]}, "
@@ -125,6 +181,26 @@ def test_the_only_third_party_script_is_the_payment_hand_off():
             continue
         offenders.append(f"{url}  ({rel})")
     assert not offenders, (
-        "the site contacts a third party on page view:\n  "
+        "the site loads a subresource from a third party on page view:\n  "
         + "\n  ".join(sorted(offenders))
+    )
+
+
+def test_every_external_link_is_a_documented_one():
+    """An anchor to another site is fine - but it must be a known one.
+
+    A page that links out is normal (the Ollama download, the GitHub
+    release). A page that quietly grows a new outbound destination is how
+    a privacy claim quietly stops being true, so the set is pinned.
+    """
+    _subresources, anchors = _scan()
+    known = {
+        "https://github.com/",
+        "https://github.com/DataAgent/DataAgent",
+        "https://ollama.ai/download",
+        "https://billing.yourdomain.com",
+    }
+    offenders = sorted({f"{u}  ({r})" for u, r in anchors if u not in known})
+    assert not offenders, (
+        "unexpected external link destinations:\n  " + "\n  ".join(offenders)
     )
