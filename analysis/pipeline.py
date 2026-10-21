@@ -889,7 +889,7 @@ class ETLPipeline:
         target = str(params.get("target_col", "") or "")
         task = str(params.get("task", "auto") or "auto").lower()
         if not target:
-            raise ValueError("AutoML node needs a Target column")
+            raise ValueError("Regression Explorer node needs a Target column")
         if target not in df.columns:
             raise ValueError(f"Target column '{target}' not found. Available: {', '.join(map(str, df.columns[:20]))}")
         if task == "compare":

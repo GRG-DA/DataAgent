@@ -362,7 +362,7 @@ def _generate_recommendations(df: pd.DataFrame, insights: Dict) -> List[str]:
     if cat_cols and numeric_cols:
         recs.append(f" Run a statistical test to check if **{numeric_cols[0]}** differs significantly across **{cat_cols[0]}** groups.")
     if cat_cols and len(df[cat_cols[0]].unique()) <= 10:
-        recs.append(f" Use segmentation analysis to compare all groups in **{cat_cols[0]}**.")
+        recs.append(f" Use a segment breakdown to compare all groups in **{cat_cols[0]}**.")
 
     if not recs:
         recs.append(" Dataset ready for analysis. Apply filters or upload additional data for deeper insights.")

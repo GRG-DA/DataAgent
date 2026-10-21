@@ -46,13 +46,13 @@ PROJECT_GUIDE = """**DataAgent** is a local, AI-powered data analytics platform.
 - **Data → Warehouse** — load cleaned data into DuckDB, list tables, view rows, drop tables.
 - **Analyze → AI Chat** — ask questions in plain English; the agent runs SQL, analyzes, and charts results.
 - **Analyze → SQL Explorer** — write/run SQL directly, with autocomplete, a **Visual Query Builder**, and an **AI Generate** button that writes SQL from a description.
-- **Tools → Analysis** — deep statistical tools: forecasting, anomalies, segmentation, correlation, hypothesis tests, regression, A/B testing, confidence intervals, normality tests.
+- **Tools → Analysis** — deep statistical tools: trend forecast, anomalies, segment breakdown, correlation, hypothesis tests, regression, A/B testing, confidence intervals, normality tests.
 - **Tools → Compare** — compare time periods and diff two tables.
 - **Tools → Anomalies** — detect outliers / unusual data points.
 - **Tools → Quality Trends** — data quality scores over time, PII scanning.
 - **Tools → Dashboard Builder / BI Dashboard** — build and view interactive dashboards.
 - **Tools → Stats** — descriptive statistics.
-- **Tools → Forecast** — time-series forecasting.
+- **Tools → Forecast** — trend forecasting: a least-squares linear trend with classical decomposition and changepoints (not ARIMA/ETS/Prophet).
 - **Tools → Connections** — connect external databases / APIs and import tables.
 - **Tools → Lineage** — view data lineage (table/column dependencies).
 - **Tools → Notebook** — run Python/SQL cells like a Jupyter notebook.
