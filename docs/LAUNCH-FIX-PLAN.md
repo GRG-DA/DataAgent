@@ -149,28 +149,61 @@ Change it to the real `<owner>/<repo>` once the repository is published, and upl
 and `DataAgent.exe` to that repository's latest release. No page needs editing — the markup carries
 `data-download="setup|portable"` and `data-repo-link="/issues|/discussions"` markers instead of URLs.
 
-### Not done here (owned elsewhere)
+### Final status of the items this agent left open
 
-- The PDF backend stub (`export/pdf_export.py`) — another agent.
-- **The legal-page rendering route cannot substitute any marker.** `api/routes/legal.py::_fill`
-  builds its lookup from the *last path segment* of `config/legal.yaml` (`name`, `address`,
-  `effective_date`, `hosting`, …) while the pages use the marker names `[[COMPANY_NAME]]`,
-  `[[COMPANY_ADDRESS]]`, `[[EFFECTIVE_DATE]]`, `[[SUBPROCESSOR_HOSTING]]`, … — the keys never
-  match, so every one of the 38 markers in `privacy.html` renders as
-  *"to be completed by the operator"* even though the yaml is now filled in.
-  **Fix:** replace the derived lookup in `api/routes/legal.py::_fill` with an explicit
-  `MARKER_NAME -> yaml key` table (`COMPANY_NAME → company.name`, `COMPANY_ADDRESS →
-  company.address`, `JURISDICTION → company.jurisdiction`, `CONTACT_EMAIL → company.contact_email`,
-  `SECURITY_EMAIL → company.security_email`, `DPO_EMAIL → company.dpo_email`, `EFFECTIVE_DATE →
-  legal.effective_date`, `DATA_REGION → legal.data_region`, `RETENTION_DAYS → legal.retention_days`,
-  `SUBPROCESSOR_HOSTING → subprocessors.hosting`, `SUBPROCESSOR_STORAGE → subprocessors.storage`,
-  `SUBPROCESSOR_EMAIL → subprocessors.email`, `SUBPROCESSOR_LLM → subprocessors.llm`,
-  `SUBPROCESSOR_MONITORING → subprocessors.monitoring`). Until then the legal pages publish a
-  visible notice instead of the operator's details. The SPA footer now points at the *rendered*
-  route (`/legal/<page>.html`) rather than the raw template, so no `[[MARKER]]` can be published.
-- The backend-side user-visible strings that still use the old vocabulary
-  (`api/main.py:3177` "…for forecasting", `analysis/pipeline.py:892` "AutoML node needs a Target column",
-  `analysis/insights.py:365` "Use segmentation analysis…", `agent/orchestrator.py:49,55`).
-- The force-sync route for C9 (spec in the agent report).
-- `shell/update.py` still points its update check at a hardcoded GitHub repo — outside this agent's
-  file ownership (`shell/`).
+Every item above was picked up by another agent and is now done:
+
+| Item | Status | Where |
+|---|---|---|
+| The PDF backend stub | **done** | `export/pdf_export.py` states that full formatting is not available in this build, names the formats that do work, and produces a real PDF with a data preview. |
+| The legal-page marker lookup | **done** | `api/routes/legal.py::MARKER_KEYS` is an explicit marker -> config-key table; a test fails when a page uses a marker with no key. All 38 markers now substitute. |
+| The backend user-visible vocabulary | **done** | `api/main.py`, `analysis/pipeline.py`, `analysis/insights.py`, `agent/orchestrator.py` all use the new names. |
+| The force-sync route for C9 | **done** | `POST /subscriptions/sync` in `api/subscriptions.py`; the SPA calls it and falls back to `GET /subscriptions/me`. |
+| `shell/update.py` hardcoding a repo | **done** | The repo is configurable (`$DATAAGENT_RELEASES_REPO` / `app.releases_repo`), and "no release published yet" is no longer reported as "could not reach the release server". |
+
+---
+
+## 6. Completion summary (all agents)
+
+| ID | Status | One-line outcome |
+|---|---|---|
+| D1 | **done** | A loopback-only install creates its first account with no environment variable. |
+| D2/D3 | **done** | The JWT secret and the grant key persist in `%LOCALAPPDATA%\DataAgent`; a paid plan survives a restart. |
+| D4 | **done** | The build downloads a pinned opencode and verifies its hash (it used to download `latest` and abort on the mismatch). |
+| D5 | **partial** | The build now FAILS when `-Sign` is requested and `signtool` is missing. **A certificate still has to be bought.** |
+| D6 | **operator action** | One constant: `website/js/main.js` -> `window.DATAAGENT_REPO_URL`. |
+| D7 | **done** | The tree is under git: baseline `3e03571` + 13 remediation commits. |
+| S1 | **done** | The sandbox escape is closed and a runaway loop is unwound at the deadline. |
+| S2 | **done** | One egress allow-list, applied to the initial URL, the pagination `next_url` and every redirect. |
+| S3/S4 | **done** | Spreadsheet formula injection and HTML injection are neutralised in every export path. |
+| S5 | **done** | The share owner comes from the session; links are tenant-scoped. |
+| S6 | **done** | RBAC is deny-by-default; 215 mutating routes registered; a structural guard holds. |
+| S7 | **done** | An API key carries its tenant. |
+| S8 | **done** | The `query_history` migration no longer runs against a different database. |
+| S9 | **done** | `/clean` reads the tenant directory and is rate limited. |
+| ? | **found by the audit** | 44 handlers interpolated a table identifier into SQL. All validated; `scripts/audit_sql_identifiers.py` proves it and is run by the test suite. |
+| ? | **found by the audit** | `/export/email` was a phishing relay (the operator's SMTP identity, any recipient, any body). |
+| ? | **found by the code review** | 3 MAJOR + 11 MINOR findings, all fixed ? see `docs/testing/pre-launch-remediation.tdd.md`. |
+| R1-R7 | **done** | The build is reproducible, the Trivy gate can fail, `/app/config` is writable, and the desktop preflight + smoke scripts exist. |
+| C1 | **done** | The mail never claims a success it did not have. |
+| C2/C3 | **done** | One price list in INR; real AI caps (25/50/100). |
+| C4 | **done** | AutoML / Segmentation / Forecasting are renamed, with "what it actually does" lines. |
+| C5 | **done** | The PDF export is labelled *PDF (basic)* and the stub is honest. |
+| C6 | **done** | The site tells one local-first story, and the download links come from one constant. |
+| C7 | **done** | No `[[MARKER]]` remains; 13 operator-dependent values are counted by the release gate. |
+| C8 | **done** | The dev-key guard is real; the keypair regeneration procedure is documented. |
+| C9 | **done** | "Sync now" works and never downgrades the plan. |
+| C10 | **done** | Doc drift corrected; the legal pages render. |
+
+### Still open for the operator
+
+1. **Buy a code-signing certificate** and sign the three artefacts. Without it the installer
+   ships as "Unknown publisher" and SmartScreen blocks most users.
+2. **Publish the release repository** and flip `window.DATAAGENT_REPO_URL`.
+3. **Fill in the 13 legal values** in `config/legal.yaml`.
+4. **Regenerate the Ed25519 keypair** and re-bake `keygen_app/baked_public_key.py` ? the
+   baked public key has no private half in the tree, so no licence can currently be minted.
+5. **Run the 16-step clean-machine smoke test** (`docs/RELEASE-CHECKLIST.md` ?4). The install ->
+   run -> uninstall cycle could not be executed here: the installer requires elevation and no
+   UAC prompt can be answered in this session.
+6. **Run one live low-value purchase** -> webhook -> refund -> grant revoked.
