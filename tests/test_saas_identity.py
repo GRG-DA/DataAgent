@@ -132,6 +132,32 @@ def _seed_platform_rows(conn, schema: str, user_id: str) -> None:
     ]
     for stmt in ddl:
         conn.execute(stmt)
+    # The api_keys table may already be the PRODUCTION one (the API-key store
+    # creates it with NOT NULL columns), so the seed row has to satisfy
+    # whichever schema is actually in place.
+    api_key_cols = [
+        r[0] for r in conn.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = ? AND table_name = 'api_keys' "
+            "ORDER BY ordinal_position",
+            [schema],
+        ).fetchall()
+    ]
+    api_key_values = {
+        "key_id": "k1", "user_id": user_id, "name": "legacy",
+        "key_hash": "k1hash", "key_prefix": "da_k1",
+        "scopes": ["read"],
+        "created_at": "2026-01-01 00:00:00",
+        "expires_at": None, "last_used_at": None,
+        "revoked": False, "revoked_at": None,
+        "tenant_id": "",
+    }
+    _api_key_insert = (
+        f"INSERT INTO {schema}.api_keys "
+        f"({', '.join(api_key_cols)}) "
+        f"VALUES ({', '.join(['?'] * len(api_key_cols))})"
+    )
+    _api_key_params = [api_key_values.get(c) for c in api_key_cols]
     inserts = [
         (f"INSERT INTO {schema}.dashboards (id, name, owner_id) VALUES (?, ?, ?)",
          ["d1", "Board", user_id]),
@@ -145,8 +171,7 @@ def _seed_platform_rows(conn, schema: str, user_id: str) -> None:
          ["q1", user_id, "select 1"]),
         (f"INSERT INTO {schema}.user_preferences (user_id, prefs) VALUES (?, CAST(? AS JSON))",
          [user_id, "{}"]),
-        (f"INSERT INTO {schema}.api_keys (key_id, user_id, name) VALUES (?, ?, ?)",
-         ["k1", user_id, "legacy"]),
+        (_api_key_insert, _api_key_params),
         (f"INSERT INTO {schema}.user_subscriptions (user_id, plan) VALUES (?, ?)",
          [user_id, "pro"]),
         (f"INSERT INTO {schema}.notification_preferences (user_id, channel) VALUES (?, ?)",

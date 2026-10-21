@@ -235,13 +235,40 @@ class DuckDBAPIKeyStore(APIKeyStore):
                     expires_at TIMESTAMP,
                     last_used_at TIMESTAMP,
                     revoked BOOLEAN DEFAULT FALSE,
-                    revoked_at TIMESTAMP
+                    revoked_at TIMESTAMP,
+                    tenant_id VARCHAR
                 )
             """)
-            conn.execute("""
-                INSERT INTO analytics.api_keys
-                SELECT * FROM analytics.api_keys_legacy
-            """)
+            # The legacy table may predate the tenant_id column, so the
+            # column list is chosen from what is actually there. A bare
+            # "SELECT *" would fail on a column-count mismatch.
+            legacy_has_tenant = conn.execute("""
+                SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = 'analytics'
+                  AND table_name = 'api_keys_legacy'
+                  AND column_name = 'tenant_id'
+            """).fetchone()[0]
+            if legacy_has_tenant:
+                conn.execute("""
+                    INSERT INTO analytics.api_keys
+                    (key_id, user_id, name, key_hash, key_prefix, scopes,
+                     created_at, expires_at, last_used_at, revoked, revoked_at,
+                     tenant_id)
+                    SELECT key_id, user_id, name, key_hash, key_prefix, scopes,
+                           created_at, expires_at, last_used_at, revoked,
+                           revoked_at, tenant_id
+                    FROM analytics.api_keys_legacy
+                """)
+            else:
+                conn.execute("""
+                    INSERT INTO analytics.api_keys
+                    (key_id, user_id, name, key_hash, key_prefix, scopes,
+                     created_at, expires_at, last_used_at, revoked, revoked_at)
+                    SELECT key_id, user_id, name, key_hash, key_prefix, scopes,
+                           created_at, expires_at, last_used_at, revoked,
+                           revoked_at
+                    FROM analytics.api_keys_legacy
+                """)
             conn.execute("DROP TABLE analytics.api_keys_legacy")
             conn.execute("COMMIT")
         except Exception:
