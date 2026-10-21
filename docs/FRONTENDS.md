@@ -75,7 +75,7 @@ python -m pytest tests/test_launch_frontend_claims.py -q -p no:cacheprovider
 | Frontend | Path | Stack | Build step | Status |
 |---|---|---|---|---|
 | **Web SPA** (the app) | `web/` | Vanilla JS + Tailwind-style utility classes + vendored libraries, hash router | **None** | Shipped — this is the product |
-| **Marketing site** | `website/` | Static HTML + CSS + Three.js / GSAP / Lenis | None (CDN + vendored) | Current — the static site |
+| **Marketing site** | `website/` | Static HTML + CSS + Three.js / GSAP / Lenis | None (vendored) | Current — the static site |
 | **Desktop shell** | `shell/` | pywebview wrapper around the SPA | PyInstaller (`scripts/build_windows.ps1`) | Shipped — Windows exe |
 
 The shell and the SPA are the **same** frontend: the shell starts the FastAPI backend and points a pywebview window at it. The marketing site is entirely separate and never talks to the API.
@@ -321,9 +321,33 @@ Static HTML — no build step, no framework. 14 pages: `index.html`, `about.html
 
 | Library | Where | Purpose |
 |---|---|---|
-| **Three.js 0.186.1** | `website/vendor/three/build/three.module.js` + `three.core.js` + `examples/jsm/postprocessing/*` | WebGL hero background (`js/fx-webgl.js` — `WebGLRenderer`, `EffectComposer`, `RenderPass`, `UnrealBloomPass`, `OutputPass`). Loaded through an import map: `{"three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/"}` |
-| **GSAP 3.13.0** | CDN (`gsap.min.js`, `ScrollTrigger.min.js`, `SplitText.min.js`) | Scroll animations, text splitting, counters |
+| **Three.js 0.186.1** | `website/vendor/three/build/three.module.js` + `three.core.js` + `examples/jsm/postprocessing/*` | WebGL hero background (`js/fx-webgl.js` — `WebGLRenderer`, `EffectComposer`, `RenderPass`, `UnrealBloomPass`, `OutputPass`). Loaded through an import map: `{"three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/"}` |
+| **GSAP 3.13.0** | `website/vendor/gsap/` (**vendored**, no CDN) | Scroll animations, text splitting, counters |
 | **Lenis 1.3.4** | `website/vendor/lenis.min.js` (vendored offline, CDN fallback) | Smooth scroll, wired into GSAP's ticker and `ScrollTrigger.update()` in `js/fx-core.js` |
+
+> **The import-map values must be URL-like — keep the `./` prefix.**
+> A mapping value that starts with neither a scheme nor `/`, `./` nor `../` is
+> parsed as a **bare specifier**, not a relative URL. Chromium then drops the
+> value, stores a **null** for that key, and refuses to resolve the specifier:
+>
+> ```
+> [WARNING] Ignored an import map value of "three": Bare specifier: vendor/three/build/three.module.js
+> Failed to resolve module specifier "three". Import Map: "three" matches with "three" but is blocked by a null value
+> ```
+>
+> The symptom is a **dead WebGL hero with no error in the page itself** — the
+> module never loads, so there is no canvas. The import map cannot simply be
+> removed: the vendored Three addons themselves import the bare specifier
+> (`website/vendor/three/examples/jsm/postprocessing/EffectComposer.js` ends
+> with `} from 'three';`), so the map has to stay and its values have to be
+> URL-like. `tests/test_launch_site_motion.py` enforces it.
+
+> **No script is loaded from a third party.** GSAP used to come from
+> `cdn.jsdelivr.net`, which sent every visitor's IP address to a third party
+> on every page view — a poor fit for a product whose site says "no
+> telemetry", and a total loss of motion for an offline visitor. It is
+> vendored now, and the only remaining third-party request is the Google
+> Fonts stylesheet (see below).
 
 `js/fx-core.js` owns the shared motion layer (Lenis ⇄ ScrollTrigger bridge, reduced-motion handling, `FX.scrollTo`, `FX.gsap`/`FX.st` capability flags); `js/fx-webgl.js` is the Three.js module.
 

@@ -9,6 +9,16 @@
    · Optional bloom (dynamic import) with graceful degradation
    · Adaptive quality: FPS watchdog + hidden-tab + off-screen throttling
    · Skipped entirely for reduced motion / no WebGL (CSS aurora remains)
+
+   The CSS aurora is the base layer and is always painted; this canvas
+   is an enhancement on top of it. If WebGL is missing, blocklisted or
+   the context is lost, the body gets .fx-no-webgl and the aurora is
+   promoted to the full-strength fallback — never a blank rectangle.
+
+   The bare specifier "three" resolves through the import map declared
+   by every page. That map MUST keep URL-like values ("./vendor/…");
+   a bare relative path is parsed as a bare specifier and the module
+   never resolves at all.
    ═══════════════════════════════════════════════════════════════════ */
 
 import * as THREE from 'three';
@@ -19,6 +29,19 @@ const FX_PARAM = (location.search.match(/[?&]fx=([a-z]+)/i) || [])[1];
 const REDUCED = FX_PARAM === 'off' ? true
               : FX_PARAM === 'full' ? false
               : window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Promote the CSS aurora to the hero. Called for reduced motion, for a
+   missing/blocklisted WebGL context, and when the context is lost. */
+function useFallback(reason, quiet) {
+  body.classList.add('fx-no-webgl');
+  body.setAttribute('data-fx-webgl', 'fallback');
+  if (window.FX) window.FX.webgl = false;
+  const canvas = document.getElementById('fx-canvas');
+  if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
+  if (!quiet && window.console && window.console.info) {
+    window.console.info('[fx] WebGL stage off (' + reason + ') — CSS aurora fallback active.');
+  }
+}
 
 /* ── Scene presets ──────────────────────────────────────────────── */
 const PRESETS = {
@@ -64,8 +87,12 @@ function supportsWebGL() {
 }
 
 function boot() {
-  if (REDUCED || !supportsWebGL()) {
-    body.classList.add('fx-no-webgl');
+  if (REDUCED) {
+    useFallback('reduced motion', true);
+    return;
+  }
+  if (!supportsWebGL()) {
+    useFallback('no WebGL context');
     return;
   }
 
@@ -78,12 +105,20 @@ function boot() {
   canvas.setAttribute('aria-hidden', 'true');
   body.appendChild(canvas);
 
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: false,
-    alpha: true,
-    powerPreference: 'high-performance'
-  });
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: false,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+  } catch (err) {
+    useFallback('renderer could not start');
+    return;
+  }
+  body.setAttribute('data-fx-webgl', 'on');
+  if (window.FX) window.FX.webgl = true;
   let dpr = Math.min(window.devicePixelRatio || 1, 1.6);
   renderer.setPixelRatio(dpr);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -256,6 +291,24 @@ function boot() {
     }
   }
 
+  /* Building the composer compiles a dozen shader programs — measured at
+     ~0.6 s of blocked main thread. That is far too much to spend before
+     the hero is on screen, so the stage starts drawing first and the
+     bloom is built later, in an idle slot. */
+  let bloomStarted = false;
+  function startBloom() {
+    if (bloomStarted) return;
+    bloomStarted = true;
+    enableBloom();
+  }
+  function scheduleBloom() {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(startBloom, { timeout: 2500 });
+    } else {
+      setTimeout(startBloom, 800);
+    }
+  }
+
   /* ── Interaction state ────────────────────────────────────────── */
   const state = { rx: 0, ry: 0, trx: 0, try_: 0, mx: 0, my: 0, tmx: 0, tmy: 0, scroll: 0 };
   const FX = window.FX || { scroll: { progress: 0 }, pointer: { nx: 0, ny: 0 }, on: () => {} };
@@ -301,12 +354,23 @@ function boot() {
   }
 
   /* ── Resize ───────────────────────────────────────────────────── */
+  let resizeRaf = 0;
   window.addEventListener('resize', () => {
-    const w = window.innerWidth, h = window.innerHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
-    if (composer) composer.setSize(w, h);
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      const w = window.innerWidth, h = window.innerHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      if (composer) composer.setSize(w, h);
+    });
+  });
+
+  /* ── Context loss ─────────────────────────────────────────────── */
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    useFallback('context lost');
   });
 
   /* ── Render loop ──────────────────────────────────────────────── */
@@ -314,6 +378,7 @@ function boot() {
   let t = 0;
   let lastFrame = 0;
   let live = false;
+  let drawn = 0;
 
   function frame(now) {
     requestAnimationFrame(frame);
@@ -328,6 +393,8 @@ function boot() {
       live = true;
       canvas.classList.add('is-live');
     }
+    drawn++;
+    if (drawn === 3) scheduleBloom();
 
     state.tmx = FX.pointer && FX.pointer.nx ? FX.pointer.nx : state.tmx;
     state.tmy = FX.pointer && FX.pointer.ny ? FX.pointer.ny : state.tmy;
@@ -377,13 +444,32 @@ function boot() {
     watchdog(now, dt);
   }
 
-  enableBloom().finally(() => {
-    requestAnimationFrame(frame);
-  });
+  /* Diagnostics — the QA harness reads renderer.info.render.calls to
+     prove the scene is actually drawing, not just that a canvas exists. */
+  if (window.FX) {
+    window.FX.webgl = true;
+    window.FX.webglRenderer = renderer;
+    window.FX.webglScene = scene;
+    window.FX.webglCamera = camera;
+  }
+
+  /* Start drawing straight away — the bloom is built later, in an idle
+     slot, so the hero is on screen before a dozen shaders are compiled. */
+  requestAnimationFrame(frame);
+}
+
+/* A failure inside the stage must never take the page down: the CSS
+   aurora is a complete hero on its own. */
+function safeBoot() {
+  try {
+    boot();
+  } catch (err) {
+    useFallback('startup error: ' + (err && err.message ? err.message : err));
+  }
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', boot);
+  document.addEventListener('DOMContentLoaded', safeBoot);
 } else {
-  boot();
+  safeBoot();
 }

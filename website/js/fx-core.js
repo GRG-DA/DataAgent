@@ -42,16 +42,43 @@
 
   var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
   var lerp  = function (a, b, t) { return a + (b - a) * t; };
+  var now   = function () {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+  };
+
+  /* ── Engine budgets ────────────────────────────────────────────────
+     Hard caps so a long page can never turn the motion layer into a
+     long task. Every one of these is a ceiling, not a target. */
+  var FX_CONFIG = {
+    /* GSAP-tilted elements: each costs a quickTo pair plus a glare node. */
+    MAX_TILT: 24,
+    /* Magnetic elements: each costs two more quickTo tweens. */
+    MAX_MAGNETIC: 40,
+    /* Reveal targets styled per animation frame — keeps boot cheap. */
+    REVEAL_CHUNK: 48,
+    /* The reveal system's own safety net (see initReveals). */
+    REVEAL_FAILSAFE_MS: 4000,
+    /* How often the scroll progress is published to CSS as --fx-scroll. */
+    SCROLL_VAR_INTERVAL: 120
+  };
 
   var FX = window.FX = {
     reduced: REDUCED,
     coarse: COARSE,
     ready: false,
     gsap: GSAP,
+    /* Set by fx-webgl.js — true once the WebGL stage is drawing. */
+    webgl: false,
+    config: FX_CONFIG,
     scroll: { y: 0, progress: 0, velocity: 0, dir: 1 },
     pointer: { x: 0, y: 0, nx: 0, ny: 0 },
     lenis: null
   };
+
+  /* A class the CSS can hang the "no motion at all" rules off. It also
+     covers ?fx=off, which the prefers-reduced-motion media query cannot
+     see. */
+  if (REDUCED) root.classList.add('fx-reduced');
 
   var bus = {};
   FX.on = function (name, cb) {
@@ -110,13 +137,23 @@
     }
 
     var last = 0;
-    function tick() {
+    var lastVar = 0;
+    function tick(now) {
       var y = scrollY();
       FX.scroll.y = y;
       FX.scroll.progress = clamp(y / docHeight(), 0, 1);
       FX.scroll.dir = y >= last ? 1 : -1;
       if (!FX.lenis) FX.scroll.velocity = y - last;
       last = y;
+
+      /* Publish the scroll progress so CSS can drift the ambient layers
+         (see .fx-scroll in premium.css). Throttled: a slow drift does
+         not need 60 updates a second, and each write invalidates style. */
+      if (!REDUCED && now - lastVar > FX_CONFIG.SCROLL_VAR_INTERVAL) {
+        lastVar = now;
+        root.style.setProperty('--fx-scroll', FX.scroll.progress.toFixed(4));
+      }
+
       emit('tick', FX.scroll);
       requestAnimationFrame(tick);
     }
@@ -300,10 +337,19 @@
     }
   }
 
-  /* ── 7. Reveal engine ───────────────────────────────────────────── */
+  /* -- 7. Reveal engine ------------------------------------------------
+     Contract: a reveal target MUST end up visible.
+       * whatever is already on screen at load reveals immediately
+       * an IntersectionObserver reveals on scroll
+       * a scroll sweep catches targets that an instant jump skipped
+       * a failsafe pass repairs the page if the observer never fires
+     Only opacity and transform are animated, so nothing reflows and
+     nothing shifts. */
   function initReveals() {
+    var t0 = now();
     var targets = [];
     var seen = new Set();
+    var io = null;
 
     function add(el) {
       if (!el || seen.has(el) || el.dataset.fxReveal === 'off') return;
@@ -315,63 +361,59 @@
     var auto = doc.querySelectorAll(
       '.animate-on-scroll, .card, .stat-panel, .plan-card, .blog-card, .req-card, ' +
       '.rail-card, .highlight-box, .faq-item, .contact-link-card, .arch-card, ' +
-      '.learn-panel, .download-card, .showcase-col > *, .timeline-item, .check-list li'
+      '.learn-panel, .download-card, .showcase-col > *, .timeline-item, .check-list li, ' +
+      '.section-header'
     );
     for (var i = 0; i < auto.length; i++) add(auto[i]);
 
-    // Stagger siblings that appear next to each other
+    /* Stagger siblings that appear next to each other. The delays are
+       computed as data first -- the DOM writes happen later, in chunks. */
+    var delays = new Array(targets.length);
     var groups = {};
-    targets.forEach(function (el) {
+    var groupSeq = 0;
+    targets.forEach(function (el, idx) {
       var parent = el.parentElement;
-      if (!parent) return;
-      var key = groups.__id || (groups.__id = 0);
+      if (!parent) { delays[idx] = '0ms'; return; }
       var id = parent.dataset.fxGroup;
-      if (!id) { id = 'g' + (++key); parent.dataset.fxGroup = id; groups.__id = key; }
-      groups[id] = (groups[id] || 0);
-      var idx = groups[id]++;
-      el.style.setProperty('--fx-delay', Math.min(idx, 6) * 70 + 'ms');
+      if (!id) { id = 'g' + (++groupSeq); parent.dataset.fxGroup = id; }
+      var n = groups[id] || 0;
+      groups[id] = n + 1;
+      delays[idx] = Math.min(n, 6) * 70 + 'ms';
     });
 
-    targets.forEach(function (el) {
-      el.classList.add('fx-reveal');
-      if (el.matches('.card, .plan-card, .download-card, .stat-panel, .rail-card, .blog-card, .req-card, .contact-link-card')) {
-        el.classList.add('fx-spot');
-      }
+    /* Editorial hairline under the section headers: a short accent rule
+       that draws itself as the header reveals. */
+    doc.querySelectorAll('.section-header').forEach(function (el) {
+      el.classList.add('fx-rule');
     });
 
-    if (REDUCED) {
-      targets.forEach(function (el) { el.classList.add('is-in'); });
-      return;
+    function reveal(el) {
+      if (!el || el.classList.contains('is-in')) return;
+      el.classList.add('is-in');
+      if (io) io.unobserve(el);
+    }
+    function revealAll() {
+      for (var k = 0; k < targets.length; k++) reveal(targets[k]);
     }
 
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-in');
-        io.unobserve(entry.target);
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-    targets.forEach(function (el) { io.observe(el); });
-
-    // Sweep: instant jumps can skip elements past the viewport between frames
-    var raf = 0;
-    function sweep() {
-      raf = 0;
-      var fold = window.innerHeight * 0.96;
-      for (var k = 0; k < targets.length; k++) {
-        var el = targets[k];
-        if (el.classList.contains('is-in')) continue;
-        if (el.getBoundingClientRect().top < fold) {
-          el.classList.add('is-in');
-          io.unobserve(el);
+    /* Apply the reveal classes in chunks -- one long style recalc for a
+       hundred cards is a long task on a slow phone. */
+    var cursor = 0;
+    function applyChunk() {
+      var end = Math.min(cursor + FX_CONFIG.REVEAL_CHUNK, targets.length);
+      for (; cursor < end; cursor++) {
+        var el = targets[cursor];
+        el.classList.add('fx-reveal');
+        el.style.setProperty('--fx-delay', delays[cursor]);
+        if (el.matches('.card, .plan-card, .download-card, .stat-panel, .rail-card, .blog-card, .req-card, .contact-link-card')) {
+          el.classList.add('fx-spot');
         }
       }
+      if (cursor < targets.length) requestAnimationFrame(applyChunk);
     }
-    window.addEventListener('scroll', function () {
-      if (!raf) raf = requestAnimationFrame(sweep);
-    }, { passive: true });
+    applyChunk();
 
-    /* Masked headings — held back until the curtain lifts, so the
+    /* Masked headings -- held back until the curtain lifts, so the
        line reveal is actually seen rather than played behind it. */
     function armMaskedHeadings() {
       var masked = doc.querySelectorAll('.fx-lines');
@@ -387,11 +429,92 @@
         if (h.getBoundingClientRect().top < window.innerHeight * 0.92) h.classList.add('is-in');
       });
     }
+
+    if (REDUCED) {
+      /* Completely static: everything is visible, nothing is masked. */
+      revealAll();
+      doc.querySelectorAll('.fx-lines').forEach(function (h) { h.classList.add('is-in'); });
+      FX.boot.reveal = Math.round((now() - t0) * 10) / 10;
+      return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      /* No observer: show everything rather than hide content. */
+      revealAll();
+      armMaskedHeadings();
+      FX.boot.reveal = Math.round((now() - t0) * 10) / 10;
+      return;
+    }
+
+    io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        reveal(entry.target);
+        io.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    targets.forEach(function (el) { io.observe(el); });
+
+    /* Sweep: instant jumps can skip elements past the viewport between frames */
+    var raf = 0;
+    function sweep() {
+      raf = 0;
+      var fold = window.innerHeight * 0.96;
+      for (var k = 0; k < targets.length; k++) {
+        var el = targets[k];
+        if (el.classList.contains('is-in')) continue;
+        if (el.getBoundingClientRect().top < fold) reveal(el);
+      }
+    }
+    window.addEventListener('scroll', function () {
+      if (!raf) raf = requestAnimationFrame(sweep);
+    }, { passive: true });
+
+    /* Whatever is on screen right now reveals now -- a restored scroll
+       position or a #hash jump must never leave content invisible. */
+    function revealInView() {
+      var fold = window.innerHeight * 0.96;
+      for (var k = 0; k < targets.length; k++) {
+        var el = targets[k];
+        if (el.classList.contains('is-in')) continue;
+        var r = el.getBoundingClientRect();
+        if (r.top < fold && r.bottom > 0) reveal(el);
+      }
+    }
+    revealInView();
+    window.addEventListener('resize', revealInView, { passive: true });
+    window.addEventListener('hashchange', function () {
+      requestAnimationFrame(function () { revealInView(); sweep(); });
+    });
+
     var armed = false;
     function arm() { if (armed) return; armed = true; armMaskedHeadings(); }
     FX.on('ready', arm);
     if (FX.ready) arm();
     setTimeout(arm, 1700);
+
+    /* -- The failsafe -------------------------------------------------
+       A reveal must never be able to hide content for good. After
+       REVEAL_FAILSAFE_MS we look for targets the observer should have
+       revealed by now:
+         * anything on screen reveals
+         * anything the visitor has already scrolled past reveals
+       And if the observer has demonstrably failed -- something was passed
+       and is still hidden -- the whole page is revealed. */
+    setTimeout(function () {
+      var missed = 0;
+      var fold = window.innerHeight * 1.05;
+      for (var k = 0; k < targets.length; k++) {
+        var el = targets[k];
+        if (el.classList.contains('is-in')) continue;
+        var r = el.getBoundingClientRect();
+        if (r.bottom < 0) { missed++; continue; }
+        if (r.top < fold) reveal(el);
+      }
+      if (missed > 0) revealAll();
+    }, FX_CONFIG.REVEAL_FAILSAFE_MS);
+
+    FX.boot.reveal = Math.round((now() - t0) * 10) / 10;
   }
 
   /* ── 8. Card tilt + spotlight ───────────────────────────────────── */
@@ -400,9 +523,18 @@
     var sel = '.card, .plan-card, .download-card, .stat-panel, .rail-card, .hero-panel, .blog-card';
     var nodes = doc.querySelectorAll(sel);
 
+    /* A 3D tilt costs a quickTo pair and a glare node per element, and
+       every one of them is a composited layer while the pointer moves.
+       Only the first MAX_TILT elements (document order = what the
+       visitor actually sees first) get the tilt; the rest keep the
+       pointer-tracked spotlight, which is nearly free. */
+    var budget = FX_CONFIG.MAX_TILT;
+
     nodes.forEach(function (el) {
       if (el.dataset.fxTilt === '1') return;
       if (el.closest('.showcase-col')) return;
+      if (budget <= 0) return;
+      budget--;
       el.dataset.fxTilt = '1';
       el.classList.add('fx-tilt');
 
@@ -444,8 +576,12 @@
   function initMagnetic() {
     if (COARSE || REDUCED || !GSAP) return;
     var sel = '.btn, .nav-cta, .scroll-top, .nav-logo, .hero-float, .section-badge';
+    /* Same budget rule as the tilt: two quickTo tweens per element. */
+    var budget = FX_CONFIG.MAX_MAGNETIC;
     doc.querySelectorAll(sel).forEach(function (el) {
       if (el.dataset.fxMag === '1') return;
+      if (budget <= 0) return;
+      budget--;
       el.dataset.fxMag = '1';
       var qx = window.gsap.quickTo(el, 'x', { duration: 0.55, ease: 'power3.out' });
       var qy = window.gsap.quickTo(el, 'y', { duration: 0.55, ease: 'power3.out' });
@@ -800,6 +936,9 @@
 
   /* ── Boot ───────────────────────────────────────────────────────── */
   function boot() {
+    var t0 = now();
+    FX.boot = { total: 0, reveal: 0 };
+
     initScroll();
     initIntro();
     initCursor();
@@ -824,6 +963,7 @@
       window.ScrollTrigger.refresh();
       window.addEventListener('load', function () { window.ScrollTrigger.refresh(); }, { once: true });
     }
+    FX.boot.total = Math.round((now() - t0) * 10) / 10;
     FX.init = true;
     emit('init');
   }

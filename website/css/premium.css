@@ -791,17 +791,66 @@ blockquote {
 /* Existing hero markup supplies its own lines */
 .hero-title .line { display: block; }
 
-/* No-WebGL fallback keeps the aurora rich */
-body.fx-no-webgl .bg-orbs::before { opacity: 1; }
-body.fx-no-webgl .bg-orbs::after { opacity: 1; }
+/* No-WebGL fallback keeps the aurora rich.
+   The canvas is an *enhancement*: the CSS aurora is the base layer and is
+   always painted. When the stage is off (no WebGL, GPU blocklisted, lost
+   context or prefers-reduced-motion) the aurora is promoted to full
+   strength and the technical grid is brought up, so the hero reads as an
+   intentional blueprint rather than a hole where the render should be.
+   These need !important: the ambient rules above set opacity with it too,
+   and without it the old rules here were dead. */
+body.fx-no-webgl .bg-orbs::before,
+body.fx-no-webgl .bg-orbs::after { opacity: 0.95 !important; }
+body.fx-no-webgl .hero::before { opacity: 0.78 !important; }
+body.fx-no-webgl .bg-grid {
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px) !important;
+}
+body.fx-no-webgl #fx-canvas { display: none !important; }
+
+/* ── Scroll-linked ambient drift ────────────────────────────────────
+   fx-core.js publishes the scroll progress as --fx-scroll on :root
+   (throttled to ~8 Hz). Only `transform` is animated, so the drift stays
+   on the compositor and never triggers a layout pass. */
+:root { --fx-scroll: 0; }
+.bg-grid {
+  transform: translate3d(0, calc(var(--fx-scroll, 0) * -5vh), 0);
+  will-change: transform;
+}
+.hero-stage-glow {
+  transform: translate3d(0, calc(var(--fx-scroll, 0) * -9vh), 0);
+}
+
+/* Editorial hairline under the section headers — a short accent rule
+   that draws itself as the header reveals. Added by fx-core.js. */
+.fx-rule { position: relative; }
+.fx-rule::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  width: 76px;
+  height: 2px;
+  margin-left: -38px;
+  border-radius: 2px;
+  background: var(--px-grad-hot);
+  opacity: 0;
+  transform: scaleX(0);
+  transition: transform 900ms var(--px-ease) 140ms, opacity 520ms var(--px-ease) 140ms;
+  pointer-events: none;
+}
+.fx-rule.is-in::after { transform: scaleX(1); opacity: 0.85; }
 
 html.fx-ready .fx-reveal {
   opacity: 0;
   transform: translate3d(0, 28px, 0);
   transition: opacity 900ms var(--px-ease), transform 1050ms var(--px-ease);
   transition-delay: var(--fx-delay, 0ms);
-  will-change: opacity, transform;
 }
+/* will-change only while the element is still hidden — a permanent
+   will-change on a hundred cards is a hundred composited layers. */
+html.fx-ready .fx-reveal:not(.is-in) { will-change: opacity, transform; }
 html.fx-ready .fx-reveal.is-in { opacity: 1; transform: none; }
 
 .fx-lines .fx-line { display: block; overflow: hidden; }
@@ -940,6 +989,20 @@ body.fx-cursor-on .fx-cursor-dot { opacity: 1; }
 .fx-skew { transition: transform 120ms linear; }
 
 /* ── 12. Accessibility & fallbacks ─────────────────────────────── */
+/* ── Static mode ─────────────────────────────────────────────────────
+   Set by fx-core.js for prefers-reduced-motion *and* for ?fx=off (the
+   media query cannot see the query flag). Nothing moves: the reveals are
+   already resolved, the transitions are switched off, the ambient drift
+   is parked. */
+html.fx-reduced .fx-reveal,
+html.fx-reduced .fx-lines .fx-line > span,
+html.fx-reduced .fx-zoom,
+html.fx-reduced .fx-rule::after { transition: none !important; }
+html.fx-reduced .bg-grid,
+html.fx-reduced .hero-stage-glow { transform: none !important; }
+html.fx-reduced .fx-rule::after { transform: scaleX(1) !important; opacity: 0.85 !important; }
+html.fx-reduced .fx-preloader { display: none !important; }
+
 @media (prefers-reduced-motion: reduce) {
   html.fx-ready .fx-reveal,
   html.fx-ready .fx-lines .fx-line > span,
@@ -949,6 +1012,16 @@ body.fx-cursor-on .fx-cursor-dot { opacity: 1; }
   /* The canvas, cursor and progress bar are created by JS, which already
      respects this preference — so they are not hidden again here. That way
      ?fx=full can still demo the full experience. */
+  /* The ambient drift and the editorial rule are motion too: park them. */
+  .bg-grid, .hero-stage-glow { transform: none !important; }
+  .fx-rule::after {
+    transform: scaleX(1) !important;
+    opacity: 0.85 !important;
+    transition: none !important;
+  }
+  /* The curtain and the page-transition veil are pure motion. */
+  .fx-preloader, .fx-transition { transition: none !important; }
+  .fx-preloader { display: none !important; }
 }
 
 @media (hover: none), (pointer: coarse) {
