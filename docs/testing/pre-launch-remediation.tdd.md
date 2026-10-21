@@ -138,7 +138,6 @@ listed above.
 The work is committed as **13 commits** on top of `3e03571` (the baseline import):
 
 ```
-3e03571 chore: initial commit — import existing DataAgent tree for version control
 2840988 fix: persist runtime secrets and runtime state in the writable per-user dir
 07005c8 fix: neutralise spreadsheet/HTML injection, unify pricing, make mail honest
 ec1daf4 fix: make the legal pages, the marketing prices and the feature names honest
@@ -151,6 +150,26 @@ b8ba5a5 fix: read the API key tenant defensively
 488b735 fix: address the pre-launch code review findings
 7c059ec fix: the api_keys index migration must survive the tenant_id column
 363199d fix: the environment check must not cry wolf in a frozen build
+e7b081c docs: add the TDD evidence report for the pre-launch remediation
+5ceacf2 docs: record the final status of every item in the launch fix plan
+473b6b8 fix: the runtime-dir override must decide the chdir too
+05a5d4a fix: state the real installer size on the site
+59e35c5 docs: warn that the test suite and the build cannot run concurrently
+70e621e fix: stop shipping 102 MB of Playwright in the release bundle
+577e81d docs: ADR-011 (Docker config volume) and ADR-012 (pinned, hash-verified downloads)
+a219a72 fix: pin the opencode download in the app and the Linux installer too
+1de39e3 fix: the WebGL hero renders and the site loads no third-party script
+f3aeeb5 docs: ADR-013 - the marketing site carries no analytics
+a44081b docs(site): replace unverifiable copy with what the product actually does
+73a4e54 fix(site): the launch artefacts, the vendored webfonts, and a CSP that does not break sign-in
+8a6fde5 fix(site): one palette, one button set, and the invisible text it was hiding
+8791e8c fix(site): the scroll reveals were dead, the fonts leaked, and a 1.9 GB archive of the project's secrets sat in the tree
+06edf2c fix(site): the social sharing tags the checklist claimed but nobody had added
+5ee3040 docs(site): record the OG card, the credential archive and the corrected gradient count
+e094afc fix(site): the heading hierarchy - 17 accessibility findings, now zero
+a852e1d ci: the release gate now covers the marketing site and the credential state
+40bd7b9 docs: record the marketing-site pass in the launch fix plan
+3e26acf fix(site): the telemetry guard tripped on my own comment
 ```
 
 Each commit is self-contained and was made against a green (or a deliberately-red, in the
