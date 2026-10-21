@@ -105,6 +105,26 @@ Invoke-Gate 'Version strings agree' {
     python -m pytest tests/test_packaging.py -q --no-header -p no:cacheprovider -k version
 } | Out-Null
 
+# --- 5b. the marketing site ---------------------------------------------------
+# The site is a separate deliverable from the app: it has its own links, its
+# own accessibility findings and its own third-party-origin budget.
+Invoke-Gate 'Site: broken links' {
+    python scripts/ci/check_site_links.py
+} | Out-Null
+Invoke-Gate 'Site: accessibility' {
+    python scripts/ci/check_site_a11y.py
+} | Out-Null
+Invoke-Gate 'Site: launch artefacts + privacy' {
+    python -m pytest tests/test_launch_site_launch_readiness.py tests/test_launch_site_privacy.py -q --no-header -p no:cacheprovider
+} | Out-Null
+
+# --- 5c. nothing that carries a credential is tracked or staged --------------
+# This is the check that would have caught the 1.9 GB archive of the working
+# tree that sat in the repo root during the pre-launch review.
+Invoke-Gate 'No credential state tracked or staged' {
+    python -m pytest tests/test_launch_no_credentials_committed.py -q --no-header -p no:cacheprovider
+} | Out-Null
+
 # --- 6. desktop preflight ----------------------------------------------------
 $preflight = Join-Path $PSScriptRoot 'preflight_desktop.ps1'
 if (Test-Path -LiteralPath $preflight) {
