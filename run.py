@@ -285,6 +285,14 @@ def _frozen_bootstrap() -> None:
         ) / "DataAgent"
     base.mkdir(parents=True, exist_ok=True)
 
+    # Export the runtime dir so every module in the process agrees on where
+    # writable state lives (see api/runtime_paths.py). Without this the JWT
+    # signing secret and the paid-plan grant key would resolve from
+    # __file__, i.e. inside the (unwritable) bundle, and be re-minted on
+    # every launch.
+    os.environ.setdefault("DATAAGENT_DATA_DIR", str(base))
+    (base / "data").mkdir(parents=True, exist_ok=True)
+
     # Windowed frozen builds (PyInstaller --windowed on Windows) have
     # sys.stdout/sys.stderr set to None, so any print() in the frozen web/api
     # path raises AttributeError at launch. This is why the onefile web build

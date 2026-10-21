@@ -44,6 +44,18 @@ def start_tray(app_url: str, on_quit):
         except Exception:  # noqa: BLE001
             pass
 
+    def _message(title: str, body: str, icon: int = 0x40) -> None:
+        """Show a message box on Windows; a no-op elsewhere."""
+        try:
+            import sys as _sys
+
+            if _sys.platform == "win32":
+                import ctypes
+
+                ctypes.windll.user32.MessageBoxW(0, body, title, icon)
+        except Exception:  # noqa: BLE001
+            pass
+
     def _about():
         try:
             from config import settings
@@ -52,15 +64,30 @@ def start_tray(app_url: str, on_quit):
         except Exception:  # noqa: BLE001
             version = "unknown"
         msg = f"DataAgent v{version}\nLocal-first AI data analyst."
-        try:
-            import sys as _sys
+        _message("About DataAgent", msg)
 
-            if _sys.platform == "win32":
-                import ctypes
+    def _check_updates():
+        """Check for a newer release without blocking the tray thread."""
 
-                ctypes.windll.user32.MessageBoxW(0, msg, "About DataAgent", 0x40)
-        except Exception:  # noqa: BLE001
-            pass
+        def _run() -> None:
+            try:
+                from shell.update import check_for_update
+
+                result = check_for_update()
+            except Exception:  # noqa: BLE001
+                _message(
+                    "DataAgent",
+                    "The update check could not be completed.",
+                    0x10,
+                )
+                return
+            title = "DataAgent update"
+            if result.available:
+                _message(title, result.detail, 0x40)
+            else:
+                _message(title, result.detail, 0x40)
+
+        threading.Thread(target=_run, daemon=True).start()
 
     try:
         from config import settings as _settings
@@ -71,6 +98,7 @@ def start_tray(app_url: str, on_quit):
     menu = pystray.Menu(
         pystray.MenuItem("Open in browser", lambda icon, item: webbrowser.open(app_url)),
         pystray.MenuItem("Open logs folder", lambda icon, item: _open_logs()),
+        pystray.MenuItem("Check for updates", lambda icon, item: _check_updates()),
         pystray.MenuItem(f"About DataAgent v{_ver}", lambda icon, item: _about()),
         pystray.MenuItem("Quit DataAgent", lambda icon, item: on_quit()),
     )

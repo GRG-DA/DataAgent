@@ -32,7 +32,7 @@ with `WAREHOUSE_RELOAD=1`.
 - **Enterprise:** catalog, SLA, cost/usage, compliance, workflows, masking, collaboration, org, API keys, SSO/SAML, audit, RLS (see `config/settings.yaml: security`).
 - **Billing:** plans/entitlements/usage metering in-app; checkout externally. See `docs/BILLING.md`.
 
-Frontend: `web/` (app SPA). Marketing: `website/` until `website-react/` lands. See `docs/FRONTENDS.md`.
+Frontend: `web/` (app SPA). Marketing: `website/`. See `docs/FRONTENDS.md`.
 
 ## Layout
 
@@ -50,7 +50,7 @@ Frontend: `web/` (app SPA). Marketing: `website/` until `website-react/` lands. 
 | `billing_server/` | standalone billing service (Razorpay) |
 | `config/` | `settings.yaml`, `model_config.yaml`, `db_config.yaml` (seeds; runtime `*.json` gitignored) |
 | `scripts/`, `packaging/`, `installers/` | build, verify, installer assets |
-| `tests/` | 2090 tests (`pytest -q`) |
+| `tests/` | 2456 tests (`pytest -q`) |
 
 ## Config
 
@@ -66,10 +66,10 @@ Frontends: `docs/FRONTENDS.md`. Coverage plan: `docs/COVERAGE.md`.
 ## Tests / quality
 
 ```powershell
-python -m pytest -q                                   # 2090 tests
+python -m pytest -q                                   # 2456 tests
 python -m pytest tests/test_packaging.py tests/test_billing_consistency.py -q
 python -m pytest tests/test_security_regressions.py -q  # SQLi / sandbox / entitlement regressions
-python -m pytest -q --cov=. --cov-report=term-missing  # coverage (gate 60%, measured ~76%)
+python -m pytest -q --cov=. --cov-report=term-missing  # coverage (enforced gate 74%, measured ~76.6%)
 ```
 
 Workflow: plan → TDD → code-review → security-review (auth/SQL/billing) → verify. See `AGENTS.md`.

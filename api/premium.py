@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 import duckdb
@@ -330,11 +331,16 @@ async def activate_product_key(req: KeyActivateRequest, user: User = Depends(get
     expires_at = payload.get("expiresAt")
 
     try:
+        # Pass the warehouse the app actually uses. Without this the Key
+        # Manager falls back to a path derived from its own module location,
+        # which in the frozen desktop build points into the (unwritable)
+        # PyInstaller bundle instead of the runtime warehouse.
         result = kg_activate(
             user_id=user.user_id,
             plan=plan,
             license_key=req.key,
             expires_at=expires_at,
+            db_path=Path(settings.duckdb.database_path),
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Activation failed: {exc}")

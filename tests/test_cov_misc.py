@@ -1295,6 +1295,11 @@ class TestRun:
         monkeypatch.setattr(sys, "stderr", None, raising=False)
         monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        # _frozen_bootstrap() exports $DATAAGENT_DATA_DIR so every module in
+        # the process agrees on the runtime dir.  Clear it afterwards —
+        # otherwise the whole pytest session keeps resolving runtime state
+        # into this throwaway tmp dir.
+        monkeypatch.delenv("DATAAGENT_DATA_DIR", raising=False)
         cwd = Path.cwd()
         try:
             run._frozen_bootstrap()
@@ -1304,6 +1309,7 @@ class TestRun:
                 os.chdir(cwd)
             except Exception:
                 pass
+            monkeypatch.delenv("DATAAGENT_DATA_DIR", raising=False)
         # NOTE: no manual delattr(sys, "frozen") here — monkeypatch teardown
         # restores sys.__dict__ itself; deleting first breaks its undo stack.
 

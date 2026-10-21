@@ -18,6 +18,7 @@ import bcrypt
 from pydantic import BaseModel
 
 from api.redact import redact_secrets
+from api.runtime_paths import runtime_file
 from api.user_store import (
     JSONUserStore,
     UserRecord,
@@ -557,10 +558,12 @@ def _load_jwt_secret() -> str:
     env_secret = os.environ.get("JWT_SECRET")
     if env_secret:
         return _validate_jwt_secret(env_secret, "the JWT_SECRET environment variable")
-    secret_file = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data", ".jwt_secret",
-    )
+    # The secret lives in the WRITABLE runtime directory, never next to the
+    # code: in a frozen build ``__file__`` points into the PyInstaller bundle
+    # (<install>\_internal), which a normal user cannot write to. A secret
+    # that cannot be persisted is re-minted on every launch, which silently
+    # invalidates every session cookie and CSRF token of the previous run.
+    secret_file = str(runtime_file("data", ".jwt_secret"))
     try:
         with open(secret_file, "r", encoding="utf-8") as f:
             existing = f.read().strip()

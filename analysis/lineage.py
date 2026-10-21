@@ -16,7 +16,24 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LINEAGE_PATH = Path(__file__).resolve().parent.parent / "data" / "lineage.json"
+# The lineage file is runtime state, so it belongs in the WRITABLE per-user
+# directory (see ``api.runtime_paths``).  Resolving it from ``__file__``
+# put it inside the PyInstaller bundle in the frozen desktop build, where the
+# save was silently dropped and the lineage was lost on every restart.
+try:  # pragma: no cover - the fallback is for a standalone analysis checkout
+    from api.runtime_paths import runtime_file as _runtime_file
+except Exception:  # noqa: BLE001
+    _runtime_file = None  # type: ignore[assignment]
+
+
+def _default_lineage_path() -> Path:
+    """Where the lineage graph is persisted."""
+    if _runtime_file is not None:
+        return _runtime_file("data", "lineage.json")
+    return Path(__file__).resolve().parent.parent / "data" / "lineage.json"
+
+
+DEFAULT_LINEAGE_PATH = _default_lineage_path()
 
 
 class LineageTracker:
@@ -33,7 +50,12 @@ class LineageTracker:
     """
 
     def __init__(self, storage_path: Optional[Path] = None):
-        self._storage_path: Path = Path(storage_path) if storage_path else DEFAULT_LINEAGE_PATH
+        # Resolved per instance rather than read from a module constant, so a
+        # caller that changes $DATAAGENT_DATA_DIR after import still gets the
+        # right directory.
+        self._storage_path: Path = (
+            Path(storage_path) if storage_path else _default_lineage_path()
+        )
         self._lineage: Dict[str, List[Dict[str, Any]]] = {}
         self._load()
 

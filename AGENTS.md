@@ -8,7 +8,9 @@ Local-first LLM data analytics agent: Python + FastAPI backend, DuckDB warehouse
 - `setup.ps1` — create venv, install requirements, init database (repo root).
 - `docker compose up --build` — containerized deployment (see `docker-compose.yml`).
 - Test/serve/ETL scripts live under `scripts/`, `etl/`, `api/`.
-- **React marketing site** (`website-react/`): `npm run dev` (port 8090), `npm run build`, `npm run preview`. Verify with `python scripts\verify_react_site.py` (needs preview on 8090 + Chrome CDP on 9333). Legacy static site remains in `website/` until sign-off.
+- **Marketing site** (`website/`): a static site, no build step. The React rewrite that
+  `website-react/` referred to was never started — `website/` IS the site. The download links
+  resolve through ONE configurable constant (see `docs/FRONTENDS.md`).
 
 ## Critical constraints
 
@@ -20,7 +22,9 @@ Local-first LLM data analytics agent: Python + FastAPI backend, DuckDB warehouse
 ## Workflow (ECC)
 
 1. **Plan** first for anything non-trivial — use the `planner` agent or `/plan`.
-2. **TDD** — write the test first (red), implement (green), refactor. Target 80%+ coverage (`/tdd`, `tdd-guide`).
+2. **TDD** — write the test first (red), implement (green), refactor. Coverage target is 80%;
+   the **enforced** gate is `fail_under = 74` in `pyproject.toml` (measured ~76.6%). Never lower
+   the gate to land a change (`/tdd`, `tdd-guide`).
 3. **Review** — run the `code-reviewer` agent after writing/modifying code (`/code-review`).
 4. **Security** — before any commit touching auth, payments, user input, or SQL: `/security` + `security-reviewer`. Scan with `agentshield scan --path .`.
 5. **Verify** — confirm the change works (`/verify`, `verification-loop`).

@@ -45,10 +45,46 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/llm", tags=["LLM Dependencies"])
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-STORAGE_DIR = PROJECT_ROOT / "storage" / "ollama"
-BIN_DIR = STORAGE_DIR / "bin"
-OLLAMA_BIN = BIN_DIR / ("ollama.exe" if os.name == "nt" else "ollama")
-LOGS_DIR = PROJECT_ROOT / "logs"
+
+# Runtime state (the downloaded Ollama binary and the server logs) must live
+# in the WRITABLE per-user directory, not next to the executable: the frozen
+# desktop build installs into "C:\Program Files\DataAgent", which a normal
+# user cannot write to.  ``api.runtime_paths`` is the single place that
+# answers "where does writable runtime state live?" — in a source checkout it
+# resolves to the project root, exactly as before.
+#
+# These are FUNCTIONS, not module constants: the runtime directory is
+# resolved on every call so a caller that sets $DATAAGENT_DATA_DIR after this
+# module was imported still gets the right answer.
+from api.runtime_paths import runtime_file as _runtime_file  # noqa: E402
+
+
+def storage_dir() -> Path:
+    """Where the managed Ollama/LMStudio binaries are installed."""
+    return _runtime_file("storage", "ollama")
+
+
+def bin_dir() -> Path:
+    """The directory the managed Ollama executable is written to."""
+    return storage_dir() / "bin"
+
+
+def ollama_bin() -> Path:
+    """The managed Ollama executable."""
+    return bin_dir() / ("ollama.exe" if os.name == "nt" else "ollama")
+
+
+def logs_dir() -> Path:
+    """Where the managed local-model server logs are written."""
+    return _runtime_file("logs")
+
+
+# Backwards-compatible aliases. These snapshot the path at import time; new
+# code should call the functions above.
+STORAGE_DIR = storage_dir()
+BIN_DIR = bin_dir()
+OLLAMA_BIN = ollama_bin()
+LOGS_DIR = logs_dir()
 
 # ── Recommended model families (quick-pull chips in the UI) ─────────────
 RECOMMENDED_OLLAMA_MODELS = [
@@ -131,8 +167,8 @@ def _find_ollama() -> Optional[str]:
             if c.exists():
                 return str(c)
     # Our managed copy (from one-click install)
-    if OLLAMA_BIN.exists():
-        return str(OLLAMA_BIN)
+    if ollama_bin().exists():
+        return str(ollama_bin())
     return None
 
 
@@ -518,8 +554,8 @@ async def ollama_start():
     if _server_reachable(ollama_url):
         return {"success": True, "already_running": True, "server_url": ollama_url}
     try:
-        LOGS_DIR.mkdir(parents=True, exist_ok=True)
-        log_path = LOGS_DIR / "ollama_serve.log"
+        logs_dir().mkdir(parents=True, exist_ok=True)
+        log_path = logs_dir() / "ollama_serve.log"
         kwargs: Dict[str, Any] = {
             "stdout": open(log_path, "ab"),
             "stderr": subprocess.STDOUT,
@@ -556,7 +592,7 @@ async def ollama_install():
 
 async def _run_install_job(job_id: str, url: str, plat: str) -> None:
     job = _install_jobs[job_id]
-    known_dir = BIN_DIR
+    known_dir = bin_dir()
     try:
         known_dir.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="ollama_install_") as tmp:
@@ -585,14 +621,14 @@ async def _run_install_job(job_id: str, url: str, plat: str) -> None:
                     src = tf.extractfile(member)
                     if not src:
                         raise RuntimeError("could not read ollama binary from archive")
-                    with open(OLLAMA_BIN, "wb") as out:
+                    with open(ollama_bin(), "wb") as out:
                         shutil.copyfileobj(src, out)
-                OLLAMA_BIN.chmod(0o755)
+                ollama_bin().chmod(0o755)
                 # Symlink into /usr/local/bin when permitted so `ollama` is on PATH
                 try:
                     link = Path("/usr/local/bin/ollama")
                     if os.access("/usr/local/bin", os.W_OK) and not link.exists():
-                        link.symlink_to(OLLAMA_BIN)
+                        link.symlink_to(ollama_bin())
                 except Exception as exc:  # noqa: BLE001
                     job["log"] += f"(note: no global symlink — {exc})\n"
                 job["pct"] = 100
@@ -600,7 +636,7 @@ async def _run_install_job(job_id: str, url: str, plat: str) -> None:
                 job["stage"] = "installed"
             elif plat == "darwin":
                 job["stage"] = "extracting"
-                dest = STORAGE_DIR / "Ollama.app"
+                dest = storage_dir() / "Ollama.app"
                 base = dest.parent
                 with zipfile.ZipFile(archive) as zf:
                     names = zf.namelist()
@@ -835,8 +871,8 @@ async def lmstudio_launch():
     if not binary:
         return {"success": False, "error": "LM Studio daemon (lms) not installed — use Auto-install first."}
     try:
-        LOGS_DIR.mkdir(parents=True, exist_ok=True)
-        log_path = LOGS_DIR / "lmstudio_server.log"
+        logs_dir().mkdir(parents=True, exist_ok=True)
+        log_path = logs_dir() / "lmstudio_server.log"
         kwargs: Dict[str, Any] = {
             "stdout": open(log_path, "ab"),
             "stderr": subprocess.STDOUT,

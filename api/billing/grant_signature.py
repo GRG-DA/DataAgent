@@ -37,6 +37,8 @@ from datetime import datetime
 from hashlib import sha256
 from typing import Any, Optional
 
+from api.runtime_paths import runtime_file
+
 logger = logging.getLogger(__name__)
 
 _KEY_FILENAME = ".grant_key"
@@ -54,9 +56,16 @@ _key_source_state = {"marker": None}
 
 
 def _key_path() -> str:
-    """The historical key location: ``data/.grant_key``."""
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    return os.path.join(root, "data", _KEY_FILENAME)
+    """The historical key location: ``data/.grant_key``.
+
+    Resolved against the WRITABLE runtime directory (see
+    ``api.runtime_paths``), not against ``__file__``: in a frozen build
+    ``__file__`` points into the PyInstaller bundle, which a normal user
+    cannot write to. A key that cannot be persisted is re-minted on every
+    launch, and every signed paid-plan grant then fails verification — a
+    paying customer loses their entitlement on every restart.
+    """
+    return str(runtime_file("data", _KEY_FILENAME))
 
 
 def _key_file_path() -> Optional[str]:

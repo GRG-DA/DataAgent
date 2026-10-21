@@ -4,6 +4,51 @@ The customer build bakes the PUBLIC key (and its fingerprint) into the
 binary. The admin build additionally loads the PRIVATE key from a PEM file
 or the LICENSE_PRIVATE_KEY env var, and refuses to run if the key is the
 bundled development keypair.
+
+.. warning::
+
+   RELEASE STEP — the baked key must be regenerated before the first sale.
+
+   The public key compiled into ``keygen_app/baked_public_key.py`` is matched
+   against ``_HARDCODED_FINGERPRINT`` below (currently ``deb8b1e5d88e42e4``).
+   A frozen customer build verifies licences against that baked key and raises
+   *"Baked public key fingerprint mismatch — build tampered."* if the two ever
+   disagree — so the two MUST be updated together.
+
+   The private half of the currently baked key is **not** in this tree
+   (``keygen_app/keys/`` is empty and ``*.pem`` is gitignored). That means the
+   currently baked key **cannot sign anything**: no licence can be minted with
+   it, and no key already issued with it could be re-derived.
+
+   To make the product sellable, do ALL of the following, in order, BEFORE the
+   first release build:
+
+   1. Generate a fresh Ed25519 keypair::
+
+          python -m keygen_app.keygen gen-keys
+
+      This writes ``keygen_app/keys/ed25519_private.pem`` (gitignored — never
+      commit it) and ``ed25519_public.pem``.
+
+   2. Compute the fingerprint of the new public key::
+
+          python -c "from keygen_app.keygen import public_fingerprint; \\
+                     from keygen_app.config import load_public_key; \\
+                     print(public_fingerprint(load_public_key()))"
+
+   3. Write the new public key into ``keygen_app/baked_public_key.py``
+      (``PUBLIC_KEY_PEM``) and update ``_HARDCODED_FINGERPRINT`` in THIS file
+      to the new fingerprint. Both must change in the same commit.
+
+   4. Keep the private key OUT of the repository and OUT of the installer. It
+      belongs in a secret manager or on the operator's machine only.
+
+   5. Verify before shipping::
+
+          python -m pytest tests/test_license_guard.py tests/test_packaging.py -q
+
+   The fingerprint check at ``load_public_key()`` makes step 3 mandatory: a
+   mismatched pair bricks every licence check in the shipped app.
 """
 from __future__ import annotations
 

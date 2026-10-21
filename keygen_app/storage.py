@@ -29,8 +29,34 @@ logger = logging.getLogger(__name__)
 SCHEMA = "analytics"
 PERIOD_DAYS = {"MONTHLY": 31, "YEARLY": 365, "ONETIME": 3650}
 
-DEFAULT_DB = Path(__file__).parent.parent / "data" / "curated" / "warehouse.duckdb"
-LOCAL_STATE_DB = Path(__file__).parent / "local_state.db"
+# The runtime data directory is resolved LAZILY (at call time), not at import
+# time, so that a caller which sets $DATAAGENT_DATA_DIR after this module was
+# imported still gets the right answer.
+#
+# Why this is not simply ``Path(__file__).parent.parent / "data" / ...``:
+# in the frozen Windows desktop build ``__file__`` points into the PyInstaller
+# bundle (``<install>\\ _internal\\keygen_app\\storage.py``), so the warehouse
+# would resolve to a copy inside Program Files — unwritable by a normal user,
+# and NOT the warehouse the app actually uses. Activating a paid licence
+# would then fail with a lock error against the wrong file.
+try:  # pragma: no cover - the fallback is for a standalone keygen checkout
+    from api.runtime_paths import runtime_file
+except Exception:  # noqa: BLE001
+
+    def runtime_file(*parts: str) -> Path:
+        """Standalone fallback: resolve relative to the project root."""
+        return Path(__file__).parent.parent.joinpath(*parts)
+
+
+def default_db() -> Path:
+    """The warehouse the Key Manager writes activations into."""
+    return runtime_file("data", "curated", "warehouse.duckdb")
+
+
+def local_state_db() -> Path:
+    """The Key Manager's own local state (pending licence sync)."""
+    return runtime_file("local_state.db")
+
 
 WRITE_RETRIES = 3
 RETRY_DELAY_S = 1.0
@@ -306,7 +332,7 @@ def activate(
 
     expires_at None => lifetime (real NULL in the DB, "Never expires" in UI).
     """
-    db_path = db_path or DEFAULT_DB
+    db_path = db_path or default_db()
     license_obj = {
         "valid": True,
         "plan": plan,
@@ -331,8 +357,9 @@ def activate(
 
 
 def _local_connect() -> sqlite3.Connection:
-    LOCAL_STATE_DB.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(str(LOCAL_STATE_DB))
+    state_db = local_state_db()
+    state_db.parent.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(str(state_db))
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA busy_timeout=5000")

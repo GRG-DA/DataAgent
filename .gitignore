@@ -58,6 +58,13 @@ build/
 # Local change backups
 backups/
 
+# Stray artefacts that used to sit at the repo root (see docs/LAUNCH-FIX-PLAN.md
+# item R6). `out.html` was a stale copy of the SPA shell, `ollama` was a
+# 0-byte file, `lib/` was an empty directory. All three are build noise.
+/out.html
+/ollama
+/lib/
+
 # Graphify analysis cache
 agent/graphify-out/
 # The graphify knowledge graph is a regenerable tool artifact (~233 MB, mostly
