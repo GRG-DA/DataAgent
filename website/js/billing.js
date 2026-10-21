@@ -68,10 +68,10 @@
       el.id = 'billing-toast';
       el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
         'padding:12px 20px;border-radius:10px;font:500 14px Inter,sans-serif;z-index:9999;' +
-        'background:#0f172a;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.35)';
+        'background:var(--surface-deep,#04030b);color:var(--text,#f5f3ff);box-shadow:0 8px 30px rgba(0,0,0,.35)';
       document.body.appendChild(el);
     }
-    el.style.background = ok ? '#059669' : '#dc2626';
+    el.style.background = ok ? 'var(--success,#34d399)' : 'var(--danger,#ef4444)';
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(el._t);
@@ -130,7 +130,7 @@
         name: sub.name,
         description: sub.description,
         prefill: { email: email },
-        theme: { color: '#6366f1' },
+        theme: { color: '#8b5cf6' },
         handler: function (resp) {
           fetch(API + '/verify-subscription', {
             method: 'POST',
@@ -184,7 +184,7 @@
         name: order.name,
         description: order.description,
         prefill: { email: email },
-        theme: { color: '#6366f1' },
+        theme: { color: '#8b5cf6' },
         handler: function (resp) {
           fetch(API + '/verify', {
             method: 'POST',

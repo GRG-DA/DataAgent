@@ -55,13 +55,34 @@ const PRESETS = {
   calm:      { cols: 8,  rows: 5,  depth: 4, particles: 900,  core: false, rings: false, camZ: 35, spin: 0.016, wave: 0.45, bloom: 0.5,  floor: false, scale: 1.1  },
 };
 
-const PALETTE = [
-  new THREE.Color('#8b5cf6'),
-  new THREE.Color('#a78bfa'),
-  new THREE.Color('#f472b6'),
-  new THREE.Color('#ff8a3d'),
-  new THREE.Color('#22d3ee'),
-];
+// The 3D hero's particle palette.
+//
+// It used to hard-code five saturated hues (violet, light violet, pink,
+// orange, cyan) - the full brand set - which is why the hero still read as
+// neon-on-black even after the CSS layer was toned down.
+//
+// The CSS palette is now ONE primary ramp plus ONE accent, with orange and
+// rose reserved for rare emphasis. The hero follows the same rule: the
+// violet family carries the scene and the cyan is the single cool accent.
+// The values are read from the CSS custom properties when they are
+// available, so the canvas can never drift from the stylesheet again.
+const PALETTE = (function () {
+  const css = (name, fallback) => {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+      return (v && v.trim()) || fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
+  return [
+    new THREE.Color(css('--primary', '#8b5cf6')),
+    new THREE.Color(css('--primary-hi', '#a78bfa')),
+    new THREE.Color(css('--primary-deep', '#7c3aed')),
+    new THREE.Color(css('--accent', '#22d3ee')),
+    new THREE.Color(css('--accent-soft', '#5fb8d6')),
+  ];
+})();
 
 function sprite() {
   const size = 64;
