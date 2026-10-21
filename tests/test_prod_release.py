@@ -30,8 +30,24 @@ def test_compose_prod_shape():
     assert "version" not in data, "obsolete compose version key"
     assert "networks" in data and "appnet" in data["networks"]
     api = data["services"]["api"]
-    vols = " ".join(str(v) for v in api.get("volumes", []))
-    assert "/app/config:ro" in vols or "/app/config:ro" in vols.replace(" ", "")
+    vols = [str(v) for v in api.get("volumes", [])]
+    joined = " ".join(vols)
+    # /app/config must be WRITABLE: POST /llm/providers/update,
+    # POST /pipeline/save and POST /pipeline/schedule all persist runtime
+    # state under config/, and a read-only mount made the Settings page
+    # silently fail. The seed files are still mounted read-only, so a fresh
+    # `docker compose up` has both the seeds and a writable config dir.
+    assert "/app/config:ro" not in joined.replace(" ", ""), (
+        "/app/config is mounted read-only - the Settings page cannot write "
+        "the LLM provider config"
+    )
+    assert any(v.endswith(":/app/config") for v in vols), (
+        "the api service does not mount /app/config"
+    )
+    for seed in ("settings.yaml", "model_config.yaml", "db_config.yaml"):
+        assert f"/app/config/{seed}:ro" in joined, (
+            f"the {seed} seed must still be mounted read-only"
+        )
     assert "deploy" in api and "limits" in api["deploy"]["resources"]
     assert api["healthcheck"]["test"][-1].endswith("/ready")
     web = data["services"]["web"]

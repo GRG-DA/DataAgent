@@ -18,7 +18,16 @@ def test_build_script_sign_and_checksums():
     assert "-Sign" in ps1 or "$Sign" in ps1
     assert "signtool" in ps1.lower()
     assert "SHA256SUMS" in ps1
-    assert "opencode.exe.sha256" in ps1
+    # The opencode download must be verified against a pinned SHA256. The pin
+    # file is VERSIONED (opencode-<version>.sha256) so the hash travels with
+    # the release it belongs to, and the script must NOT download "latest" and
+    # then check it against a hash of a different build.
+    assert ".sha256" in ps1, "the opencode download is not checksum-verified"
+    assert "Get-FileHash" in ps1
+    assert "releases/latest/download" not in ps1, (
+        "the build downloads opencode 'latest' but verifies a pinned hash - "
+        "the two must be the same version"
+    )
 
 
 def test_shell_preflight_and_update_exist():

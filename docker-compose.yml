@@ -13,10 +13,31 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./outputs:/app/outputs
-      # Config is mounted read-only in production: the app reads
-      # settings.yaml + llm_runtime.json but must never write secrets
-      # back into the host checkout from inside the container.
-      - ./config:/app/config:ro
+      # /app/config MUST be writable. Three routes persist runtime state there:
+      #   POST /llm/providers/update  -> config/llm_runtime.json
+      #   POST /pipeline/save         -> config/pipelines/<name>.json
+      #   POST /pipeline/schedule     -> config/schedules/<name>.json
+      # The old read-only bind mount made every one of those writes fail with
+      # a permission error, so in Docker the Settings page could not change the
+      # LLM provider at all - the single most important setting in the
+      # product. (save_llm_runtime_overrides swallows the write error, so the
+      # route even answered "success" while nothing was persisted.)
+      #
+      # The runtime state lives in a NAMED VOLUME so that:
+      #   * the container never writes secrets (llm_runtime.json holds provider
+      #     API keys) back into the host checkout, and
+      #   * the host's own credential state (config/users.json,
+      #     config/db_connections.json) is not handed to the container.
+      # The volume is seeded from the image on first use, so a fresh
+      # `docker compose up` still has the config package and the seed yaml.
+      - config_runtime:/app/config
+      # The seed yaml stays authoritative and read-only: the operator's copy
+      # in the repo is what the container reads, and the container can never
+      # rewrite it. Every source file here MUST already exist - Docker would
+      # otherwise create a *directory* at that path.
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      - ./config/model_config.yaml:/app/config/model_config.yaml:ro
+      - ./config/db_config.yaml:/app/config/db_config.yaml:ro
     environment:
       - APP_HOST=0.0.0.0
       - APP_PORT=8002
@@ -106,5 +127,8 @@ networks:
 
 volumes:
   ollama_data:
+  # Writable runtime config for the api service: llm_runtime.json,
+  # pipelines/ and schedules/ (the three routes that write under config/).
+  config_runtime:
   # Uncomment with the certs volume mount above after enable_tls.ps1:
   # certs:

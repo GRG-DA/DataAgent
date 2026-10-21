@@ -14,7 +14,9 @@ Excluded entirely (runtime/credential state — regenerated on first boot):
   - config/google_login_pending.json     (OAuth flow state)
   - config/llm_runtime.json              (provider/model runtime state)
   - data/curated/warehouse.duckdb*       (user data; keep the zip shareable)
-Also excluded: .git, venvs, caches, build outputs, logs, backups.
+Also excluded: .git, venvs, caches, build outputs, logs, backups, the
+third-party binaries fetched at build time (``installers/opencode``) and the
+stray repo-root artefacts (``out.html``, ``lib/``).
 
 Usage:
     python scripts/build_secure_zip.py [--root DIR] [--out FILE] [--top NAME]
@@ -44,6 +46,8 @@ EXCLUDE_FILES = {
     ".env",
     ".env.local",
     ".env.production",
+    # Stale copy of the SPA index that used to be committed at the repo root.
+    "out.html",
     os.path.join("data", ".jwt_secret"),
     os.path.join("data", ".grant_key"),
     os.path.join("data", ".grant_migrated"),
@@ -79,6 +83,12 @@ EXCLUDE_DIRS = {
     "__pycache__", "build", "dist", "dist-verify2", "graphify-out",
     "logs", "outputs", "backups", "node_modules", "keygen_app-dist",
     "google_login_pending", "website-react",
+    # Third-party binaries fetched at build time (the opencode CLI is ~180 MB
+    # and is downloaded from GitHub by scripts/build_windows.ps1) - never
+    # ship them in a source archive.
+    "opencode",
+    # Empty stray directory that used to be committed at the repo root.
+    "lib",
     # Local E2E artifacts: screenshots, console logs and copies of the
     # files the upload tests push through the app.
     ".playwright-mcp",

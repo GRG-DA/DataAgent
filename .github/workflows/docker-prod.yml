@@ -8,9 +8,13 @@ on:
 jobs:
   build-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Docker build (prod image)
+        # The image is built from the Dockerfile, which pins the canonical
+        # release Python version (3.13) - the same interpreter the Windows
+        # desktop build and the pytest job use.
         run: docker build -t dataagent:${{ github.sha }} .
       - name: Trivy scan (fail on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@0.24.0
@@ -19,7 +23,17 @@ jobs:
           format: sarif
           output: trivy.sarif
           severity: HIGH,CRITICAL
-          exit-code: "0"
+          # A gate must be able to fail. This used to be exit-code "0", which
+          # turned the scan into a reporter: an image with HIGH/CRITICAL
+          # vulnerabilities - or a completely broken image - still went green.
+          # exit-code "1" makes the job red when the image is bad, which is
+          # the entire point of the step.
+          #
+          # --ignore-unfixed is deliberately NOT set: an unfixed CVE is still
+          # shipped. If a specific advisory must be tolerated, add a narrow
+          # ignore rule for that CVE id here and say why in a comment - never
+          # a blanket ignore.
+          exit-code: "1"
       - name: Upload Trivy SARIF
         if: always()
         uses: actions/upload-artifact@v4
@@ -29,6 +43,46 @@ jobs:
       - name: Compose config check
         run: |
           cp .env.example .env
-          python -c "import secrets;print(secrets.token_hex(32))" > /tmp/jwt.txt
+          python3 -c "import secrets;print(secrets.token_hex(32))" > /tmp/jwt.txt
           JWT_SECRET=$(cat /tmp/jwt.txt) docker compose config > /dev/null
           echo "compose config OK"
+      # "The image builds" is not "the image runs". Start the image we just
+      # built and talk to its health endpoint.
+      - name: Smoke test the built image
+        run: |
+          set -euo pipefail
+          docker run -d --name dataagent-smoke \
+            -p 127.0.0.1:8002:8002 \
+            -e JWT_SECRET="$(cat /tmp/jwt.txt)" \
+            -e APP_HOST=0.0.0.0 \
+            -e APP_PORT=8002 \
+            dataagent:${{ github.sha }}
+          ok=0
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8002/health > /tmp/health.json 2>/dev/null; then
+              echo "image healthy after ${i}s: $(cat /tmp/health.json)"
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::the built image never answered /health"
+            docker logs dataagent-smoke || true
+            docker rm -f dataagent-smoke || true
+            exit 1
+          fi
+          docker rm -f dataagent-smoke
+          echo "smoke test OK"
+      # NOTE: there is deliberately NO deploy job. This project has no
+      # container registry and no deploy target yet, so a deploy step would
+      # be theatre. A future deploy job needs, at minimum:
+      #   * a registry (GHCR) + `docker/login-action` and an image push,
+      #   * a target (a host / a cluster / a PaaS) and its credentials as
+      #     repository secrets,
+      #   * a rollout step that runs the compose file (or its k8s
+      #     equivalent) against the pushed image,
+      #   * a post-deploy health check, and
+      #   * a migration/rollback plan for the DuckDB warehouse in ./data.
+      # Until those exist, this workflow honestly reports: it builds, it
+      # scans with a real gate, and it smoke tests.

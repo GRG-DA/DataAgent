@@ -1,7 +1,23 @@
 # ============================================================
-# Build Stage
+# DataAgent — production image
 # ============================================================
-FROM python:3.11-slim AS builder
+# CANONICAL RELEASE PYTHON VERSION: 3.13
+#
+# One version for every build path. The Windows desktop .exe, this image and
+# the CI workflows must all build on the same interpreter, because
+# requirements.txt gates a dependency on the interpreter version
+# (`fastparquet>=2024.5.0 ; python_version < "3.13"`): a 3.11 build installs a
+# DIFFERENT dependency set than a 3.13 build, so the artefact built locally
+# would not be the artefact CI tested.
+#
+# Parquet on 3.13 uses pyarrow (an unconditional dependency) - pandas picks it
+# automatically because no call site passes `engine=`.
+#
+# Keep this in sync with:
+#   .github/workflows/build-windows.yml   (python-version)
+#   .github/workflows/pytest.yml          (matrix python-version)
+# ============================================================
+FROM python:3.13-slim AS builder
 
 WORKDIR /build
 
@@ -16,7 +32,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # ============================================================
 # Runtime Stage
 # ============================================================
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -31,7 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # (That was the `ModuleNotFoundError: No module named 'uvicorn'` crash loop.)
 COPY --from=builder --chown=10001:10001 /root/.local /opt/pydeps
 ENV PATH=/opt/pydeps/bin:$PATH
-ENV PYTHONPATH=/opt/pydeps/lib/python3.11/site-packages
+ENV PYTHONPATH=/opt/pydeps/lib/python3.13/site-packages
 
 # Copy application (see .dockerignore: data/, logs/, secrets excluded)
 COPY . .

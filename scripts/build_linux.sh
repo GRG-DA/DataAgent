@@ -98,6 +98,15 @@ install -m 0755 "$PKG_DIR/warp-install.sh" "$STAGE/warp-install.sh"
 install -m 0755 "$PKG_DIR/opencode-install.sh" "$STAGE/opencode-install.sh"
 install -m 0755 scripts/dataagent-launch.sh "$STAGE/dataagent-launch.sh"
 
+# NOTE (D4): unlike the Windows bundle, the .deb/.rpm does NOT ship the
+# opencode CLI - it is downloaded at INSTALL time by opencode-install.sh, and
+# that script still resolves the moving "latest" release. The Windows build
+# pins the CLI (scripts/build_windows.ps1: $OpenCodeVersion + the committed
+# installers/opencode-<version>.sha256); the Linux install path does not, so
+# a Linux install is NOT hash-verifiable. Pin it in
+# packaging/linux/opencode-install.sh before publishing a package.
+echo "    NOTE: the opencode CLI is downloaded at install time (unpinned 'latest')."
+
 echo "==> [3/5] Building .deb"
 DEB_ROOT="$DIST/deb-root"
 rm -rf "$DEB_ROOT"

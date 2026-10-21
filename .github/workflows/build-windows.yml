@@ -8,23 +8,45 @@ on:
 jobs:
   build-exe:
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # The canonical release Python version (see the Dockerfile header).
+          # The desktop .exe must be built by the same interpreter the rest of
+          # the pipeline tests: requirements.txt gates a dependency on the
+          # interpreter version, so 3.11 and 3.13 install different packages.
+          python-version: "3.13"
           cache: pip
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-desktop.txt
           pip install pyinstaller
-      - name: Packaging tests (version/icon/anti-crack)
-        run: python -m pytest tests/test_packaging.py tests/test_exe_release.py -q
-      - name: Build exes (no sign on CI unless secrets present)
+      - name: Packaging tests (version/icon/anti-crack/release contracts)
+        run: python -m pytest tests/test_packaging.py tests/test_exe_release.py tests/test_launch_packaging.py -q
+      # R7: the frozen desktop build has its own preflight (toolchain, the
+      # pinned opencode hash, version agreement, credential exclusion). It
+      # exits non-zero on a FAIL, so a broken release cannot be produced.
+      - name: Desktop preflight
+        run: powershell -ExecutionPolicy Bypass -File scripts/ci/preflight_desktop.ps1
+      - name: Build exes
+        # No -Sign here: this runner has no code-signing certificate, and
+        # since D5 a missing signtool/certificate now FAILS the build instead
+        # of silently shipping an unsigned installer.
         run: powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1
         env:
           DATAAENT_CODESIGN_IDENTITY: ""
+      - name: Report the signing state
+        if: always()
+        run: |
+          Write-Host "::warning::This CI build is UNSIGNED. Windows SmartScreen will show 'Unknown publisher'."
+          Write-Host "Sign a release with:"
+          Write-Host "  signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /sha1 <THUMBPRINT> dist\DataAgent.exe"
+          Write-Host "  signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /sha1 <THUMBPRINT> dist\DataAgentShell\DataAgentShell.exe"
+          Write-Host "  signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /sha1 <THUMBPRINT> dist\DataAgent-Setup.exe"
+          Write-Host "(or re-run scripts\build_windows.ps1 -Sign with DATAAENT_CODESIGN_THUMBPRINT / DATAAENT_CODESIGN_PFX set)"
       - name: Checksums
         if: always()
         run: |

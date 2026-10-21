@@ -38,7 +38,7 @@ jobs:
           --no-cache
           --select E9,F63,F7,F82,F811
           --exclude graphify-out,build,dist,web/vendor,website-react/node_modules,.venv-mcp,.venv-laya,.venv-strix,node_modules
-          api agent etl analysis warehouse config billing_server keygen_app lib mcp_servers scripts
+          api agent etl analysis warehouse config billing_server keygen_app mcp_servers scripts
 
   dependency-audit:
     name: dependency audit (pip-audit)
@@ -80,6 +80,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # The RELEASE is built with one canonical interpreter (3.13 - see the
+        # Dockerfile header and .github/workflows/build-windows.yml), but the
+        # TEST matrix must still cover every interpreter the app supports:
+        # requirements.txt gates `fastparquet` on `python_version < "3.13"`,
+        # so a 3.11/3.12 leg installs a different dependency set and can catch
+        # a break the release leg never sees.
         python-version: ["3.11", "3.12", "3.13"]
         identity-store: ["session"]
         include:

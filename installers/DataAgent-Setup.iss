@@ -60,6 +60,9 @@ Source: "..\dist\DataAgentShell\*"; DestDir: "{app}"; Flags: ignoreversion recur
 Source: "..\dist\DataAgent.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; Bundled opencode CLI (downloaded by build_windows.ps1). Placed next to the
 ; app exe so agent.opencode_bootstrap resolves it via the exe's own directory.
+; The CLI version is PINNED in scripts/build_windows.ps1 ($OpenCodeVersion) and
+; its SHA256 is committed as installers\opencode-<version>.sha256 - the build
+; refuses to ship a binary that does not match that pin.
 Source: "opencode\opencode.exe"; DestDir: "{app}"; Flags: ignoreversion
 #ifdef IncludeWarp
 ; Bundled WARP MSI (universal x64/arm64, downloaded by build_windows.ps1 -IncludeWarp).
