@@ -20,7 +20,6 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from api.state import loader
 from api.middleware.auth_middleware import get_current_user, User
 from api.tenancy import DEFAULT_TENANT_ID, tenant_schema
 
@@ -32,17 +31,30 @@ logger = logging.getLogger(__name__)
 
 
 def _get_con():
-    if loader is None:
-        from config import settings
-        from etl.load import WarehouseLoader
-        import api.state as _state
-        _state.loader = WarehouseLoader(
+    """The warehouse connection for the platform schema.
+
+    The loader is resolved from the **current** settings on every call.
+    The module used to bind ``api.state.loader`` at import time, which
+    froze it to whatever warehouse existed when the module was first
+    imported: the create/migrate step and the read step could then talk to
+    two different databases, and a table left in an older shape raised a
+    ``BinderException`` depending on which caller ran first.
+    """
+    import api.state as _state
+    from config import settings
+    from etl.load import WarehouseLoader
+
+    current = _state.loader
+    if current is None or str(getattr(current, "db_path", "")) != str(
+        settings.duckdb.database_path
+    ):
+        current = WarehouseLoader(
             db_path=settings.duckdb.database_path,
             schema=settings.duckdb.schema,
             config=settings.duckdb.config,
         )
-        return _state.loader.get_connection()
-    return loader.get_connection()
+        _state.loader = current
+    return current.get_connection()
 
 
 #: Columns every platform table must carry.  ``CREATE TABLE IF NOT
@@ -73,8 +85,23 @@ def _migrate_columns(con) -> None:
                     f"ALTER TABLE {SCHEMA}.{table} "
                     f"ADD COLUMN IF NOT EXISTS {column} {ddl}"
                 )
-            except Exception:  # noqa: BLE001 — the table is created above
-                pass
+            except Exception as exc:  # noqa: BLE001 — the table may not exist
+                logger.debug("could not add %s.%s: %s", table, column, exc)
+
+
+def _ensure_platform_shape(con) -> None:
+    """Align the platform tables with the columns the app reads.
+
+    ``CREATE TABLE IF NOT EXISTS`` never changes an existing table, so a
+    table created by an older release keeps its old shape and every query
+    against the new columns raises a ``BinderException``.  The migration
+    adds the missing columns; it is idempotent, and a failure is logged
+    rather than fatal — the caller still gets a document.
+    """
+    try:
+        _migrate_columns(con)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("could not align the platform table shape: %s", exc)
 
 
 def _ensure_tables() -> None:
@@ -789,6 +816,10 @@ def build_user_export(user_id: str, tenant_id: str, *, con=None,
             )
 
     platform = platform_con if platform_con is not None else con
+    # The export reads the platform tables with ``SELECT *``, so a table
+    # left in an older shape would silently produce a document with a
+    # different — and incomplete — column set.
+    _ensure_platform_shape(platform)
     limit = MAX_EXPORT_ROWS_PER_TABLE
     sections, available, unavailable = _collect_platform_sections(
         platform, user_id, limit

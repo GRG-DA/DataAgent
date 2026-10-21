@@ -212,9 +212,18 @@ async def upload_file(
 
 
 @router.post("/clean", response_model=CleanResponse)
-async def clean_data(request: CleanRequest):
+async def clean_data(request: CleanRequest, http_request: Request):
     """Clean uploaded data using auto-inferred or custom cleaning plan."""
-    raw_dir = Path("data/raw")
+    from api.middleware.rate_limit import check_rate_limit
+
+    # Cleaning parses the whole file, so it is as expensive as the upload
+    # and shares its budget (ADR-009 D5).
+    check_rate_limit(http_request, "upload")
+
+    # The uploaded file lives in the caller's *tenant* directory, so /clean
+    # must read it from there too — the flat ``data/raw`` only holds the
+    # files of the ``default`` tenant.
+    raw_dir = _tenant_raw_dir()
     file_path = resolve_under(raw_dir, request.filename)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found. Upload first.")

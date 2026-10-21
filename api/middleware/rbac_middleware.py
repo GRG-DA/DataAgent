@@ -14,18 +14,45 @@ hold it.
 Design notes
 ------------
 - The map is **deny-by-default for mutating verbs**: any ``POST``/``PUT``/
-  ``PATCH``/``DELETE`` on a path that is not explicitly listed as
-  permission-free requires at least one of the listed permissions. Unknown
-  paths fall back to the route's own dependency checks.
+  ``PATCH``/``DELETE`` on a path that is not explicitly listed requires a
+  permission. A mutating request that no rule covers is **refused** with
+  403 — it is never allowed through "because nobody thought about it".
 - Read verbs (``GET``/``HEAD``/``OPTIONS``) only require a permission where
   one is listed, so the UI keeps working for the default role.
 - Admins always pass.
 - API keys pass when the key carries the matching scope.
+- Every mutating route of the app must be registered. The test
+  ``tests/test_launch_middleware_tenancy.py::test_every_mutating_route_has_a_permission_rule``
+  walks ``app.routes`` and fails when a mutating route has no rule, so a
+  new route cannot be added without a decision about its permission.
+
+Permission vocabulary
+----------------------
+The permissions below come from :class:`api.rbac.Permission`; the roles
+that hold them come from ``config/settings.yaml``
+(``security.rbac.roles``).  The ``user`` role is the self-serve default:
+
+* ``data:read`` / ``data:write`` / ``query:execute`` — the data and the
+  analysis plane.  A ``viewer`` holds neither ``data:write`` nor
+  ``query:execute``, so it is locked out of the data plane.
+* ``export:*`` — every export format, including the html/pptx/pdf/markdown
+  ones, so a format is never a way around the export permissions.
+* ``dashboard:create`` / ``dashboard:manage`` — the dashboard builder.
+* ``data:read`` — also used for the **caller-scoped** routes: the rows a
+  request may write are its own (chats, preferences, query history,
+  notification state, own comments/annotations, own consent record).  The
+  handler enforces the ownership, so the permission only has to say "an
+  authenticated account acting on itself".
+* The remaining permissions (``user:manage``, ``config:manage``,
+  ``audit:read``, ``org:manage``, ``catalog:write``, ``pipeline:manage``,
+  ``schema:manage``, ``api_key:create``, ``collaboration:share``, …) are
+  **not** held by the ``user`` role: the routes that use them are the
+  operator's surface and are admin-only until ``config/settings.yaml``
+  grants them to the self-serve role.
 """
 from __future__ import annotations
 
 import logging
-import re
 from typing import Callable, Optional
 
 from fastapi import Request, Response
@@ -42,6 +69,13 @@ OPEN_PATHS = frozenset({
     "/health", "/live", "/ready", "/metrics",
     "/auth/login", "/auth/register", "/auth/logout", "/auth/verify",
     "/auth/status", "/auth/me",
+    # The account-lifecycle endpoints are public (the caller has no
+    # session yet — see the auth middleware's public path list).  A
+    # browser that still holds a session must be able to reach them, so
+    # they are open here too.
+    "/auth/forgot-password", "/auth/reset-password", "/auth/verify-email",
+    "/auth/resend-verification", "/auth/accept-invite",
+    "/auth/accounts/login", "/auth/accounts/register",
     "/subscriptions/me", "/subscriptions/plans", "/subscriptions/trial/start",
     "/premium/activate-key",
 })
@@ -54,6 +88,8 @@ PATH_PERMISSIONS = {
     "/merge": {"POST": "data:write"},
     "/execute": {"POST": "query:execute"},
     "/sql": {"POST": "query:execute"},
+    "/ask": {"POST": "query:execute"},
+    "/ask-sql": {"POST": "query:execute"},
     "/query/visual/execute": {"POST": "query:execute"},
     "/upload": {"POST": "data:write"},
     "/load": {"POST": "data:write"},
@@ -73,6 +109,18 @@ PATH_PERMISSIONS = {
     "/auth/api-key": {"POST": "api_key:create"},
     # Inviting an account is a user-management action (ADR-009 D3).
     "/auth/invite": {"POST": "user:manage"},
+    # Caller-scoped account actions.
+    "/auth/check-access": {"POST": "data:read"},
+    "/auth/delete-account": {"POST": "data:read"},
+    # The caller's own privacy request; the *execution* of a request is
+    # a compliance action and is registered under /compliance.
+    "/compliance/privacy-request": {"POST": "data:read"},
+    # Publishing a product to the (shared) marketplace is an operator
+    # action; rating and requesting one are covered by the prefix rule.
+    "/marketplace/products": {"POST": "catalog:write"},
+    # The caller's own subscription and its entitlement sync.
+    "/subscriptions/me": {"POST": "data:read"},
+    "/subscriptions/sync": {"POST": "data:read"},
     "/settings": {"POST": "config:manage", "PUT": "config:manage"},
     "/audit": {"GET": "audit:read"},
     # Org structure — reads are org:view, writes are org:manage.
@@ -86,52 +134,166 @@ PATH_PERMISSIONS = {
     "/pipeline": {"POST": "pipeline:manage", "PUT": "pipeline:manage", "DELETE": "pipeline:manage"},
 }
 
-#: Prefix rules → {method: permission}. Checked after exact matches.
+#: Prefix rules → {method: permission}. Checked after exact matches, in
+#: order: the first rule that matches wins.
 PREFIX_PERMISSIONS = (
+    # ── exports ──────────────────────────────────────────────────────
     ("/export/bi", {"GET": "export:bi"}),
     ("/export/csv", {"GET": "export:csv"}),
     ("/export/parquet", {"GET": "export:parquet"}),
     ("/export/xlsx", {"GET": "export:excel"}),
     ("/export/zip", {"GET": "export:csv"}),
     ("/export/email", {"POST": "export:csv"}),
+    # The other export formats are table exports too — they must not be a
+    # way around the export permissions.
+    ("/export/html", {"GET": "export:csv"}),
+    ("/export/markdown", {"GET": "export:csv"}),
+    ("/export/pdf", {"GET": "export:csv"}),
+    ("/export/pptx", {"GET": "export:csv"}),
+    # ── admin surface ───────────────────────────────────────────────
+    ("/auth/users/{username}/password", {"POST": "user:manage"}),
     ("/auth/users", {"GET": "user:manage", "POST": "user:manage",
                      "PUT": "user:manage", "PATCH": "user:manage",
                      "DELETE": "user:manage"}),
     ("/auth/api-key", {"POST": "api_key:create"}),
+    ("/auth/api-keys", {"POST": "api_key:create", "DELETE": "api_key:revoke"}),
     ("/auth/invite", {"POST": "user:manage"}),
-    # An administrator resetting another account's password.
-    ("/auth/users/{username}/password", {"POST": "user:manage"}),
-    # NOTE: /auth/me/export is deliberately NOT listed. It is the caller's
-    # own data (a GDPR right), so every authenticated role may fetch it —
-    # the handler refuses any attempt to name another account. Adding a
-    # permission here would deny the `viewer` role its own export.
     # The audit trail is admin/auditor-only. PATH_PERMISSIONS carries an
     # exact "/audit" entry, but the routes are "/audit/logs" and
     # "/audit/logs/export" — an exact-path rule can never match them, so
     # without this prefix rule every role could read the whole trail.
     ("/audit", {"GET": "audit:read"}),
+    # ── org structure ───────────────────────────────────────────────
     ("/org/departments", {"GET": "org:view", "POST": "org:manage",
                           "PUT": "org:manage", "DELETE": "org:manage"}),
     ("/org/teams", {"GET": "org:view", "POST": "org:manage",
                     "PUT": "org:manage", "DELETE": "org:manage"}),
     ("/org/groups", {"GET": "org:view", "POST": "org:manage",
                      "PUT": "org:manage", "DELETE": "org:manage"}),
+    # ── governance: catalog, masking ────────────────────────────────
+    # NOTE: /masking/rules is an entitlement gate, not an RBAC one — the
+    # "governance" pseudo-permission is handled by the billing gate.
     ("/masking/", {"POST": "governance", "PUT": "governance", "DELETE": "governance"}),
+    ("/catalog/terms", {"POST": "catalog:write", "PUT": "catalog:write",
+                        "DELETE": "catalog:write"}),
+    ("/catalog/metrics", {"POST": "catalog:write", "PUT": "catalog:write",
+                          "DELETE": "catalog:write"}),
+    ("/catalog/assets", {"PUT": "catalog:write"}),
+    ("/catalog/certify", {"POST": "catalog:certify"}),
     ("/catalog/sync", {"POST": "catalog:manage"}),
+    # ── api keys ────────────────────────────────────────────────────
     ("/api-keys", {"POST": "api_key:create", "DELETE": "api_key:revoke"}),
+    # ── sso ─────────────────────────────────────────────────────────
     ("/sso/", {"POST": "sso:manage", "PUT": "sso:manage"}),
-    ("/pipeline/", {"POST": "pipeline:manage", "PUT": "pipeline:manage", "DELETE": "pipeline:manage"}),
+    # ── pipelines ───────────────────────────────────────────────────
+    ("/pipeline/", {"POST": "pipeline:manage", "PUT": "pipeline:manage",
+                    "DELETE": "pipeline:manage"}),
+    # ── caller-scoped routes: the rows a request may write are its own
+    ("/user", {"POST": "data:read", "PUT": "data:read", "DELETE": "data:read"}),
+    ("/notifications", {"POST": "data:read", "PUT": "data:read"}),
+    ("/comments", {"POST": "data:read", "PUT": "data:read", "DELETE": "data:read"}),
+    ("/annotations", {"POST": "data:read"}),
+    ("/compliance/consent", {"POST": "data:read"}),
+    # Rating and requesting a marketplace product (the publishing route is
+    # an exact-path rule above).
+    ("/marketplace/products", {"POST": "data:read"}),
+    # ── the data plane ─────────────────────────────────────────────
+    ("/tables", {"DELETE": "data:delete", "POST": "data:read"}),
+    ("/upload", {"POST": "data:write"}),
+    ("/load", {"POST": "data:write"}),
+    ("/clean", {"POST": "data:write"}),
+    ("/merge", {"POST": "data:write"}),
+    ("/metadata", {"PUT": "schema:manage"}),
+    ("/alerts", {"POST": "alerts_thresholds", "DELETE": "alerts_thresholds"}),
+    ("/alert", {"POST": "alerts_thresholds"}),
+    ("/experiments", {"POST": "data:write", "DELETE": "data:write"}),
+    ("/schedule", {"POST": "data:write", "DELETE": "data:write"}),
+    ("/watcher", {"POST": "data:write"}),
+    ("/quality", {"POST": "data:write"}),
+    ("/lineage", {"POST": "data:write"}),
+    ("/tasks", {"POST": "data:write"}),
+    ("/cache", {"POST": "data:write"}),
+    ("/queries", {"POST": "query:execute", "DELETE": "query:execute"}),
+    ("/connect", {"POST": "data:write"}),
+    # ── the query / analysis plane ──────────────────────────────────
+    ("/analysis", {"POST": "query:execute"}),
+    ("/query/visual", {"POST": "query:execute"}),
+    ("/bi", {"POST": "query:execute"}),
+    ("/llm/chat", {"POST": "query:execute"}),
+    ("/llm/generate-code", {"POST": "query:execute"}),
+    ("/llm/rewrite", {"POST": "query:execute"}),
+    ("/llm/chart-recommend", {"POST": "query:execute"}),
+    # ── dashboards and the BI builder ───────────────────────────────
+    ("/dashboards", {"POST": "dashboard:create", "PUT": "dashboard:manage",
+                     "DELETE": "dashboard:manage"}),
+    ("/dashboard", {"POST": "dashboard:create"}),
+    # The DashStudio imports write into the warehouse, the model edits
+    # change the dashboard model and the visual query runs a query.
+    ("/dashstudio/import-file", {"POST": "data:write"}),
+    ("/dashstudio/import-paste", {"POST": "data:write"}),
+    ("/dashstudio/import-pbix", {"POST": "data:write"}),
+    ("/dashstudio/import-warehouse", {"POST": "data:write"}),
+    ("/dashstudio/build-from-image", {"POST": "dashboard:create"}),
+    ("/dashstudio/build-from-pbix", {"POST": "dashboard:create"}),
+    ("/dashstudio/analyze-image", {"POST": "query:execute"}),
+    ("/dashstudio/visual-data", {"POST": "query:execute"}),
+    ("/dashstudio/model", {"POST": "dashboard:manage"}),
+    ("/dashstudio/save", {"POST": "dashboard:manage"}),
+    ("/dashstudio", {"POST": "dashboard:manage", "DELETE": "dashboard:manage"}),
+    # The persistent calculation layer belongs to the dashboard builder.
+    ("/measures", {"POST": "dashboard:manage", "PUT": "dashboard:manage",
+                   "DELETE": "dashboard:manage"}),
+    # ── compliance: the operator's surface ─────────────────────────
+    ("/compliance/privacy-requests", {"POST": "audit:read"}),
+    ("/compliance/pii-scan", {"POST": "audit:read"}),
+    ("/compliance/retention-policies", {"POST": "config:manage",
+                                        "PUT": "config:manage",
+                                        "DELETE": "config:manage"}),
+    ("/compliance/retention", {"POST": "config:manage", "PUT": "config:manage",
+                               "DELETE": "config:manage"}),
+    # ── enterprise: cost, SLA, workflows ────────────────────────────
+    ("/cost", {"POST": "config:manage", "PUT": "config:manage",
+               "DELETE": "config:manage"}),
+    ("/sla", {"POST": "config:manage", "PUT": "config:manage",
+              "DELETE": "config:manage"}),
+    ("/workflows", {"POST": "pipeline:manage"}),
+    # ── instance configuration ──────────────────────────────────────
+    ("/premium", {"POST": "config:manage", "DELETE": "config:manage"}),
+    # Fetching a proxy list through the relay is a ticket-gated read of
+    # the caller's own pool, not a configuration change — it must stay
+    # reachable for a paying account (tests/test_feature_tickets.py).
+    ("/llm/providers/opencode/proxies", {"POST": "data:read"}),
+    ("/llm/providers", {"POST": "config:manage"}),
+    ("/llm/ollama", {"POST": "config:manage"}),
+    ("/llm/lmstudio", {"POST": "config:manage"}),
+    ("/llm/warp", {"POST": "config:manage"}),
+    # ── sharing ─────────────────────────────────────────────────────
+    # A share link publishes a table to anybody who has it, so it is an
+    # operator action rather than a self-serve one.
+    ("/share", {"POST": "collaboration:share", "DELETE": "collaboration:share"}),
+    # ── subscriptions ───────────────────────────────────────────────
+    # Setting another account's subscription is an admin action.
+    ("/subscriptions/", {"POST": "user:manage"}),
 )
 
 #: Methods that mutate state. These require a permission unless the path is
 #: explicitly open.
 MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
+#: The permission reported for a mutating request that no rule covers.
+#: It is deliberately not a member of :class:`api.rbac.Permission`, so no
+#: role — and no API-key scope — can ever satisfy it.
+UNMAPPED_PERMISSION = "rbac:unmapped"
+
 #: Non-permission feature keys used as pseudo-permissions in PATH_PERMISSIONS.
 #: These are entitlement gates, not RBAC roles, so they are handled by the
 #: billing gate instead. Listed here so this middleware does not demand an
 #: RBAC permission that no role holds.
-ENTITLEMENT_KEYS = frozenset({"governance"})
+#:
+#: ``alerts_thresholds`` — the alert surface is plan-gated (every alert
+#: route carries ``require_feature(FEATURE_ALERTS_THRESHOLDS)``), so the
+#: plan decides who may use it, not the role.
+ENTITLEMENT_KEYS = frozenset({"governance", "alerts_thresholds"})
 
 
 def _prefix_matches(normalized: str, prefix: str) -> bool:
@@ -152,6 +314,11 @@ def _required_permission(path: str, method: str) -> Optional[str]:
     *method* is the HTTP verb. Rules are looked up exact-path first, then
     by prefix, and within each the verb-specific entry wins over a
     catch-all.
+
+    A **mutating** request that no rule covers returns
+    :data:`UNMAPPED_PERMISSION` — the caller must refuse it. A read that
+    no rule covers returns ``None``: reads stay open where they are open
+    today.
     """
     normalized = path.rstrip("/") or "/"
     verb = (method or "GET").upper()
@@ -169,6 +336,8 @@ def _required_permission(path: str, method: str) -> Optional[str]:
                 return rules.get(verb) or rules.get("*")
             return rules
 
+    if verb in MUTATING_METHODS:
+        return UNMAPPED_PERMISSION
     return None
 
 
@@ -197,6 +366,27 @@ class RBACMiddleware(BaseHTTPMiddleware):
         permission = _required_permission(request.url.path, request.method)
         if not permission:
             return await call_next(request)
+
+        if permission == UNMAPPED_PERMISSION:
+            # A mutating request no rule covers: refuse it. Letting it
+            # through would make every route that was never registered
+            # reachable by every authenticated role.
+            logger.info(
+                "RBAC denied %s %s for role=%s (no rule registered)",
+                request.method, request.url.path, getattr(user, "role", "?"),
+            )
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": (
+                        "Permission denied: your role "
+                        f"'{getattr(user, 'role', 'unknown')}' may not use this "
+                        "endpoint. Ask an administrator for access."
+                    )
+                },
+            )
 
         # Entitlement-backed pseudo-permissions are enforced by the billing
         # gate, not by RBAC.

@@ -9,27 +9,37 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from api.state import loader
-
 
 TABLE = "pbi_studios"
 SCHEMA = "analytics"
 
 
 def _get_con():
-    """Get a warehouse connection (falls back to a standalone loader if the
-    shared app state hasn't been initialized yet)."""
-    if loader is None:
-        from config import settings
-        from etl.load import WarehouseLoader
-        import api.state as _state
-        _state.loader = WarehouseLoader(
+    """Get a warehouse connection.
+
+    The loader is resolved from the **current** settings on every call.  The
+    module used to bind ``api.state.loader`` at import time, which froze it
+    to whatever warehouse existed when the module was first imported: the
+    create/migrate step and the read step could then talk to two different
+    databases, and a table left in an older shape raised a ``BinderException``
+    depending on which caller ran first.  (Same defect, same fix, as
+    ``api/user_data.py``.)
+    """
+    import api.state as _state
+    from config import settings
+    from etl.load import WarehouseLoader
+
+    current = _state.loader
+    if current is None or str(getattr(current, "db_path", "")) != str(
+        settings.duckdb.database_path
+    ):
+        current = WarehouseLoader(
             db_path=settings.duckdb.database_path,
             schema=settings.duckdb.schema,
             config=settings.duckdb.config,
         )
-        return _state.loader.get_connection()
-    return loader.get_connection()
+        _state.loader = current
+    return current.get_connection()
 
 
 def _ensure_table() -> None:

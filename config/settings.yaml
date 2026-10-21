@@ -250,7 +250,22 @@ security:
         permissions: ["data:read", "query:execute", "dashboard:view", "export:csv", "export:parquet", "export:excel", "org:view"]
         description: "Analysis and reporting"
       user:
-        permissions: ["data:read", "data:write", "query:execute", "dashboard:view", "dashboard:create", "dashboard:manage", "export:csv", "export:parquet", "export:excel", "export:bi", "catalog:read", "notification:read", "org:view"]
+        # The self-serve default. RBAC is deny-by-default for mutating verbs
+        # (api/middleware/rbac_middleware.py), so every mutating route a
+        # paying customer is expected to use must be granted here explicitly.
+        #
+        # Granted (self-serve):
+        #   api_key:*            - manage your own API keys
+        #   collaboration:*      - comment on and share your own work
+        #   notification:manage  - mark your own notifications read
+        #   dashboard:share     - share a dashboard you own
+        #   dashboard:export    - export a dashboard you own
+        #   catalog:write       - the data catalog (terms + metrics)
+        #
+        # NOT granted (operator surfaces, admin only):
+        #   config:manage, user:manage, pipeline:manage, org:manage,
+        #   schema:manage, audit:read, catalog:manage, catalog:certify
+        permissions: ["data:read", "data:write", "query:execute", "dashboard:view", "dashboard:create", "dashboard:manage", "dashboard:share", "dashboard:export", "export:csv", "export:parquet", "export:excel", "export:bi", "catalog:read", "catalog:write", "notification:read", "notification:manage", "org:view", "api_key:create", "api_key:revoke", "api_key:view", "collaboration:share", "collaboration:comment"]
         description: "Standard self-serve account: upload data, ask questions, build and export dashboards"
       viewer:
         permissions: ["data:read", "dashboard:view"]

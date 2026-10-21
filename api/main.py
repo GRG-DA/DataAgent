@@ -2727,7 +2727,8 @@ async def list_masking_rules(
     _: None = Depends(require_feature(FEATURE_GOVERNANCE)),
 ):
     """List masking rules."""
-    table_name = validate_table_name(table_name)
+    if table_name:
+        table_name = validate_table_name(table_name)
     try:
         from api.masking import get_masking_manager
         mgr = get_masking_manager()
@@ -3898,7 +3899,8 @@ async def import_from_database(
     _: None = Depends(require_feature(FEATURE_CONNECT_PAGE)),
 ):
     """Import a table from an external database into the warehouse."""
-    table_name = validate_table_name(table_name)
+    if table_name:
+        table_name = validate_table_name(table_name)
     try:
         from api.security_egress import EgressBlocked, assert_not_metadata_address
 
@@ -7449,6 +7451,7 @@ async def generate_api_key(request: LoginRequest, request_ctx: Request,
             name="password-login",
             scopes=["read", "write"],
             expires_days=None,
+            tenant_id=info.get("tenant_id"),
         )
         audit_logger.log_api_key_created(
             user_id=api_key_obj.user_id,

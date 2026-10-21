@@ -25,6 +25,22 @@ class APIKeyScope(str, Enum):
     ADMIN = "admin"
 
 
+def _default_db_path() -> str:
+    """The warehouse the API-key store writes to.
+
+    Resolved from the CURRENT settings, not a hard-coded relative path: a
+    hard-coded path points at the developer's real warehouse, so the key
+    store is shared between concurrent test processes and a revoke loses a
+    DuckDB write conflict.
+    """
+    try:
+        from config import settings
+
+        return str(settings.duckdb.database_path)
+    except Exception:  # noqa: BLE001 — the fallback keeps the old behaviour
+        return "data/curated/warehouse.duckdb"
+
+
 @dataclass
 class APIKey:
     """API key record."""
@@ -42,6 +58,10 @@ class APIKey:
     last_used_at: Optional[datetime] = None
     revoked: bool = False
     revoked_at: Optional[datetime] = None
+    #: The tenant the key belongs to.  An API key must never reach another
+    #: tenant's data, so the tenant travels WITH the key rather than being
+    #: looked up from the account on every request.
+    tenant_id: Optional[str] = None
 
     def is_valid(self) -> bool:
         """Check if key is valid (not revoked, not expired)."""
@@ -113,8 +133,12 @@ class APIKeyStore(ABC):
 class DuckDBAPIKeyStore(APIKeyStore):
     """DuckDB-backed API key store."""
 
-    def __init__(self, db_path: str = "data/curated/warehouse.duckdb"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        # The path is resolved from the CURRENT settings, not a hard-coded
+        # relative path: a hard-coded path points at the developer's real
+        # warehouse, so the key store is shared between concurrent test
+        # processes and a revoke loses a DuckDB write conflict.
+        self.db_path = db_path or _default_db_path()
         self._init_table()
 
     def _get_conn(self):
@@ -140,15 +164,31 @@ class DuckDBAPIKeyStore(APIKeyStore):
                     expires_at TIMESTAMP,
                     last_used_at TIMESTAMP,
                     revoked BOOLEAN DEFAULT FALSE,
-                    revoked_at TIMESTAMP
+                    revoked_at TIMESTAMP,
+                    tenant_id VARCHAR
                 )
             """)
+            self._migrate_add_tenant_id(conn)
             self._migrate_drop_indexes(conn)
+
+    @staticmethod
+    def _migrate_add_tenant_id(conn):
+        """Add the tenant_id column to an api_keys table created before it.
+
+        The column is added LAST so the existing positional row indices used
+        by ``_row_to_key`` stay valid.  Idempotent.
+        """
+        try:
+            conn.execute(
+                "ALTER TABLE analytics.api_keys "
+                "ADD COLUMN IF NOT EXISTS tenant_id VARCHAR"
+            )
+        except Exception:  # noqa: BLE001 — the column may already exist
+            pass
 
     @staticmethod
     def _migrate_drop_indexes(conn):
         """Drop PK/secondary indexes from legacy api_keys tables.
-
         DuckDB cannot UPDATE (or DELETE+INSERT in one transaction) rows in a
         table that has a PRIMARY KEY or secondary ART index — it raises
         'Duplicate key ... violates primary key constraint'. That made every
@@ -214,18 +254,19 @@ class DuckDBAPIKeyStore(APIKeyStore):
             last_used_at=row[8],
             revoked=row[9],
             revoked_at=row[10],
+            tenant_id=row[11] if len(row) > 11 else None,
         )
 
     def create(self, key: APIKey) -> APIKey:
         with self._get_conn() as conn:
             conn.execute("""
                 INSERT INTO analytics.api_keys
-                (key_id, user_id, name, key_hash, key_prefix, scopes, created_at, expires_at, last_used_at, revoked, revoked_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (key_id, user_id, name, key_hash, key_prefix, scopes, created_at, expires_at, last_used_at, revoked, revoked_at, tenant_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, [
                 key.id, key.user_id, key.name, key.key_hash, key.key_prefix,
                 key.scopes, key.created_at, key.expires_at, key.last_used_at,
-                key.revoked, key.revoked_at
+                key.revoked, key.revoked_at, key.tenant_id
             ])
         return key
 
@@ -258,12 +299,13 @@ class DuckDBAPIKeyStore(APIKeyStore):
                 conn.execute("""
                     INSERT INTO analytics.api_keys
                     (key_id, user_id, name, key_hash, key_prefix, scopes,
-                     created_at, expires_at, last_used_at, revoked, revoked_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     created_at, expires_at, last_used_at, revoked, revoked_at,
+                     tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, [
                     key.id, key.user_id, key.name, key.key_hash, key.key_prefix,
                     key.scopes, key.created_at, key.expires_at, key.last_used_at,
-                    key.revoked, key.revoked_at
+                    key.revoked, key.revoked_at, key.tenant_id
                 ])
                 conn.execute("COMMIT")
             except Exception:
@@ -407,6 +449,7 @@ class APIKeyManager:
             key_prefix=prefix,
             scopes=scopes,
             expires_at=expires_at,
+            tenant_id=tenant_id,
         )
 
         self.store.create(api_key)
@@ -439,6 +482,7 @@ class APIKeyManager:
             user_id=api_key.user_id,
             key_id=api_key.id,
             scopes=key_scopes,
+            tenant_id=api_key.tenant_id,
         )
 
     def revoke_key(self, user_id: str, key_id: str) -> bool:

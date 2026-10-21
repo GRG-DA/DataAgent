@@ -36,6 +36,9 @@ async def create_api_key(request: Dict[str, Any], user=Depends(get_current_user)
         name=name,
         scopes=scopes,
         expires_days=expires_days,
+        # The key carries its tenant, so it can never be used against
+        # another tenant's data.
+        tenant_id=user.tenant_id,
     )
 
     audit_logger.log_api_key_created(

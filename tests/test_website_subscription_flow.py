@@ -46,8 +46,17 @@ class TestBillingJsSubscriptionFlow:
         assert "key delivery" not in src
 
     def test_display_prices_unchanged(self):
-        assert "price: '$6/mo'" in BILLING_JS
-        assert "price: '$120'" in BILLING_JS
+        # The site must show the ONE price list the checkout charges
+        # (api/billing/seed.py -> PRICES, in paise):
+        #   free 0 | pro 49900 paise = ₹499/mo | lifetime 1000000 paise = ₹10,000
+        # It must NOT show the old second, dollar-denominated list.
+        assert "price: '₹499/mo'" in BILLING_JS
+        assert "price: '₹10,000'" in BILLING_JS
+        assert "price: '₹0'" in BILLING_JS
+        assert "$6/mo" not in BILLING_JS
+        assert "$120" not in BILLING_JS
+        # Lifetime is the headline product.
+        assert "recommended: true" in BILLING_JS
 
 
 class TestBillingHtmlCopy:
