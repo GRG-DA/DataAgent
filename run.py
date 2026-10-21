@@ -179,8 +179,11 @@ def check_environment(skip_ollama: bool = False, skip_db: bool = False,
         "config/model_config.yaml",
         "config/db_config.yaml",
         "config/settings.yaml",
-        "requirements.txt",
     ]
+    if not getattr(sys, "frozen", False):
+        # requirements.txt is a SOURCE artefact: it is not bundled into the
+        # frozen build, so asking for it there is a false alarm.
+        config_files.append("requirements.txt")
     for f in config_files:
         path = PROJECT_ROOT / f
         status = "OK" if path.exists() else "X"
@@ -234,6 +237,7 @@ def check_environment(skip_ollama: bool = False, skip_db: bool = False,
                 print("  Run: python run.py init-db")
                 return
             print(f"  OK Database exists: {db_path}")
+            wal = db_path.with_name(db_path.name + ".wal")
             try:
                 import duckdb as _ddb
                 con = _ddb.connect(str(db_path), read_only=True)
@@ -243,7 +247,20 @@ def check_environment(skip_ollama: bool = False, skip_db: bool = False,
                 finally:
                     con.close()
             except Exception as e:
-                print(f"  ? Database probe failed ({type(e).__name__}): locked or busy?")
+                if wal.exists():
+                    # A stale write-ahead log means the app was killed rather
+                    # than shut down. A read-only connection cannot replay it,
+                    # so the probe fails even though nothing holds a lock -
+                    # and the next normal start recovers it. Saying "locked
+                    # or busy" here sends the user hunting for a process that
+                    # does not exist.
+                    print(
+                        "  ! Database has a stale write-ahead log "
+                        f"({wal.name}) - the app was not shut down cleanly."
+                    )
+                    print("    It is recovered automatically on the next start.")
+                else:
+                    print(f"  ? Database probe failed ({type(e).__name__}): locked or busy?")
             return None
         _probe("database", _db_probe)
 
