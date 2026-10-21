@@ -65,6 +65,9 @@ backups/
 /ollama
 /lib/
 
+# Browser-automation scratch (Playwright MCP console logs + page snapshots)
+.playwright-mcp/
+
 # Graphify analysis cache
 agent/graphify-out/
 # The graphify knowledge graph is a regenerable tool artifact (~233 MB, mostly

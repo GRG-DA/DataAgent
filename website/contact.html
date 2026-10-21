@@ -86,7 +86,7 @@
 
       <!-- Quick Links -->
       <div class="contact-links animate-on-scroll animate-delay-1">
-        <a href="https://github.com/DataAgent/DataAgent/issues" class="card contact-link-card" target="_blank" rel="noopener">
+        <a data-repo-link="/issues" href="#" class="card contact-link-card" target="_blank" rel="noopener">
           <div class="link-icon" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2);color:var(--primary-light);">&#128196;</div>
           <div class="link-info">
             <h4>GitHub Issues</h4>
@@ -94,7 +94,7 @@
           </div>
         </a>
 
-        <a href="https://github.com/DataAgent/DataAgent/discussions" class="card contact-link-card" target="_blank" rel="noopener">
+        <a data-repo-link="/discussions" href="#" class="card contact-link-card" target="_blank" rel="noopener">
           <div class="link-icon" style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.2);color:var(--info);">&#128172;</div>
           <div class="link-info">
             <h4>GitHub Discussions</h4>
@@ -102,7 +102,7 @@
           </div>
         </a>
 
-        <a href="https://github.com/DataAgent/DataAgent" class="card contact-link-card" target="_blank" rel="noopener">
+        <a data-repo-link="" href="#" class="card contact-link-card" target="_blank" rel="noopener">
           <div class="link-icon" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2);color:var(--success);">&#128736;</div>
           <div class="link-info">
             <h4>Contribute</h4>
@@ -124,7 +124,7 @@
 
           <details style="margin-bottom:12px;">
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Is DataAgent really free?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. The core product is free and open source forever. Optional paid plans unlock higher entitlements such as unlimited AI queries and Power BI export — see <a href="billing.html">pricing</a>. If you use local LLMs via Ollama, there are zero ongoing costs.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. The core product is free and open source forever. Optional paid plans unlock higher entitlements such as a larger daily AI allowance and Power BI export — see <a href="billing.html">pricing</a>. If you use local LLMs via Ollama, there are zero ongoing costs.</p>
           </details>
 
           <details style="margin-bottom:12px;">
@@ -134,7 +134,7 @@
 
           <details style="margin-bottom:12px;">
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Can I use it commercially?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. DataAgent is open source under the GNU AGPL v3 licence — you may use it for personal projects, internal tools and client deliverables. AGPL has one condition: if you modify it and let users interact with it over a network, you must offer those users the modified source. Running it unmodified, including self-hosting it for your own team, triggers none of that. Full terms are in the LICENSE file at the root of the <a href="https://github.com/DataAgent/DataAgent" target="_blank" rel="noopener">repository</a>.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. DataAgent is open source under the GNU AGPL v3 licence — you may use it for personal projects, internal tools and client deliverables. AGPL has one condition: if you modify it and let users interact with it over a network, you must offer those users the modified source. Running it unmodified, including self-hosting it for your own team, triggers none of that. Full terms are in the LICENSE file at the root of the <a data-repo-link="" href="#" target="_blank" rel="noopener">repository</a>.</p>
           </details>
 
           <details>
@@ -159,7 +159,7 @@
           <div class="nav-logo-icon">DA</div>
           <span>DataAgent</span>
         </a>
-        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
         <h4>Product</h4>
@@ -186,12 +186,12 @@
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+          <li><a data-repo-link="" href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Free & Open Source.</span>
+      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>
@@ -227,8 +227,8 @@
      window.CONTACT_EMAIL — a real, monitored inbox for security reports
        and anything that must not be lost in a form.
 
-   GitHub issues always work as a fallback channel:
-   https://github.com/DataAgent/DataAgent/issues
+   GitHub issues always work as a fallback channel — the URL is derived from
+   window.DATAAGENT_REPO_URL (see js/main.js), so there is one place to set.
    ─────────────────────────────────────────────────────────────────────── */
 window.CONTACT_ENDPOINT = '';
 window.CONTACT_EMAIL = 'contact@dataagent.dev';
@@ -246,7 +246,7 @@ function handleSubmit(e) {
   var btn = form.querySelector('button[type="submit"]');
   var endpoint = (window.CONTACT_ENDPOINT || '').trim();
   var email = (window.CONTACT_EMAIL || '').trim();
-  var issues = 'https://github.com/DataAgent/DataAgent/issues';
+  var issues = String(window.DATAAGENT_REPO_URL || '').replace(/\/+$/, '') + '/issues';
 
   if (!endpoint) {
     contactStatus(

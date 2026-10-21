@@ -279,7 +279,7 @@
     qualityScore: (table) => GET(`/quality/${encodeURIComponent(table)}`),
     piiScan: (table) => GET(`/quality/pii/${encodeURIComponent(table)}`),
 
-    // Analysis - Forecasting & time series
+    // Analysis - trend forecast & time series
     forecast: (table, dateCol, valCol, periods = 12) =>
       GET(`/analysis/forecast/${encodeURIComponent(table)}`, { params: { date_col: dateCol, value_col: valCol, periods } }),
     decomposition: (table, dateCol, valCol, period, model = "additive") =>
@@ -294,7 +294,7 @@
     storytelling: (table, question = "") => POST("/analysis/storytelling", { table_name: table, user_question: question }),
     storytellingStatus: (jobId) => GET(`/analysis/storytelling/status/${encodeURIComponent(jobId)}`),
 
-    // Analysis - Segmentation & correlations
+    // Analysis - segment breakdowns & correlations
     segmentation: (table, segCol, metricCol) =>
       GET(`/analysis/segmentation/${encodeURIComponent(table)}`, { params: { seg_col: segCol, metric_col: metricCol } }),
     correlation: (table) => GET(`/analysis/correlation/${encodeURIComponent(table)}`),
@@ -342,7 +342,7 @@
     bayesianCorr: (table, colX, colY) =>
       POST("/analysis/bayesian/correlation", { table_name: table, column_x: colX, column_y: colY }),
 
-    // Analysis - Advanced Forecasting
+    // Analysis - Advanced trend forecast
     advancedForecast: (table, dateCol, valCol, periods = 12, method = "auto", confidence = 0.95) =>
       POST("/analysis/forecast/advanced", { table_name: table, date_col: dateCol, value_col: valCol, periods, method, confidence }),
 

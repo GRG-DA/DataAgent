@@ -58,7 +58,15 @@ const SubscriptionPage = {
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-8 space-y-4">
-                <p class="text-sm text-secondary">${planLine}</p>
+                <p class="text-sm text-secondary" id="plan-line">${planLine}</p>
+
+                <div class="flex items-center gap-3 flex-wrap">
+                    <button id="sync-plan-btn" class="btn btn-secondary btn-sm"
+                        title="Re-check the billing server for the plan attached to your account email.">
+                        <i class="fas fa-sync-alt mr-1"></i>Sync now
+                    </button>
+                    <p id="sync-plan-status" class="text-xs text-muted" role="status" aria-live="polite"></p>
+                </div>
 
                 ${renewalHtml}
 
@@ -93,6 +101,28 @@ const SubscriptionPage = {
                 </div>
             </div>
         </div>`;
+
+        const syncBtn = document.getElementById('sync-plan-btn');
+        const syncStatus = document.getElementById('sync-plan-status');
+        const planLineEl = document.getElementById('plan-line');
+        if (syncBtn && syncStatus && planLineEl && window.API) {
+            syncBtn.addEventListener('click', async () => {
+                syncBtn.disabled = true;
+                syncStatus.textContent = 'Syncing…';
+                try {
+                    // GET /subscriptions/me re-reads the plan and asks the billing
+                    // server for the plan attached to this account's email.
+                    const sub = await API.mySubscription();
+                    const plan = (sub && sub.plan) || 'free';
+                    planLineEl.innerHTML = `Current plan: <strong>${App.escapeHtml(plan)}</strong>`;
+                    syncStatus.textContent = `Synced — the plan attached to your account is "${plan}".`;
+                } catch (e) {
+                    syncStatus.textContent = `Sync failed: ${App.escapeHtml(e.message || 'could not reach the billing server')}`;
+                } finally {
+                    syncBtn.disabled = false;
+                }
+            });
+        }
 
         const trialBtn = document.getElementById('trial-start-btn');
         const trialLine = document.getElementById('trial-status-line');

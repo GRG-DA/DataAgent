@@ -1,6 +1,72 @@
 # Frontends
 
-DataAgent has three shipped frontends — the vanilla-JS **web SPA** (`web/`), the **marketing site** (`website/`) and the **desktop shell** (`shell/`, pywebview) — plus a fourth, the React marketing site (`website-react/`), that **does not exist on disk** yet. This document maps each one, the navigation, the auth gate, onboarding, the TypeScript BI layer, and the checkout wiring on the pricing page. Written for frontend contributors and for anyone changing the UI surface.
+DataAgent has three shipped frontends — the vanilla-JS **web SPA** (`web/`), the **marketing site** (`website/`) and the **desktop shell** (`shell/`, pywebview). There is **no fourth frontend**: the React marketing site that `website-react/` referred to was never started, and `website/` *is* the marketing site. This document maps each one, the navigation, the auth gate, onboarding, the TypeScript BI layer, and the checkout wiring on the pricing page. Written for frontend contributors and for anyone changing the UI surface.
+
+---
+
+## 0. The product decision the frontends must reflect
+
+> **v1 ships as a local-first desktop app.** The user's warehouse, queries, dashboards and exports stay on their
+> machine. There is no hosted multi-tenant service in this release.
+
+This is a deliberate decision (**ADR-010**, accepted 2026-10-21), not an accident, and it is the decision
+every page of `website/` and every screen of `web/` has to agree with:
+
+| Why | Detail |
+|---|---|
+| **It is the moat** | ChatGPT and Julius AI are cloud-only; Power BI Desktop is local but cannot do NL → SQL → dashboard → `.pbix`. DataAgent does all of it offline. |
+| **It removes a whole risk class** | No hosted tenant isolation to get wrong — no cross-tenant leakage, no per-tenant connection handling, no server-side data plane. |
+| **It costs ~$0 to serve** | One Python process on the user's machine. The business is the licence, not the infrastructure. |
+| **The code is built for it** | DuckDB on a local file, a single-writer warehouse, a local LLM provider, PyInstaller packaging — all of it already works this way. |
+
+**ADR-010 (`docs/decisions/ADR-010-local-first-v1.md`, 2026-10-21)** is the accepted decision and the
+authoritative statement of this contract. **ADR-009** (`docs/decisions/ADR-009-*.md`, 2026-10-20) proposed
+turning DataAgent into a hosted multi-tenant SaaS with the data plane on the server; it is **retained as
+the documented v2 path**, not deleted, and not the v1 strategy. If you implement it, it is a *new* product
+mode — do not quietly let the two stories coexist on the site, because "where does my data live?" is the
+first question an enterprise buyer asks and the answer must be the same on every page.
+
+### The paid model is real — say so
+
+| Tier | Price | Notes |
+|---|---|---|
+| Free | $0 | The local desktop app with a daily AI-request cap. This is the acquisition funnel and the local-first story is the moat — do not give it up. |
+| Pro | $6/mo (≈ ₹499) | Auto-renewing, cancel anytime. |
+| **Lifetime** | **$120 (≈ ₹10,000)** | One-time licence. This is the primary revenue line. |
+| Hosted + AI credits | later | Optional convenience tier for users who will not run Ollama. Metered by tokens — never "unlimited". |
+
+Source of truth: `api/billing/seed.py` → `PRICES`, `billing_server/config.py` → `PLANS`, `website/js/billing.js`.
+`docs/BILLING.md` explains the entitlement chain.
+
+### Claim consistency checklist — run before shipping any copy change
+
+Every edit to `website/` must keep all of these true at the same time:
+
+- [ ] **The desktop app is local-first.** "Your data stays on your machine" is scoped to the desktop app, and the
+      privacy/security pages carry the *full network disclosure* (update check, your LLM provider, cloud sign-in,
+      the paid-plan entitlement service).
+- [ ] **No unconditional "$0" / "no subscription" / "100% Local".** There IS a paid tier; a free tier and a
+      paid tier can coexist, but an unqualified "free forever" claim about the *product* (as opposed to the
+      self-hosted Docker build, which really is free) is false.
+- [ ] **"No telemetry" is scoped.** True for the desktop app; false as an absolute for a hosted tier. Write
+      "the desktop app ships no telemetry", not "no telemetry".
+- [ ] **"Open source" names the licence.** The tree is AGPL-3.0 (`LICENSE`). Say "open source under the GNU
+      AGPL v3 licence" at least once per page that makes the claim.
+- [ ] **The release/download URL is not hardcoded.** It comes from the single constant
+      `window.DATAAGENT_REPO_URL` in `website/js/main.js`. No page in `website/` may contain a literal
+      `github.com/...` URL.
+- [ ] **Feature names describe the code.** The SPA labels are honest: *Regression Explorer* (not "AutoML"),
+      *Segment Breakdown* (not "Segmentation"), *Trend Forecast* (not "Forecasting"). Keep it that way — the
+      review economy is the business.
+- [ ] **Export claims match the build.** PDF export is a *basic* (text-only) PDF on the shipped build; the
+      fully formatted exports are Excel, PowerPoint, `.pbix`, HTML, Markdown, CSV and Parquet.
+- [ ] **No dead internal links.** Every `href="*.html"` in `website/` resolves to a file that exists.
+
+`tests/test_launch_frontend_claims.py` enforces most of this list mechanically. Run it after any copy change:
+
+```bash
+python -m pytest tests/test_launch_frontend_claims.py -q -p no:cacheprovider
+```
 
 ---
 
@@ -10,8 +76,9 @@ DataAgent has three shipped frontends — the vanilla-JS **web SPA** (`web/`), t
 |---|---|---|---|---|
 | **Web SPA** (the app) | `web/` | Vanilla JS + Tailwind-style utility classes + vendored libraries, hash router | **None** | Shipped — this is the product |
 | **Marketing site** | `website/` | Static HTML + CSS + Three.js / GSAP / Lenis | None (CDN + vendored) | Current — the static site |
-| **React marketing site** | `website-react/` | React | `npm run dev` / `npm run build` | **Does not exist on disk.** `AGENTS.md` still lists it as the intended replacement; `config/settings.yaml` carries a note that the 8090 CORS entries are kept only for the billing dev mock. Until it lands, `website/` is the live marketing site. |
 | **Desktop shell** | `shell/` | pywebview wrapper around the SPA | PyInstaller (`scripts/build_windows.ps1`) | Shipped — Windows exe |
+
+The shell and the SPA are the **same** frontend: the shell starts the FastAPI backend and points a pywebview window at it. The marketing site is entirely separate and never talks to the API.
 
 The shell and the SPA are the **same** frontend: the shell starts the FastAPI backend and points a pywebview window at it. The marketing site is entirely separate and never talks to the API.
 
@@ -260,6 +327,35 @@ Static HTML — no build step, no framework. 14 pages: `index.html`, `about.html
 
 `js/fx-core.js` owns the shared motion layer (Lenis ⇄ ScrollTrigger bridge, reduced-motion handling, `FX.scrollTo`, `FX.gsap`/`FX.st` capability flags); `js/fx-webgl.js` is the Three.js module.
 
+### The release / download URL — ONE setting
+
+No page in `website/` contains a literal `github.com/...` URL. Everything is derived at runtime from three
+constants in **`website/js/main.js`**:
+
+```js
+window.DATAAGENT_REPO_URL         = 'https://github.com/DataAgent/DataAgent';
+window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/latest/download';
+window.DATAAGENT_DOWNLOADS        = { setup: 'DataAgent-Setup.exe', portable: 'DataAgent.exe' };
+```
+
+`initDownloadLinks()` (called on `DOMContentLoaded`) rewrites two kinds of anchor:
+
+| Marker | Becomes | Used by |
+|---|---|---|
+| `data-download="setup"` | `{RELEASE_BASE}/DataAgent-Setup.exe` | the installer button on `download.html` |
+| `data-download="portable"` | `{RELEASE_BASE}/DataAgent.exe` | the portable-build link on `download.html` |
+| `data-repo-link=""` | `{REPO_URL}` | the footer "GitHub" link on every page |
+| `data-repo-link="/issues"` | `{REPO_URL}/issues` | the contact page |
+| `data-repo-link="/discussions"` | `{REPO_URL}/discussions` | the contact page |
+
+**To publish the repo:** change `window.DATAAGENT_REPO_URL` in `website/js/main.js` to the real
+`<owner>/<repo>` and upload `DataAgent-Setup.exe` and `DataAgent.exe` to that repository's latest release.
+Nothing else in the site needs editing. Until a repository exists at that URL the download buttons 404 —
+which is why the URL is a constant and not a hardcoded link in the markup.
+
+The **desktop shell** has its own update check (`shell/update.py` → `api.github.com/repos/.../releases/latest`);
+it is not driven by this constant.
+
 ### The pricing page and checkout wiring
 
 `website/billing.html` + `website/js/billing.js` implement the storefront.
@@ -303,4 +399,5 @@ Both handlers show a `payment.failed` toast ("Payment failed — no money was ta
 | Desktop shell | `shell/` |
 | Marketing site | `website/` |
 | Marketing checkout | `website/js/billing.js`, `website/billing.html` |
+| **Release / download URL (the one setting)** | **`website/js/main.js` → `window.DATAAGENT_REPO_URL`** |
 | Live chat contract | `docs/decisions/ADR-006-live-agentic-chat-stream-steps.md` |

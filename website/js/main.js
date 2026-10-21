@@ -2,6 +2,53 @@
    LLM Data Analytics Agent — Interactions & Animations
    ============================================================ */
 
+/* ══════════════════════════════════════════════════════════════════
+   RELEASE / DOWNLOAD LINKS — the ONE place to set the base URL
+   ══════════════════════════════════════════════════════════════════
+
+   Set window.DATAAGENT_REPO_URL to the GitHub repository that publishes
+   the Windows releases, e.g. 'https://github.com/<owner>/<repo>'.
+
+   Every download button and every repository link on the site is derived
+   from this constant at runtime (see initDownloadLinks below), so moving
+   the project to a different repository — or publishing the repo that
+   does not exist yet — is a one-line edit here and nothing else. No page
+   in this site hardcodes a github.com URL.
+
+   The default points at the project's intended home. If that repository
+   has not been published yet, set it to the real one before going live,
+   otherwise the download buttons will 404.
+
+   To publish a release, upload these two assets to the "latest" release
+   of that repository:
+     • DataAgent-Setup.exe  — the Inno Setup installer
+     • DataAgent.exe        — the portable one-file build
+   ══════════════════════════════════════════════════════════════════ */
+window.DATAAGENT_REPO_URL = 'https://github.com/DataAgent/DataAgent';
+window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/latest/download';
+window.DATAAGENT_DOWNLOADS = {
+  setup: 'DataAgent-Setup.exe',   // Inno Setup installer
+  portable: 'DataAgent.exe'      // portable one-file build
+};
+
+/* Build every repository / download URL from the constants above. */
+function initDownloadLinks() {
+  const repo = String(window.DATAAGENT_REPO_URL || '').replace(/\/+$/, '');
+  const base = String(window.DATAAGENT_RELEASE_BASE_URL || '').replace(/\/+$/, '');
+  const files = window.DATAAGENT_DOWNLOADS || {};
+
+  document.querySelectorAll('a[data-repo-link]').forEach(function (a) {
+    if (!repo) return;
+    a.setAttribute('href', repo + (a.getAttribute('data-repo-link') || ''));
+  });
+
+  document.querySelectorAll('a[data-download]').forEach(function (a) {
+    const file = files[a.getAttribute('data-download')];
+    if (!base || !file) return;
+    a.setAttribute('href', base + '/' + file);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initNavbar();
   initMobileMenu();
@@ -9,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollTop();
   initActiveNav();
   initCountUp();
+  initDownloadLinks();
 });
 
 /* ── Navbar Scroll Effect (hide on scroll down, show on up) ── */

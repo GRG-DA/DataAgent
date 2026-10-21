@@ -59,7 +59,7 @@
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Does it run on macOS or Linux?</summary>
-            <div class="faq-a">The packaged download is Windows-only today (Windows 10/11, 64-bit). The project is open source, so the same stack can be run from source on macOS or Linux if you are comfortable with a Python environment. The <a href="download.html">download page</a> lists exactly what the Windows build needs.</div>
+            <div class="faq-a">The packaged download is Windows-only today (Windows 10/11, 64-bit). The project is open source under the GNU AGPL v3 licence, so the same stack can be run from source on macOS or Linux if you are comfortable with a Python environment. The <a href="download.html">download page</a> lists exactly what the Windows build needs.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Do I need my own LLM API key?</summary>
@@ -77,11 +77,11 @@
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
             <summary>Is DataAgent really free?</summary>
-            <div class="faq-a">Yes. The core product is free and open source — download it, read the code, self-host it. Paid plans (Pro at $6/mo &#8776;&#8377;499, Lifetime at $120 &#8776;&#8377;10,000) exist for teams that want support and premium features; checkout happens on Razorpay's secure payment page or our separate billing site. Self-host it with Docker and you get the full product — every feature — free forever, with no account and no card. Your hosted LLM provider (if you choose one) bills you directly.</div>
+            <div class="faq-a">The core desktop app is free and open source under AGPL-3.0 — download it, read the code, self-host it. Paid plans exist and are optional: Pro at &#8377;499/mo, and a one-time Lifetime licence at &#8377;10,000 that unlocks the paid features for good. Checkout happens on Razorpay's secure payment page or our separate billing site. Self-host it with Docker and you get the full product — every feature — free forever, with no account and no card. Your hosted LLM provider (if you choose one) bills you directly.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>What do paid plans add?</summary>
-            <div class="faq-a">Higher entitlements — unlimited AI queries, advanced analytics, and Power BI export — plus priority support. The free tier is designed to cover real work, not a demo. Compare the plans on the <a href="billing.html">pricing page</a>.</div>
+            <div class="faq-a">Higher entitlements — a larger daily AI allowance, advanced analytics, and Power BI export — plus priority support. The free tier is designed to cover real work, not a demo. Compare the plans on the <a href="billing.html">pricing page</a>.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Where does checkout happen?</summary>
@@ -95,7 +95,7 @@
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
             <summary>Does my data leave my machine?</summary>
-            <div class="faq-a">No telemetry, no analytics, no crash reporting, no background sync &mdash; ever. The warehouse is a local DuckDB file and the app runs on your machine. Outbound traffic goes to three places, and only these: the LLM provider <em>you</em> configure (choose Ollama for a fully offline setup); GitHub, for the update check; and, for Pro users only, the feature-ticket and entitlement service plus the proxy pool used by the IP-rotation feature. Details on the <a href="security.html">security page</a>.</div>
+            <div class="faq-a">The desktop app ships no telemetry, no analytics, no crash reporting and no background sync. The warehouse is a local DuckDB file and the app runs on your machine. Outbound traffic goes to three places, and only these: the LLM provider <em>you</em> configure (choose Ollama for a fully offline setup); GitHub, for the update check; and, for paid plans only, the entitlement service plus the proxy pool used by the IP-rotation feature. Details on the <a href="security.html">security page</a>.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>How is access controlled?</summary>
@@ -143,7 +143,7 @@
           <div class="nav-logo-icon">DA</div>
           <span>DataAgent</span>
         </a>
-        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
         <h4>Product</h4>
@@ -170,12 +170,12 @@
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+          <li><a data-repo-link="" href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>

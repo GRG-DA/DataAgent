@@ -193,7 +193,7 @@
         '<div style="font-size:32px;margin-bottom:8px;">&#9733;</div>' +
         '<div style="font-size:20px;font-weight:600;margin-bottom:8px;">Premium Feature</div>' +
         '<div style="display:inline-block;background:#ede9fe;color:#6d28d9;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:12px;">' + label + '</div>' +
-        '<p style="font-size:13px;color:#666;line-height:20px;margin-bottom:20px;">This feature is part of the Pro plan. Upgrade to unlock ' + label.toLowerCase() + ', unlimited AI queries, and all premium capabilities.</p>' +
+        '<p style="font-size:13px;color:#666;line-height:20px;margin-bottom:20px;">This feature is part of the Pro plan. Upgrade to unlock ' + label.toLowerCase() + ', a higher daily AI allowance, and all premium capabilities.</p>' +
         '<button onclick="window.location.hash=\'#subscription\';RBAC.dismissUpgradeOverlay();" style="width:100%;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">Upgrade to Pro</button>' +
         '<button onclick="RBAC.dismissUpgradeOverlay()" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer;">Not now</button>' +
         '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">One-time Lifetime plan also available.</div>' +

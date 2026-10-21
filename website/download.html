@@ -50,7 +50,7 @@
         <div class="download-version">Version 1.0.0 &bull; Windows 64-bit</div>
         <h2 class="download-title">DataAgent for Windows</h2>
         <p class="download-size">One signed installer &mdash; the whole platform inside, and no prerequisites to set up</p>
-        <a href="https://github.com/DataAgent/DataAgent/releases/latest/download/DataAgent-Setup.exe"
+        <a data-download="setup" href="#"
            class="btn btn-primary btn-lg"
            style="width:100%;justify-content:center;margin-bottom:16px;"
            id="downloadBtn">
@@ -61,8 +61,14 @@
           The free tier covers the core workflow &mdash; upload, ask questions, chat, SQL, dashboards &mdash; with a daily AI-request cap. Power BI export, Dashboard Studio, automation, data catalog, org structure and enterprise controls are paid features. Self-host it with Docker and you get everything, free forever, with no account and no card.
         </p>
         <p style="font-size:0.82rem;margin-top:6px;">
-          <a href="https://github.com/DataAgent/DataAgent/releases/latest/download/DataAgent.exe">Prefer no install? Get the portable build &#8594;</a>
+          <a data-download="portable" href="#">Prefer no install? Get the portable build &#8594;</a>
         </p>
+        <noscript>
+          <p style="font-size:0.82rem;margin-top:6px;color:var(--text-muted);">
+            The direct download links are built in JavaScript. Enable JavaScript, or use the
+            <a href="contact.html">contact page</a> to ask for a download link.
+          </p>
+        </noscript>
         <p style="font-size:0.82rem;margin-top:6px;font-weight:600;">
           <a href="changelog.html">What's new in version 1.0.0 &#8594;</a>
         </p>
@@ -87,7 +93,7 @@
         </div>
         <div class="card req-card">
           <div class="req-label">Storage</div>
-          <div class="req-value">Approx. 1.5 GB for the application and your data, plus about 4.7 GB if you add a local AI model</div>
+          <div class="req-value">Roughly 0.7&ndash;1&nbsp;GB once the application is installed, plus your own data &mdash; and about 4.7&nbsp;GB more if you add a local AI model</div>
         </div>
         <div class="card req-card">
           <div class="req-label">Processor</div>
@@ -121,7 +127,7 @@
 
       <div class="highlight-box">
         <h3>&#11015; Step 1 &mdash; Download the installer</h3>
-        <p>Select <strong>Download DataAgent-Setup.exe</strong> above (approximately 490 MB). The complete platform ships in this one file, so there are no additional application components to obtain. The one optional extra download is the local model used for AI chat &mdash; see AI Setup below.</p>
+        <p>Select <strong>Download DataAgent-Setup.exe</strong> above (roughly 300&ndash;400&nbsp;MB &mdash; the exact size of the current release is shown on the release page). The complete platform ships in this one file, so there are no additional application components to obtain. The one optional extra download is the local model used for AI chat &mdash; see AI Setup below.</p>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
@@ -214,7 +220,7 @@ Backup or migration   Copy this folder to keep your workspace intact</code>
           <div class="nav-logo-icon">DA</div>
           <span>DataAgent</span>
         </a>
-        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
         <h4>Product</h4>
@@ -241,12 +247,12 @@ Backup or migration   Copy this folder to keep your workspace intact</code>
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+          <li><a data-repo-link="" href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>

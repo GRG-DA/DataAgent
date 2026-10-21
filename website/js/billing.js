@@ -30,9 +30,21 @@
   var RAZORPAY_MARK = 'Pay with Razorpay';
 
   var plans = [
-    { code: 'free', name: 'Free', price: '$0', desc: 'Basic chat, 3 dashboards, 7-day history.' },
-    { code: 'pro', name: 'Pro', price: '$6/mo', hint: '≈ ₹499/mo · auto-renews · cancel anytime', desc: 'Unlimited chat, 50 dashboards, ad-free.', recommended: true },
-    { code: 'lifetime', name: 'Lifetime', price: '$120', hint: '≈ ₹10,000 · one-time', desc: 'Everything in Pro, lifetime access.' },
+    {
+      code: 'free', name: 'Free', price: '₹0',
+      desc: '25 AI requests a day, 3 dashboards, 7-day history.'
+    },
+    {
+      code: 'pro', name: 'Pro', price: '₹499/mo',
+      hint: 'auto-renews · cancel anytime',
+      desc: '50 AI requests a day, 50 dashboards, ad-free.'
+    },
+    {
+      code: 'lifetime', name: 'Lifetime', price: '₹10,000',
+      hint: 'one-time',
+      desc: 'Everything in Pro, 100 AI requests a day, lifetime access.',
+      recommended: true
+    },
   ];
 
   function hasPayLinks() {

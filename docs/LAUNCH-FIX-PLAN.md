@@ -121,3 +121,56 @@ Neither is visible from a source read of the hosted path.
   the exact release procedure.
 - **Completing a live Razorpay purchase** (C2/C3 verification) — needs KYC and a live key.
   The code path is reconciled and the checklist item stays open.
+
+---
+
+## 5. Completion log — Agent 7 (frontends: `web/`, `website/`, `docs/FRONTENDS.md`)
+
+Scope of this agent: the SPA (`web/**`), the marketing site (`website/**`), `docs/FRONTENDS.md`, and a new
+guard file `tests/test_launch_frontend_claims.py`.
+
+| ID | Status | What changed |
+|---|---|---|
+| **C4** | **done (frontend)** | The three over-promising feature names are gone from the SPA: *AutoML* → **Regression Explorer**, *Segmentation* → **Segment Breakdown**, *Forecasting* → **Trend Forecast**. Each panel now carries a "what this actually does" line (adjusted R² comparison / a group-by breakdown, not clustering / a least-squares trend, not ARIMA-ETS-Prophet). Endpoint paths, API method names and the Python module names are unchanged. |
+| **C5** | **done (frontend)** | The export page no longer offers a "PDF Report": the button is **PDF (basic)** with a tooltip, plus a `#pdf-export-note` naming the fully formatted exports (Excel, PowerPoint, `.pbix`, HTML, Markdown, CSV, Parquet). The `/export/pdf/` route is still wired. The backend stub itself is owned by another agent. |
+| **C6** | **done** | The site now tells one story: a **local-first desktop app** that ships a free tier, with a one-time **Lifetime licence ($120)** and an optional Pro plan; "no telemetry" is scoped to the app; "open source" names **AGPL-3.0** (verified against `LICENSE`); the blanket "$0 / no subscription / 100% Local" claims are gone. Every GitHub/download URL now derives from **one** constant, `window.DATAAGENT_REPO_URL` in `website/js/main.js`. `docs/FRONTENDS.md` records the v1 = local-first decision, ADR-009 as the documented v2 path, and a **Claim consistency** checklist. |
+| **C9** | **done (frontend) / backend route missing** | The subscription page now has a **Sync now** button that re-reads `GET /subscriptions/me` (the only plan-reading route that exists) and reports *Syncing… / Synced / Sync failed*. **No force-sync route exists in the backend** — the exact spec is in the agent report. |
+| **C10** | **done** | `AGENTS.md` and `README.md` drift (`website-react/`, 80 %+ coverage, 2090 tests) is already corrected in the tree. The SPA footer now links the **rendered** legal pages (`/legal/<page>.html`) instead of the raw static template, so an unfilled `[[MARKER]]` can never be published. |
+
+Verification: `python -m pytest tests/test_launch_frontend_claims.py -q -p no:cacheprovider` → **31 passed**.
+The download-link rewrite was additionally verified in a real browser (Playwright): the anchors resolve to
+`{RELEASE_BASE}/DataAgent-Setup.exe` and `{RELEASE_BASE}/DataAgent.exe` at runtime.
+
+### The one setting the operator must flip (D6)
+
+`website/js/main.js` → `window.DATAAGENT_REPO_URL = 'https://github.com/DataAgent/DataAgent';`
+
+Change it to the real `<owner>/<repo>` once the repository is published, and upload `DataAgent-Setup.exe`
+and `DataAgent.exe` to that repository's latest release. No page needs editing — the markup carries
+`data-download="setup|portable"` and `data-repo-link="/issues|/discussions"` markers instead of URLs.
+
+### Not done here (owned elsewhere)
+
+- The PDF backend stub (`export/pdf_export.py`) — another agent.
+- **The legal-page rendering route cannot substitute any marker.** `api/routes/legal.py::_fill`
+  builds its lookup from the *last path segment* of `config/legal.yaml` (`name`, `address`,
+  `effective_date`, `hosting`, …) while the pages use the marker names `[[COMPANY_NAME]]`,
+  `[[COMPANY_ADDRESS]]`, `[[EFFECTIVE_DATE]]`, `[[SUBPROCESSOR_HOSTING]]`, … — the keys never
+  match, so every one of the 38 markers in `privacy.html` renders as
+  *"to be completed by the operator"* even though the yaml is now filled in.
+  **Fix:** replace the derived lookup in `api/routes/legal.py::_fill` with an explicit
+  `MARKER_NAME -> yaml key` table (`COMPANY_NAME → company.name`, `COMPANY_ADDRESS →
+  company.address`, `JURISDICTION → company.jurisdiction`, `CONTACT_EMAIL → company.contact_email`,
+  `SECURITY_EMAIL → company.security_email`, `DPO_EMAIL → company.dpo_email`, `EFFECTIVE_DATE →
+  legal.effective_date`, `DATA_REGION → legal.data_region`, `RETENTION_DAYS → legal.retention_days`,
+  `SUBPROCESSOR_HOSTING → subprocessors.hosting`, `SUBPROCESSOR_STORAGE → subprocessors.storage`,
+  `SUBPROCESSOR_EMAIL → subprocessors.email`, `SUBPROCESSOR_LLM → subprocessors.llm`,
+  `SUBPROCESSOR_MONITORING → subprocessors.monitoring`). Until then the legal pages publish a
+  visible notice instead of the operator's details. The SPA footer now points at the *rendered*
+  route (`/legal/<page>.html`) rather than the raw template, so no `[[MARKER]]` can be published.
+- The backend-side user-visible strings that still use the old vocabulary
+  (`api/main.py:3177` "…for forecasting", `analysis/pipeline.py:892` "AutoML node needs a Target column",
+  `analysis/insights.py:365` "Use segmentation analysis…", `agent/orchestrator.py:49,55`).
+- The force-sync route for C9 (spec in the agent report).
+- `shell/update.py` still points its update check at a hardcoded GitHub repo — outside this agent's
+  file ownership (`shell/`).

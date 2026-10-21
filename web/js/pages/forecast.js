@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   Forecasting — Time Series Prediction
+   Trend Forecast — linear trend projection
    ═══════════════════════════════════════════ */
 
 const ForecastPage = {
@@ -19,8 +19,8 @@ const ForecastPage = {
                 <div class="page-title">
                     <div class="page-title-icon"><i class="fas fa-chart-line"></i></div>
                     <div>
-                        <h2>Forecasting Dashboard</h2>
-                        <p class="page-title-subtitle">Time series forecasting with trend analysis and seasonal decomposition</p>
+                        <h2>Trend Forecast</h2>
+                        <p class="page-title-subtitle">Least-squares linear trend projection with classical seasonal decomposition and changepoint detection — a trend projection, not an ARIMA/ETS/Prophet model.</p>
                     </div>
                 </div>
             </div>
@@ -59,7 +59,7 @@ const ForecastPage = {
             <div id="fc-results" class="space-y-4">
                 <div class="card text-center py-12 text-gray-400">
                     <i class="fas fa-chart-line text-4xl mb-3 opacity-30"></i>
-                    <p>Select a table with a date column and numeric values to forecast</p>
+                    <p>Select a table with a date column and numeric values to project a trend</p>
                 </div>
             </div>
         </div>`;
@@ -113,7 +113,7 @@ const ForecastPage = {
 
         const el = document.getElementById('fc-results');
         const btn = document.getElementById('fc-run-btn');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Forecasting...'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Projecting trend…'; }
         el.innerHTML = '<div class="card flex items-center justify-center py-12"><i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i><span class="ml-3 text-sm text-gray-400">Computing forecast...</span></div>';
 
         try {

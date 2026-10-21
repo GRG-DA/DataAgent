@@ -13,8 +13,8 @@ const AnalysisPage = {
         { id: 'correlations', icon: 'fa-th',          label: 'Correlations' },
         { id: 'distributions', icon: 'fa-chart-bar',  label: 'Distributions' },
         { id: 'outliers',     icon: 'fa-exclamation-triangle', label: 'Outliers' },
-        { id: 'forecast',     icon: 'fa-chart-line',  label: 'Forecast' },
-        { id: 'segmentation', icon: 'fa-users',       label: 'Segmentation' },
+        { id: 'forecast',     icon: 'fa-chart-line',  label: 'Trend Forecast' },
+        { id: 'segmentation', icon: 'fa-users',       label: 'Segment Breakdown' },
         { id: 'kpi',          icon: 'fa-calculator',  label: 'Custom KPI' },
         { id: 'merge',        icon: 'fa-code-branch', label: 'Data Merge' },
         { id: 'chart',        icon: 'fa-palette',     label: 'Chart Builder' },
@@ -122,7 +122,7 @@ const AnalysisPage = {
                 case 'distributions': await this._renderDistributions(content); break;
                 case 'outliers':    await this._renderOutliers(content); break;
                 case 'forecast':    await this._renderForecast(content); break;
-                case 'segmentation': await this._renderSegmentation(content); break;
+                case 'segmentation': await this._renderSegmentBreakdown(content); break;
                 case 'kpi':         this._renderKPI(content); break;
                 case 'merge':       this._renderMerge(content); break;
                 case 'chart':       this._renderChartBuilder(content); break;
@@ -469,7 +469,7 @@ const AnalysisPage = {
     },
 
     /* ════════════════════════════════════════════════════════════════
-       TAB 5: Forecast
+       TAB 5: Trend Forecast
        ════════════════════════════════════════════════════════════════ */
     async _renderForecast(el) {
         const profile = this._profileData || await API.profile(this._selectedTable);
@@ -480,7 +480,13 @@ const AnalysisPage = {
 
         el.innerHTML = `
         <div class="space-y-4">
-            <h3 class="text-lg font-semibold">Forecast</h3>
+            <h3 class="text-lg font-semibold">Trend Forecast</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Fits a straight-line trend (least squares) to the series and projects it forward, with
+                classical additive/multiplicative seasonal decomposition and changepoint detection.
+                It is a trend projection, not a time-series model — there is no ARIMA, ETS, Prophet or
+                Holt-Winters here.
+            </p>
             <div class="flex items-center gap-3 flex-wrap">
                 <div>
                     <label class="text-sm font-medium">Date Column:</label>
@@ -547,9 +553,9 @@ const AnalysisPage = {
     },
 
     /* ════════════════════════════════════════════════════════════════
-       TAB 6: Segmentation
+       TAB 6: Segment Breakdown
        ════════════════════════════════════════════════════════════════ */
-    async _renderSegmentation(el) {
+    async _renderSegmentBreakdown(el) {
         const profile = this._profileData || await API.profile(this._selectedTable);
         if (!this._profileData) this._profileData = profile;
         const cols = Object.keys(this._normalizeProfile(profile));
@@ -557,7 +563,13 @@ const AnalysisPage = {
 
         el.innerHTML = `
         <div class="space-y-4">
-            <h3 class="text-lg font-semibold">Segmentation</h3>
+            <h3 class="text-lg font-semibold">Segment Breakdown</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Groups the rows by the segment column and reports count, sum, mean, median, standard
+                deviation, min and max for each group, plus that group's share of the total. It is a
+                breakdown of the column you pick — there is no clustering, no k-means and no
+                model-based grouping behind it.
+            </p>
             <div class="flex items-center gap-3 flex-wrap">
                 <div>
                     <label class="text-sm font-medium">Segment By:</label>
@@ -572,18 +584,18 @@ const AnalysisPage = {
                         ${numCols.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                 </div>
-                <button onclick="AnalysisPage._runSegmentation()" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-1 rounded text-sm mt-4">Segment</button>
+                <button onclick="AnalysisPage._runSegmentBreakdown()" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-1 rounded text-sm mt-4">Break down</button>
             </div>
             <canvas id="seg-chart" width="700" height="350"></canvas>
         </div>`;
     },
 
-    async _runSegmentation() {
+    async _runSegmentBreakdown() {
         const segCol = document.getElementById('seg-col').value;
         const metricCol = document.getElementById('seg-metric').value || undefined;
         try {
             const data = await API.segmentation(this._selectedTable, segCol, metricCol);
-            if (!data.success) throw new Error(data.error || 'Segmentation failed');
+            if (!data.success) throw new Error(data.error || 'Segment breakdown failed');
 
             // Backend returns: segments: [{segment, count, total, mean, ...}]
             const segments = data.segments || [];
@@ -596,15 +608,15 @@ const AnalysisPage = {
 
             if (labels.length <= 8) {
                 Charts.pie('seg-chart', labels, values, {
-                    plugins: { title: { display: true, text: `Segmentation by ${segCol} (${metricCol || 'count'})` } },
+                    plugins: { title: { display: true, text: `Segment breakdown by ${segCol} (${metricCol || 'count'})` } },
                 });
             } else {
                 Charts.bar('seg-chart', labels, values, {
-                    plugins: { title: { display: true, text: `Segmentation by ${segCol}` } },
+                    plugins: { title: { display: true, text: `Segment breakdown by ${segCol}` } },
                 });
             }
         } catch (e) {
-            App.toast('Segmentation failed', 'error');
+            App.toast('Segment breakdown failed', 'error');
         }
     },
 

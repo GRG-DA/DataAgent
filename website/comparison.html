@@ -69,7 +69,7 @@
           <!-- Pricing -->
           <tr>
             <td>&#128176; Pricing</td>
-            <td class="highlight"><strong style="color:var(--success);">Free tier</strong><span class="price-tag">$0 — self-host = all</span></td>
+            <td class="highlight"><strong style="color:var(--success);">Free tier</strong><span class="price-tag">Free tier &middot; Pro &#8377;499/mo &middot; Lifetime &#8377;10,000</span></td>
             <td>Vendor pricing<span class="price-tag">check vendor site</span></td>
             <td>Vendor pricing<span class="price-tag">check vendor site</span></td>
             <td>Free OSS <span class="price-tag">hosted plan</span></td>
@@ -113,7 +113,7 @@
             <td><span class="check no">&#10007;</span></td>
           </tr>
           <tr>
-            <td>&#128274; Data Never Leaves Device</td>
+            <td>&#128274; Data Stays On Your Machine</td>
             <td class="highlight"><span class="check yes-strong">&#10003;</span></td>
             <td><span class="check no">&#10007;</span></td>
             <td><span class="check no">&#10007;</span></td>
@@ -182,7 +182,7 @@
           </tr>
           <tr>
             <td>&#128227; PDF Report Export</td>
-            <td class="highlight"><span class="check yes-strong">&#10003;</span></td>
+            <td class="highlight"><span class="check partial">Basic</span></td>
             <td><span class="check yes">&#10003;</span></td>
             <td><span class="check yes">&#10003;</span></td>
             <td><span class="check yes">&#10003;</span></td>
@@ -307,7 +307,7 @@
     </div>
 
     <p class="section-subtitle animate-on-scroll" style="text-align:center;margin-top:20px;">
-      Also compared: Hex, Lightdash, Deepnote, Wren AI. Competitor prices change and vary by plan, seat count and region &mdash; check each vendor's current pricing page. Tableau's natural-language SQL is Ask Data / Tableau Pulse.
+      Also compared: Hex, Lightdash, Deepnote, Wren AI. Competitor prices change and vary by plan, seat count and region &mdash; check each vendor's current pricing page. Tableau's natural-language SQL is Ask Data / Tableau Pulse. Every DataAgent entry above describes the local-first desktop app: your warehouse stays on your machine, and the app ships no telemetry.
     </p>
 
     <!-- Key Differentiators -->
@@ -318,8 +318,8 @@
     <div class="diff-grid">
       <div class="card diff-card animate-on-scroll animate-delay-1">
         <div class="diff-icon">&#127760;</div>
-        <h3 class="diff-title">100% Local & Private</h3>
-        <p class="diff-desc">Run entirely on your machine with Ollama. Your data never touches any cloud server. Zero API costs with local LLMs like Qwen 2.5 and LLaMA 3. Only a question you send to a cloud provider ever leaves the machine &mdash; see the <a href="faq.html">network disclosure</a>.</p>
+        <h3 class="diff-title">Local-first &amp; Private</h3>
+        <p class="diff-desc">The desktop app runs entirely on your machine with Ollama, and your warehouse is a local DuckDB file &mdash; it never touches our servers. Zero API costs with local LLMs like Qwen 2.5 and LLaMA 3. Only a question you send to a cloud provider ever leaves the machine &mdash; see the <a href="faq.html">network disclosure</a>.</p>
       </div>
       <div class="card diff-card animate-on-scroll animate-delay-2">
         <div class="diff-icon">&#128196;</div>
@@ -328,8 +328,8 @@
       </div>
       <div class="card diff-card animate-on-scroll animate-delay-3">
         <div class="diff-icon">&#128176;</div>
-        <h3 class="diff-title">Free &amp; Open Source</h3>
-        <p class="diff-desc">The free tier covers the core workflow &mdash; upload, ask questions, chat, SQL, dashboards &mdash; with a daily AI-request cap. Power BI export, Dashboard Studio, automation, data catalog, org structure and enterprise controls are paid features. Self-host it with Docker and you get everything, free forever, with no account and no card.</p>
+        <h3 class="diff-title">Free tier &amp; open source</h3>
+        <p class="diff-desc">The core app is open source under AGPL-3.0 and the free tier covers the core workflow &mdash; upload, ask questions, chat, SQL, dashboards &mdash; with a daily AI-request cap. A one-time Lifetime licence (&#8377;10,000) or a monthly Pro plan unlocks Power BI export, Dashboard Studio, automation, data catalog, org structure and enterprise controls. Self-host it with Docker and you get everything, free forever, with no account and no card.</p>
       </div>
     </div>
 
@@ -361,7 +361,7 @@
           <div class="nav-logo-icon">DA</div>
           <span>DataAgent</span>
         </a>
-        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
         <h4>Product</h4>
@@ -388,12 +388,12 @@
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+          <li><a data-repo-link="" href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Free & Open Source.</span>
+      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>

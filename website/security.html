@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Security &amp; Privacy — DataAgent</title>
-  <meta name="description" content="How DataAgent handles your data: local-first by default, parameterized SQL, secrets outside git, no telemetry.">
+  <meta name="description" content="How DataAgent handles your data: a local-first desktop app, parameterized SQL, secrets outside git, no telemetry from the app.">
   <link rel="icon" href="favicon_io/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
@@ -57,7 +57,7 @@
         <div class="flow-sep">&#8594;</div>
         <div class="flow-node">Your LLM<small>Local (Ollama) or a provider you chose</small></div>
         <div class="flow-sep">&#8594;</div>
-        <div class="flow-node locked">Nowhere else<small>No telemetry, no background sync</small></div>
+        <div class="flow-node locked">Nowhere else<small>No telemetry from the app, no background sync</small></div>
       </div>
       <p class="section-subtitle animate-on-scroll" style="text-align:center; margin-bottom: 56px;">The entire data path, start to finish.</p>
 
@@ -138,7 +138,7 @@
           <div class="card">
             <div class="card-title">Every install</div>
             <ul class="check-list">
-              <li><strong>Update check</strong> — one HTTPS GET to <code>api.github.com</code> on launch to compare the installed version against the latest release. Sends your IP address and a User-Agent string. No data, no identifiers, no telemetry.</li>
+              <li><strong>Update check</strong> — one HTTPS GET to <code>api.github.com</code> on launch to compare the installed version against the latest release. Sends your IP address and a User-Agent string. No data and no identifiers are included, and the app makes no telemetry calls.</li>
               <li><strong>Your LLM provider</strong> — the prompt and whatever schema context the question needs, sent to whichever provider you configured. With a local Ollama model, this never leaves the machine.</li>
               <li><strong>Cloud provider sign-in</strong> — only if you use Google login or a cloud LLM provider.</li>
             </ul>
@@ -155,10 +155,17 @@
         <div class="card" style="margin-top: 24px;">
           <div class="card-title">What is never sent</div>
           <p class="card-text">
-            No telemetry, no analytics, no crash reporting, no product usage tracking, no
-            advertising identifiers, and no server-side copy of your data. Your warehouse
-            is a single file on your disk. There is no code path in this application that
-            uploads it anywhere.
+            The desktop app sends no telemetry, no analytics, no crash reporting, no product
+            usage tracking, no advertising identifiers, and no server-side copy of your data.
+            Your warehouse is a single file on your disk. There is no code path in this
+            application that uploads it anywhere.
+          </p>
+          <p class="card-text" style="margin-top: 10px;">
+            DataAgent ships as a <b>local-first desktop app</b> &mdash; there is no hosted
+            multi-tenant service in this release, so no row of your data is ever processed on
+            our infrastructure. The only outbound traffic the app can make is listed above: the
+            update check, the LLM provider you configured, cloud sign-in, and the entitlement
+            service that a paid plan uses to confirm that your licence is current.
           </p>
         </div>
         <div class="inline-cta">
@@ -179,7 +186,7 @@
           <div class="nav-logo-icon">DA</div>
           <span>DataAgent</span>
         </a>
-        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — fully local and private.</p>
+        <p>AI-powered data analytics platform. Ask questions, explore with SQL, build dashboards, and export to Power BI — a local-first desktop app, so your data stays on your machine.</p>
       </div>
             <div class="footer-col">
         <h4>Product</h4>
@@ -206,12 +213,12 @@
           <li><a href="about.html">About</a></li>
           <li><a href="security.html">Security</a></li>
           <li><a href="contact.html">Contact</a></li>
-          <li><a href="https://github.com/DataAgent/DataAgent">GitHub</a></li>
+          <li><a data-repo-link="" href="#">GitHub</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Free &amp; Open Source.</span>
+      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>

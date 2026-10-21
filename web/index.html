@@ -130,7 +130,7 @@
                         <a href="#anomalies" class="nav-dropdown-item" data-page="anomalies" role="menuitem"><i class="fas fa-bug"></i><span>Anomalies</span></a>
                         <a href="#quality" class="nav-dropdown-item" data-page="quality" role="menuitem"><i class="fas fa-chart-line"></i><span>Quality Trends</span></a>
                         <a href="#stats" class="nav-dropdown-item" data-page="stats" role="menuitem"><i class="fas fa-calculator"></i><span>Stats</span></a>
-                        <a href="#forecast" class="nav-dropdown-item" data-page="forecast" role="menuitem"><i class="fas fa-chart-line"></i><span>Forecast</span></a>
+                        <a href="#forecast" class="nav-dropdown-item" data-page="forecast" role="menuitem"><i class="fas fa-chart-line"></i><span>Trend Forecast</span></a>
                         <a href="#connect" class="nav-dropdown-item" data-page="connect" data-feature="connect_page" role="menuitem"><i class="fas fa-plug"></i><span>Connections</span></a>
                         <a href="#lineage" class="nav-dropdown-item" data-page="lineage" role="menuitem"><i class="fas fa-diagram-project"></i><span>Lineage</span></a>
                         <a href="#notebook" class="nav-dropdown-item" data-page="notebook" role="menuitem"><i class="fas fa-book-open"></i><span>Notebook</span></a>
@@ -291,10 +291,12 @@
                 <span class="app-footer-note">AI-powered analytics for your data</span>
             </div>
             <nav class="app-footer-links" aria-label="Legal and security">
-                <a href="/static/legal/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-                <a href="/static/legal/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>
-                <a href="/static/legal/dpa.html" target="_blank" rel="noopener noreferrer">Data Processing Addendum</a>
-                <a href="/static/legal/security.html" target="_blank" rel="noopener noreferrer">Security</a>
+                <!-- Served through the rendering route so the operator's details
+                     are filled in — the raw legal template is never linked. -->
+                <a href="/legal/privacy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                <a href="/legal/terms.html" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+                <a href="/legal/dpa.html" target="_blank" rel="noopener noreferrer">Data Processing Addendum</a>
+                <a href="/legal/security.html" target="_blank" rel="noopener noreferrer">Security</a>
             </nav>
         </div>
     </footer>

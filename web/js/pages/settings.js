@@ -896,7 +896,7 @@ const SettingsPage = {
                         <span class="font-medium text-sm">Data Agent AI</span>
                         <span class="tag tag-gray" style="font-size:10px"><i class="fas fa-lock mr-1"></i>Pro / Lifetime</span>
                     </div>
-                    <p class="text-xs text-secondary mt-1">Unlimited is available on the Pro or Lifetime plan.</p>
+                    <p class="text-xs text-secondary mt-1">A higher daily AI allowance is available on the Pro or Lifetime plan.</p>
                     <div class="mt-2 flex items-center gap-2 flex-wrap">
                         <a href="#subscription" class="btn btn-primary btn-sm"><i class="fas fa-crown mr-1"></i>Upgrade</a>
                     </div>

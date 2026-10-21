@@ -78,8 +78,9 @@ const ExportPage = {
                     <button onclick="ExportPage.download('pptx')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
                         <i class="fas fa-file-powerpoint mr-1"></i>PowerPoint
                     </button>
-                    <button onclick="ExportPage.download('pdf')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
-                        <i class="fas fa-file-pdf mr-1"></i>PDF Report
+                    <button onclick="ExportPage.download('pdf')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                        title="PDF (basic) — a minimal, text-only PDF. The full report layout needs the optional PDF rendering engine, which is not bundled in the Windows build.">
+                        <i class="fas fa-file-pdf mr-1"></i>PDF (basic)
                     </button>
                     <button onclick="ExportPage.download('zip')" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
                         <i class="fas fa-file-archive mr-1"></i>ZIP All
@@ -87,6 +88,13 @@ const ExportPage = {
                     <button onclick="ExportPage.copyMarkdown()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
                         <i class="fas fa-copy mr-1"></i>Copy as MD
                     </button>
+                </div>
+                <div id="pdf-export-note" class="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-gray-700 dark:text-gray-300">
+                    <b>PDF (basic)</b> produces a minimal, text-only PDF. The full report layout needs the
+                    optional PDF rendering engine, which is not bundled in the Windows build &mdash; so
+                    prefer one of the fully formatted formats: <b>Excel</b> (.xlsx), <b>PowerPoint</b>
+                    (.pptx), the <b>Power BI</b> report (.pbix), the HTML report, Markdown, <b>CSV</b>
+                    and Parquet.
                 </div>
             </div>
 

@@ -235,7 +235,7 @@ const AutomationPage = {
           ['regression', 'Regression', '#0ea5e9', 'fa-chart-scatter'],
           ['comparison', 'Comparison', '#f59e0b', 'fa-scale-balanced'],
           ['cohort', 'Cohort / Retention', '#ec4899', 'fa-users'],
-          ['ml_model', 'AutoML / Model', '#6366f1', 'fa-robot'],
+          ['ml_model', 'Regression Explorer', '#6366f1', 'fa-robot'],
         ],
       },
       {
@@ -396,7 +396,7 @@ const AutomationPage = {
       regression: { label: 'Regression', icon: 'fa-chart-area', group: 'Analyze' },
       comparison: { label: 'Comparison', icon: 'fa-scale-balanced', group: 'Analyze' },
       cohort: { label: 'Cohort', icon: 'fa-users', group: 'Analyze' },
-      ml_model: { label: 'ML Model', icon: 'fa-brain', group: 'Analyze' },
+      ml_model: { label: 'Regression Explorer', icon: 'fa-brain', group: 'Analyze' },
       dashboard: { label: 'Dashboard', icon: 'fa-gauge-high', group: 'Output' },
       export: { label: 'Export', icon: 'fa-file-export', group: 'Output' },
     };
@@ -776,7 +776,8 @@ const AutomationPage = {
   _buildMlModelConfig(node) {
     var c = node.config;
     return '<div class="bp-config-section"><h4>Target Column</h4><input class="bp-config-input" data-key="target_col" value="' + App.escapeHtml(c.target_col||'') + '" placeholder="target column"></div>'
-      + '<div class="bp-config-section"><h4>Task</h4><select class="bp-config-select" data-key="task"><option value="auto"' + (c.task==='auto'?' selected':'') + '>Auto analyze (full pipeline)</option><option value="compare"' + (c.task==='compare'?' selected':'') + '>Compare linear vs polynomial</option></select></div>';
+      + '<div class="bp-config-section"><h4>Task</h4><select class="bp-config-select" data-key="task"><option value="auto"' + (c.task==='auto'?' selected':'') + '>Full pass (feature selection + model comparison)</option><option value="compare"' + (c.task==='compare'?' selected':'') + '>Compare linear vs degree-2 polynomial</option></select></div>'
+      + '<div class="bp-config-section"><p class="bp-config-help">What this does: ranks the candidate columns by Pearson |r| against the target, drops the collinear ones, then fits a <b>linear</b> and a <b>degree-2 polynomial</b> regression and reports the adjusted R&#178; of each. It is a regression comparison, not model search — there is no cross-validation, no hyper-parameter tuning and no ensembling.</p></div>';
   },
 
   _buildDashboardConfig(node) {

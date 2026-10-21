@@ -34,16 +34,51 @@ PAGES = ("privacy", "terms", "dpa", "security")
 
 _MARKER_RE = re.compile(r"\[\[([A-Z0-9_]+)\]\]")
 
+#: The marker in a legal page -> the key in ``config/legal.yaml``.
+#:
+#: This table is explicit on purpose.  The pages use screaming-snake markers
+#: (``[[COMPANY_NAME]]``) and the config uses dotted paths
+#: (``company.name``), so the two do not share a naming scheme and cannot be
+#: related mechanically.  Deriving the lookup from the config key's last
+#: segment silently produced a lookup that matched NONE of the markers, so
+#: every legal page published "[to be completed by the operator]" in all 38
+#: places even with a fully filled config.
+#:
+#: Add a marker to a page -> add its key here.  ``tests/test_launch_legal_pages.py``
+#: fails when a page uses a marker that is missing from this table.
+MARKER_KEYS = {
+    "COMPANY_NAME": "company.name",
+    "COMPANY_ADDRESS": "company.address",
+    "JURISDICTION": "company.jurisdiction",
+    "CONTACT_EMAIL": "company.contact_email",
+    "SECURITY_EMAIL": "company.security_email",
+    "DPO_EMAIL": "company.dpo_email",
+    "EFFECTIVE_DATE": "legal.effective_date",
+    "DATA_REGION": "legal.data_region",
+    "RETENTION_DAYS": "legal.retention_days",
+    "SUBPROCESSOR_HOSTING": "subprocessors.hosting",
+    "SUBPROCESSOR_STORAGE": "subprocessors.storage",
+    "SUBPROCESSOR_EMAIL": "subprocessors.email",
+    "SUBPROCESSOR_LLM": "subprocessors.llm",
+    "SUBPROCESSOR_MONITORING": "subprocessors.monitoring",
+}
+
 
 def _fill(markup: str) -> str:
     """Replace every ``[[MARKER]]`` with its configured value."""
     values = legal_values()
-    # The config keys are "section.key"; the pages use the bare marker name.
-    lookup = {key.split(".", 1)[-1]: value for key, value in values.items()}
 
     def _sub(match: "re.Match[str]") -> str:
         name = match.group(1)
-        return lookup.get(name, PLACEHOLDER_NOTICE)
+        key = MARKER_KEYS.get(name)
+        if key is None:
+            logger.warning(
+                "legal page uses the marker [[%s]], which has no key in "
+                "config/legal.yaml (see api/routes/legal.py::MARKER_KEYS)",
+                name,
+            )
+            return PLACEHOLDER_NOTICE
+        return values.get(key) or PLACEHOLDER_NOTICE
 
     return _MARKER_RE.sub(_sub, markup)
 

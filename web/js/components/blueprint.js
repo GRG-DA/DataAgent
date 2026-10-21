@@ -183,7 +183,7 @@
       defaultConfig: { kind: 'retention', user_id_col: '', date_col: '', cohort_period: 'month', revenue_col: '', max_periods: 12, inactivity_days: 30 },
     },
     ml_model: {
-      label: 'AutoML / Model',
+      label: 'Regression Explorer',
       icon: 'fa-robot',
       color: '#6366f1', // indigo
       inputs: 1,

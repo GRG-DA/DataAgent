@@ -78,6 +78,27 @@ def unfilled_legal_markers() -> list:
     )
 
 
+#: The phrase every "the operator must fill this in" value carries.  A value
+#: that still carries it is *configured* — it is not an unfilled marker — but
+#: it is not ready to publish either, so the release gate counts it.
+NEEDS_OPERATOR_VALUE = "before public distribution"
+
+
+def legal_values_needing_an_operator() -> list:
+    """Return the keys whose value is a "fill this in before you publish" notice.
+
+    These are not ``[[MARKER]]`` placeholders any more (the file carries no
+    marker), so ``unfilled_legal_markers()`` cannot see them — but the legal
+    pages still publish prose like *"set it in config/legal.yaml before public
+    distribution"*, which is not a finished document.  The release gate uses
+    this list to fail the check.
+    """
+    return sorted(
+        key for key, value in _flattened().items()
+        if value and NEEDS_OPERATOR_VALUE in value
+    )
+
+
 def render_legal_page(markdown: str) -> str:
     """Replace ``{{key}}`` placeholders in *markdown* with the legal values.
 
