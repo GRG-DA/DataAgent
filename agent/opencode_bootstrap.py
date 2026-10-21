@@ -44,10 +44,22 @@ logger = logging.getLogger(__name__)
 # Progress callback: (stage, pct, log_line). ``line`` may be empty.
 Progress = Callable[[str, int, str], Awaitable[None]]
 
-# Official release base — single source of truth for the download fallback.
-_OPENCODE_RELEASE_URL = "https://github.com/anomalyco/opencode/releases/latest/download/opencode-{target}{ext}"
+# The opencode release this app installs — PINNED (ADR-012).
+#
+# It used to be "releases/latest", which made the install unreproducible and
+# unverified: a different binary arrived on every run, with no way to check
+# it. Keep this version in sync with $OpenCodeVersion in
+# scripts/build_windows.ps1 and with packaging/linux/opencode-install.sh.
+OPENCODE_VERSION = "v1.19.3"
 
-# GitHub API for the latest release (same repo as the download fallback).
+# Official release base — single source of truth for the download fallback.
+_OPENCODE_RELEASE_URL = (
+    "https://github.com/anomalyco/opencode/releases/download/"
+    f"{OPENCODE_VERSION}/opencode-{{target}}{{ext}}"
+)
+
+# GitHub API for the latest release. Used ONLY to report "a newer version
+# exists" — it never decides WHAT is downloaded.
 _OPENCODE_LATEST_API = "https://api.github.com/repos/anomalyco/opencode/releases/latest"
 
 # How long a fetched "latest version" answer is trusted (GitHub allows
