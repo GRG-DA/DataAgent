@@ -287,12 +287,17 @@ def _frozen_bootstrap() -> None:
     """
     import shutil
 
-    # Resolve the per-user writable runtime dir BEFORE the stdout redirect, so
-    # the redirect target (<base>/logs/) is defined. base was previously set
-    # below the redirect block, so every frozen windowed web launch crashed
-    # with UnboundLocalError: cannot access local variable 'base' (no console,
-    # no log, silent exit at startup).
-    if sys.platform == "win32":
+    # An explicit override wins for BOTH the chdir and the runtime-dir
+    # resolution.  When only the resolution honoured it, the app chdir'd
+    # into %LOCALAPPDATA%\DataAgent (so the warehouse and config lived
+    # there) while the key files were written to the override - two halves
+    # of one install in two places, and a re-minted JWT secret on every
+    # launch.  The override is how a portable install or a test run points
+    # the whole app somewhere else.
+    override = (os.environ.get("DATAAGENT_DATA_DIR") or "").strip()
+    if override:
+        base = Path(override).expanduser()
+    elif sys.platform == "win32":
         base = Path(
             os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
         ) / "DataAgent"
@@ -306,8 +311,9 @@ def _frozen_bootstrap() -> None:
     # writable state lives (see api/runtime_paths.py). Without this the JWT
     # signing secret and the paid-plan grant key would resolve from
     # __file__, i.e. inside the (unwritable) bundle, and be re-minted on
-    # every launch.
-    os.environ.setdefault("DATAAGENT_DATA_DIR", str(base))
+    # every launch.  Set (not setdefault): the override above already
+    # decided the base, and every module must agree on it.
+    os.environ["DATAAGENT_DATA_DIR"] = str(base)
     (base / "data").mkdir(parents=True, exist_ok=True)
 
     # Windowed frozen builds (PyInstaller --windowed on Windows) have
