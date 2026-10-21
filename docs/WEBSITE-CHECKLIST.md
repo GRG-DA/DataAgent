@@ -32,7 +32,7 @@ this site, that is said plainly rather than quietly ignored.
 | 16 | Contact form testing | **partial** | The form exists and validates client-side. **It has no backend** — it is a mailto/placeholder flow. A real destination is an operator decision (see §4). |
 | 17 | **Analytics (Google Analytics)** | **deliberately not done** | **ADR-013.** GA would send every visitor's IP, a cookie and a persistent identifier to a third party on every page view — on the site of a product whose own pages say *"no telemetry"* — and would require a consent banner and a DPA to be lawful. It also buys the wrong metric: **installer downloads** are already reported by the GitHub Release the site links to, with no script, no cookie and no third party. `tests/test_launch_site_privacy.py` fails the build if any new third-party origin appears. |
 | 18 | Search Console setup | **operator** | The plumbing is done (robots.txt, sitemap.xml, absolute `<loc>`s). **You** need the Google account and the property. |
-| 19 | **Social media links and sharing tags** | **done** | Open Graph and Twitter card tags on every page, with the site's own preview image. |
+| 19 | **Social media links and sharing tags** | **done** | Open Graph and Twitter card tags on all 16 pages, with `website/og-image.png` ? a 1200?630 card rendered from the site's own palette. This was on the checklist as "done" while **no page had a single sharing tag**: a link pasted into a chat rendered as a bare URL. |
 | 20 | Backup system | **n/a for the site** | The site is static: there is no server state to back up. The **app's** data has `scripts/backup.ps1` and `scripts/hosted_backup.py`, and `scripts/ci/support_bundle.ps1` collects the three log files a support request needs. |
 | 21 | Security measures | **done** | CSP, HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP, CORP — identical across all three host configs, and a test asserts the three sets are **identical** so a host change cannot silently drop one. The app's `nginx.conf` carries its own set. |
 | 22 | Accessibility check | **partial, tooled** | `scripts/ci/check_site_a11y.py` checks alt text, form labels, accessible names, one `<h1>` per page, no skipped heading level, `lang`, iframe titles and the viewport. The **17 findings it reports are real and still open** — see §3. A static checker is not an audit: colour contrast, focus order and screen-reader flow still need a human. |
@@ -75,6 +75,18 @@ this site, that is said plainly rather than quietly ignored.
 | Too many font styles | **fixed** | 4 families → 2 (one sans, one display) plus a mono for code. |
 | No visual hierarchy | **fixed** | A type scale with distinct heading, body, caption and mono roles. |
 | Sticky elements covering content | **fixed** | The sticky header's height is a token and the content offset matches it. |
+
+### A credential leak the checklist surfaced
+
+Not a design item, but found while auditing the site: a **1.9 GB `DataAgent-public.rar` of the
+working tree** was sitting in the repo root. It contained `config/users.json` (23 accounts,
+password hashes and **plaintext API keys**), `data/.jwt_secret`, `data/.grant_key`,
+`data/curated/warehouse.duckdb` and `.env` ? every file the never-commit list exists to
+exclude, one `git add -A` away from being published.
+
+It has been deleted, `.gitignore` now blocks project archives, and
+`tests/test_launch_no_credentials_committed.py` reads what git is **actually** tracking and
+what is **staged**, so the guarantee is structural rather than procedural.
 
 ### A bug the checklist surfaced that nobody had listed
 
