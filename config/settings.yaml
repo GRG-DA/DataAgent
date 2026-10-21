@@ -44,14 +44,48 @@ billing:
   # Env overrides: BILLING_SYNC_URL / BILLING_SYNC_SECRET.
   sync_url: ""
   sync_secret: ""
-  # Per-tenant daily AI request budget (0 = unlimited). The aggregate AI
-  # usage of every account of a tenant is capped by this number.
-  # Env override: BILLING_TENANT_AI_DAILY_CAP.
-  tenant_ai_daily_cap: 0
+  # Per-tenant daily AI request budget.  This is the PLATFORM'S COST
+  # CEILING for the hosted path: the aggregate AI usage of every account of
+  # a tenant is capped by this number, whatever the account count.
+  #
+  # Arithmetic (see api/billing/seed.py for the full note): one AI request
+  # costs at most ~$0.04 (10k input + 2k output tokens — the schema and the
+  # relationships for up to 25 tables are injected into every prompt,
+  # agent/sqlgen.py:402 — at Sonnet-class prices).  100 requests/day is
+  # $4/day = $120/month of platform AI spend per tenant, which one Lifetime
+  # seat (INR 10,000) covers.  It used to be 0, and 0 meant UNLIMITED: an
+  # unbounded cost hole on a paid product (C3).
+  # 0 still means "unlimited" for the code, but the shipped default is
+  # finite.  Env override: BILLING_TENANT_AI_DAILY_CAP.
+  tenant_ai_daily_cap: 100
   # Path to the entitlement signing key, kept OUTSIDE the data directory in
   # a hosted deployment (ADR-009 D6).
   # Env override: DATAAGENT_GRANT_KEY_FILE.
   grant_key_file: ""
+
+# Transactional e-mail — password reset, e-mail verification, invites.
+#
+# The desktop build ships WITHOUT a mail server, so `smtp_host` is empty and
+# the account-lifecycle endpoints cannot deliver anything.  They now say so
+# truthfully (the user is told to ask the administrator) instead of
+# answering "success" and losing the message (C1).
+#
+# To enable mail delivery, set `smtp_host` (plus `smtp_user` /
+# `smtp_password`) here, or export NOTIFICATION_SMTP_HOST /
+# NOTIFICATION_SMTP_PORT / NOTIFICATION_SMTP_USER /
+# NOTIFICATION_SMTP_PASSWORD / NOTIFICATION_SMTP_FROM.  An empty value in
+# this file never overrides an environment variable.
+notifications:
+  enabled: true
+  # Notification digests (a different feature from the account lifecycle).
+  email_enabled: false
+  smtp_host: ""
+  smtp_port: 587
+  smtp_user: ""
+  smtp_password: ""
+  # The From: address of the account-lifecycle mails.  Empty keeps the
+  # built-in default.
+  smtp_from: ""
 
 # PostgreSQL — the hosted identity / session store (optional).
 # Set DATABASE_URL (or POSTGRES_DSN) to point at the shared database a

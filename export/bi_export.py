@@ -9,6 +9,7 @@ Features:
 - Generate Power BI / Tableau connection instructions
 """
 
+import html
 import io
 import json
 import logging
@@ -26,6 +27,76 @@ from openpyxl.utils import get_column_letter
 logger = logging.getLogger(__name__)
 
 
+# ── injection hardening ──────────────────────────────────────────────────
+# Exported data is attacker-controlled: an uploaded CSV can carry
+# ``=HYPERLINK("http://evil","x")`` or ``=cmd|' /C calc'!A1``.  Excel,
+# LibreOffice and Google Sheets evaluate a cell whose text starts with
+# ``= + - @`` as a *live formula* when the exported file is opened, so every
+# string written to a spreadsheet is prefixed with a single quote, which
+# forces the value to be stored and displayed as text.
+
+_FORMULA_TRIGGER_CHARS = ("=", "+", "-", "@")
+_LEADING_WHITESPACE = " \t\r\n"
+
+
+def _sanitize_spreadsheet_value(value: Any) -> Any:
+    """Neutralise spreadsheet formula injection in a single cell value.
+
+    A string whose first non-whitespace character (whitespace includes tab,
+    CR and LF, the classic ``\\t=cmd|...`` DDE vector) is one of
+    ``= + - @`` is prefixed with a single quote.  Non-string values are
+    returned untouched, so a float stays a float and is still written as a
+    number rather than as text.
+    """
+    if not isinstance(value, str):
+        return value
+    if value.lstrip(_LEADING_WHITESPACE)[:1] in _FORMULA_TRIGGER_CHARS:
+        return "'" + value
+    return value
+
+
+def _sanitize_series(series: pd.Series) -> pd.Series:
+    """Neutralise formula-like strings inside one column."""
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        series = series.astype(object)
+    if series.dtype == object or pd.api.types.is_string_dtype(series):
+        return series.map(_sanitize_spreadsheet_value)
+    return series
+
+
+def _sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy of ``df`` with formula-like strings neutralised.
+
+    Column names are sanitised as well — a header called ``=cmd|...`` is a
+    formula too.  Numeric, boolean and date columns keep their dtype.
+    Columns are addressed by position so a table with duplicate column
+    names cannot break the export.
+    """
+    out = df.copy()
+    for idx in range(out.shape[1]):
+        out.isetitem(idx, _sanitize_series(out.iloc[:, idx]))
+    out.columns = [_sanitize_spreadsheet_value(str(c)) for c in out.columns]
+    return out
+
+
+def _escape_markdown_cell(value: Any) -> str:
+    """Escape a value for use inside a Markdown table cell.
+
+    Line breaks are flattened (a newline inside a cell would split the row),
+    HTML is neutralised so a cell cannot inject markup into the rendered
+    document, and the column separator is escaped so the table stays
+    structurally valid.
+    """
+    text = str(value).replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    text = html.escape(text, quote=False)
+    return text.replace("|", "\\|")
+
+
+def _html_escape(value: Any) -> str:
+    """HTML-escape a value for safe interpolation into an HTML document."""
+    return html.escape(str(value), quote=True)
+
+
 def _get_connection(
     db_path: Union[str, Path],
     schema: str = "analytics",
@@ -34,6 +105,19 @@ def _get_connection(
     conn = duckdb.connect(str(db_path))
     conn.execute(f"SET search_path = '{schema}'")
     return conn
+
+
+def load_table_frame(
+    table: str,
+    db_path: Union[str, Path] = "data/curated/warehouse.duckdb",
+    schema: str = "analytics",
+) -> pd.DataFrame:
+    """Read a warehouse table into a DataFrame (read-only)."""
+    conn = _get_connection(db_path, schema)
+    try:
+        return conn.execute(f"SELECT * FROM {schema}.{table}").df()
+    finally:
+        conn.close()
 
 
 def export_table_csv(
@@ -45,6 +129,9 @@ def export_table_csv(
     """
     Export a warehouse table as CSV string.
 
+    Cell values and column names are sanitised so a spreadsheet cannot
+    evaluate them as formulas (see ``_sanitize_spreadsheet_value``).
+
     Args:
         table: Table name
         db_path: Path to DuckDB database
@@ -54,12 +141,8 @@ def export_table_csv(
     Returns:
         CSV content as string
     """
-    conn = _get_connection(db_path, schema)
-    try:
-        df = conn.execute(f"SELECT * FROM {schema}.{table}").df()
-        return df.to_csv(index=False, encoding=encoding)
-    finally:
-        conn.close()
+    df = load_table_frame(table, db_path, schema)
+    return _sanitize_dataframe(df).to_csv(index=False, encoding=encoding)
 
 
 def export_table_csv_bytes(
@@ -97,6 +180,8 @@ def export_table_xlsx(
     - Sheet named after the table
     - Row-capped so huge tables can't exhaust memory; a truncation
       notice is written to a second sheet when capped.
+    - Cell values and column names are sanitised so Excel cannot
+      evaluate them as formulas.
 
     Args:
         table: Table name
@@ -122,18 +207,40 @@ def export_table_xlsx(
     ws = wb.active
     ws.title = table[:31]  # Excel sheet name limit
 
-    # --- Header style ---
+    _write_xlsx_header(ws, df.columns)
+    _write_xlsx_rows(ws, df)
+    _set_xlsx_widths(ws, df)
+    ws.freeze_panes = "A2"
+    _set_xlsx_autofilter(ws, df)
+    if truncated:
+        _write_xlsx_truncation_notice(
+            wb, schema, table, len(df), total_rows, max_rows
+        )
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def _write_xlsx_header(ws, columns) -> None:
+    """Write the styled header row (column names are sanitised)."""
     header_fill = PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True, size=11)
 
-    # Write header row
-    for col_idx, col_name in enumerate(df.columns, start=1):
-        cell = ws.cell(row=1, column=col_idx, value=str(col_name))
+    for col_idx, col_name in enumerate(columns, start=1):
+        cell = ws.cell(
+            row=1,
+            column=col_idx,
+            value=_sanitize_spreadsheet_value(str(col_name)),
+        )
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # Write data rows
+
+def _write_xlsx_rows(ws, df) -> None:
+    """Write the data rows; string cells are neutralised against formulas."""
     for row_idx, (_, row) in enumerate(df.iterrows(), start=2):
         for col_idx, col_name in enumerate(df.columns, start=1):
             val = row[col_name]
@@ -142,7 +249,7 @@ def export_table_xlsx(
             if val is None or (isinstance(val, float) and pd.isna(val)):
                 cell.value = None
             else:
-                cell.value = val
+                cell.value = _sanitize_spreadsheet_value(val)
 
             # Number formatting for numeric types
             dtype = df[col_name].dtype
@@ -151,11 +258,11 @@ def export_table_xlsx(
             elif pd.api.types.is_float_dtype(dtype):
                 cell.number_format = '#,##0.00'
 
-    # --- Auto-column width ---
+
+def _set_xlsx_widths(ws, df) -> None:
+    """Size each column from the header and the widest (capped) cell."""
     for col_idx, col_name in enumerate(df.columns, start=1):
-        # Header width
         header_len = len(str(col_name))
-        # Data content width (max 60)
         data_len = (
             df[col_name].astype(str).str.len().max()
             if len(df) > 0
@@ -165,39 +272,37 @@ def export_table_xlsx(
         best_width = max(header_len + 2, data_len + 2, 10)
         ws.column_dimensions[get_column_letter(col_idx)].width = best_width
 
-    # --- Freeze top row ---
-    ws.freeze_panes = "A2"
 
-    # --- Auto-filter ---
-    if len(df.columns) > 0:
-        last_col_letter = get_column_letter(len(df.columns))
-        last_row = len(df) + 1  # +1 for header
-        ws.auto_filter.ref = f"A1:{last_col_letter}{last_row}"
+def _set_xlsx_autofilter(ws, df) -> None:
+    """Enable the header filter across the written range."""
+    if len(df.columns) == 0:
+        return
+    last_col_letter = get_column_letter(len(df.columns))
+    last_row = len(df) + 1  # +1 for header
+    ws.auto_filter.ref = f"A1:{last_col_letter}{last_row}"
 
-    # --- Truncation notice ---
-    if truncated:
-        info = wb.create_sheet("Export Info")
-        info.column_dimensions["A"].width = 30
-        notes = [
-            ("Table", table),
-            ("Rows exported", len(df)),
-            ("Rows in warehouse", total_rows),
-            ("Truncated", "yes — export capped at "
-             f"{max_rows:,} rows (EXPORT_MAX_ROWS)"),
-        ]
-        for r, (k, v) in enumerate(notes, start=1):
-            kc = info.cell(row=r, column=1, value=k)
-            kc.font = Font(bold=True)
-            info.cell(row=r, column=2, value=str(v))
-        logger.warning(
-            "Export of %s.%s truncated: %d of %d rows (cap=%d)",
-            schema, table, len(df), total_rows, max_rows,
-        )
 
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return buf.getvalue()
+def _write_xlsx_truncation_notice(
+    wb, schema: str, table: str, exported: int, total: int, max_rows: int
+) -> None:
+    """Add the 'Export Info' sheet describing a capped export."""
+    info = wb.create_sheet("Export Info")
+    info.column_dimensions["A"].width = 30
+    notes = [
+        ("Table", table),
+        ("Rows exported", exported),
+        ("Rows in warehouse", total),
+        ("Truncated", "yes — export capped at "
+         f"{max_rows:,} rows (EXPORT_MAX_ROWS)"),
+    ]
+    for r, (k, v) in enumerate(notes, start=1):
+        kc = info.cell(row=r, column=1, value=k)
+        kc.font = Font(bold=True)
+        info.cell(row=r, column=2, value=str(v))
+    logger.warning(
+        "Export of %s.%s truncated: %d of %d rows (cap=%d)",
+        schema, table, exported, total, max_rows,
+    )
 
 
 def export_table_parquet(
@@ -264,7 +369,7 @@ def export_all_tables(
                     df.to_parquet(filepath, index=False)
                 else:
                     filepath = output / f"{table_name}.csv"
-                    df.to_csv(filepath, index=False)
+                    _sanitize_dataframe(df).to_csv(filepath, index=False)
                 exported.append(str(filepath))
                 logger.info(f"Exported {table_name} ({df.shape[0]} rows) to {filepath}")
             except Exception as e:
@@ -319,7 +424,7 @@ def export_all_as_zip(
             for table_name in selected:
                 try:
                     df = conn.execute(f"SELECT * FROM {schema}.{table_name}").df()
-                    csv_data = df.to_csv(index=False)
+                    csv_data = _sanitize_dataframe(df).to_csv(index=False)
                     zf.writestr(f"{schema}_{table_name}.csv", csv_data)
                     logger.info(f"Packed {table_name} ({df.shape[0]} rows)")
                 except Exception as e:
@@ -475,6 +580,10 @@ def export_table_markdown(
     """
     Export a table as a Markdown-formatted string.
 
+    Cell values and column names are HTML-escaped so a cell cannot inject
+    markup into the rendered document, and the column separator is escaped
+    so the table stays structurally valid.
+
     Args:
         table: Table name
         db_path: Path to DuckDB database
@@ -490,13 +599,13 @@ def export_table_markdown(
         total_rows = len(df)
         df = df.head(max_rows)
 
-        lines = [f"## {table} ({total_rows} rows)\n"]
+        lines = [f"## {_escape_markdown_cell(table)} ({total_rows} rows)\n"]
         if total_rows > max_rows:
             lines.append(f"*Showing {max_rows} of {total_rows} rows*\n")
 
         # Header
         cols = list(df.columns)
-        lines.append("| " + " | ".join(str(c) for c in cols) + " |")
+        lines.append("| " + " | ".join(_escape_markdown_cell(c) for c in cols) + " |")
         lines.append("| " + " | ".join("---" for _ in cols) + " |")
 
         # Rows
@@ -509,7 +618,7 @@ def export_table_markdown(
                 elif isinstance(v, (int, float)):
                     vals.append(f"{v:,.2f}" if isinstance(v, float) else f"{v:,}")
                 else:
-                    vals.append(str(v).replace("|", "\\|"))
+                    vals.append(_sanitize_spreadsheet_value(_escape_markdown_cell(v)))
             lines.append("| " + " | ".join(vals) + " |")
 
         return "\n".join(lines)
@@ -526,6 +635,9 @@ def export_report_html(
     """
     Export a table as a styled HTML report.
 
+    Every interpolated column name, cell value and title is HTML-escaped,
+    so attacker-controlled data cannot inject markup into the document.
+
     Returns HTML as bytes.
     """
     conn = _get_connection(db_path, schema)
@@ -534,28 +646,14 @@ def export_report_html(
     finally:
         conn.close()
 
-    display_title = title or f"Data Report: {table}"
+    display_title = _html_escape(title or f"Data Report: {table}")
     cols = list(df.columns)
     total = len(df)
 
-    # Stats
-    stats_html = ""
-    num_cols = df.select_dtypes(include=["number"]).columns
-    if len(num_cols) > 0:
-        stats_html = "<div style='margin:20px 0;'><h3>Column Statistics</h3><table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-size:13px;'>"
-        stats_html += "<tr><th>Column</th><th>Count</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr>"
-        for col in num_cols:
-            s = df[col].dropna()
-            stats_html += f"<tr><td><strong>{col}</strong></td><td>{len(s)}</td><td>{s.mean():.2f}</td><td>{s.std():.2f}</td><td>{s.min():.2f}</td><td>{s.max():.2f}</td></tr>"
-        stats_html += "</table></div>"
+    stats_html = _html_stats_block(df)
 
     # Data table (max 200 rows)
-    display = df.head(200)
-    table_html = "<table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-size:12px;'>"
-    table_html += "<tr style='background:#2F5496;color:white;'>" + "".join(f"<th>{c}</th>" for c in cols) + "</tr>"
-    for _, row in display.iterrows():
-        table_html += "<tr>" + "".join(f"<td>{'' if pd.isna(row[c]) else row[c]}</td>" for c in cols) + "</tr>"
-    table_html += "</table>"
+    table_html = _html_data_table(df, cols)
     if total > 200:
         table_html += f"<p style='color:#666;'>Showing 200 of {total} rows</p>"
 
@@ -577,6 +675,61 @@ def export_report_html(
 </body></html>"""
 
     return html.encode("utf-8")
+
+
+def _html_stats_block(df) -> str:
+    """Render the numeric column statistics block (escaped)."""
+    num_cols = df.select_dtypes(include=["number"]).columns
+    if len(num_cols) == 0:
+        return ""
+
+    out = [
+        "<div style='margin:20px 0;'><h3>Column Statistics</h3>"
+        "<table border='1' cellpadding='6' cellspacing='0' "
+        "style='border-collapse:collapse;font-size:13px;'>"
+    ]
+    out.append(
+        "<tr><th>Column</th><th>Count</th><th>Mean</th>"
+        "<th>Std</th><th>Min</th><th>Max</th></tr>"
+    )
+    for col in num_cols:
+        s = df[col].dropna()
+        out.append(
+            f"<tr><td><strong>{_html_escape(col)}</strong></td><td>{len(s)}</td>"
+            f"<td>{s.mean():.2f}</td><td>{s.std():.2f}</td>"
+            f"<td>{s.min():.2f}</td><td>{s.max():.2f}</td></tr>"
+        )
+    out.append("</table></div>")
+    return "".join(out)
+
+
+def _html_data_table(df, cols) -> str:
+    """Render the (max 200 row) data table with every value escaped.
+
+    Values are also neutralised against formula injection: Excel evaluates
+    a cell that starts with ``=`` even when the file is an HTML table.
+    """
+    out = [
+        "<table border='1' cellpadding='6' cellspacing='0' "
+        "style='border-collapse:collapse;font-size:12px;'>"
+    ]
+    out.append(
+        "<tr style='background:#2F5496;color:white;'>"
+        + "".join(f"<th>{_html_escape(c)}</th>" for c in cols)
+        + "</tr>"
+    )
+    for _, row in df.head(200).iterrows():
+        cells = []
+        for c in cols:
+            value = row[c]
+            if pd.isna(value):
+                cells.append("<td></td>")
+            else:
+                safe = _sanitize_spreadsheet_value(value)
+                cells.append(f"<td>{_html_escape(safe)}</td>")
+        out.append("<tr>" + "".join(cells) + "</tr>")
+    out.append("</table>")
+    return "".join(out)
 
 
 def export_table_pptx(

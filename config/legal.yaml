@@ -1,29 +1,57 @@
-# Legal / company details for the hosted deployment.
+# Legal / company details for the deployed product.
 #
-# The pages under web/legal/ read these values. A `[[MARKER]]` left in place
-# is reported by `scripts/ci/preflight.ps1` and by the startup check in
-# api/main.py, so an operator cannot ship a page that still says
-# "[[COMPANY_NAME]]".
+# The pages under web/legal/ read these values: the privacy policy, the
+# terms, the DPA and the security page all take their company name,
+# contact details, jurisdiction and subprocessor list from this file, so
+# they cannot drift apart (see api/legal_config.py and api/routes/legal.py).
+#
+# ── READ THIS BEFORE THE PRODUCT IS PUBLICLY DISTRIBUTED ──────────────────
+#
+# Every value marked "…set it in config/legal.yaml before public
+# distribution" still has to be replaced with the operator's real details.
+# They are deliberately NOT written as `[[MARKER]]` tokens: the placeholder
+# checker (`api/legal_config.py` -> `unfilled_legal_markers()`) only
+# recognises the `[[UPPER_SNAKE]]` form, so a marker would be reported —
+# but a marker is also what a shipped page would have to publish.
+#
+# The values below are therefore plain sentences that a reader can act on:
+# the published page says plainly that the detail has to be filled in
+# before distribution, instead of showing a template token or a plausible
+# but untrue address.
+#
+# The release checklist should therefore grep this file for
+# "before public distribution" (13 values today) and refuse to ship while
+# any of them is still there.  The startup check in api/main.py reports
+# `unfilled_legal_markers()`, which is 0 now that no marker is left.
+#
+# The values below replace the old placeholder markers.  The marker names
+# are listed here for reference (and for the release checklist):
+#
+#   [[COMPANY_NAME]] [[COMPANY_ADDRESS]] [[JURISDICTION]] [[CONTACT_EMAIL]]
+#   [[SECURITY_EMAIL]] [[DPO_EMAIL]] [[EFFECTIVE_DATE]] [[DATA_REGION]]
+#   [[RETENTION_DAYS]] [[SUBPROCESSOR_HOSTING]] [[SUBPROCESSOR_STORAGE]]
+#   [[SUBPROCESSOR_EMAIL]] [[SUBPROCESSOR_LLM]] [[SUBPROCESSOR_MONITORING]]
 #
 # Copy this file, fill it in, and keep the filled copy out of git if it
 # holds anything sensitive (it should not — it is public page content).
 
 company:
-  name: "[[COMPANY_NAME]]"
-  address: "[[COMPANY_ADDRESS]]"
-  jurisdiction: "[[JURISDICTION]]"
-  contact_email: "[[CONTACT_EMAIL]]"
-  security_email: "[[SECURITY_EMAIL]]"
-  dpo_email: "[[DPO_EMAIL]]"
+  # The product's real name — this one is not a placeholder.
+  name: "DataAgent"
+  address: "the registered address of the operator — set it in config/legal.yaml before public distribution"
+  jurisdiction: "the jurisdiction the operator is registered in — set it in config/legal.yaml before public distribution"
+  contact_email: "the address support mail reaches — set it in config/legal.yaml before public distribution"
+  security_email: "the address security reports reach — set it in config/legal.yaml before public distribution"
+  dpo_email: "the address data-protection requests reach — set it in config/legal.yaml before public distribution"
 
 legal:
-  effective_date: "[[EFFECTIVE_DATE]]"
-  data_region: "[[DATA_REGION]]"
-  retention_days: "[[RETENTION_DAYS]]"
+  effective_date: "the date this policy comes into force — set it in config/legal.yaml before public distribution"
+  data_region: "the region this deployment stores data in — set it in config/legal.yaml before public distribution"
+  retention_days: "the retention period this deployment applies — set it in config/legal.yaml before public distribution"
 
 subprocessors:
-  hosting: "[[SUBPROCESSOR_HOSTING]]"
-  storage: "[[SUBPROCESSOR_STORAGE]]"
-  email: "[[SUBPROCESSOR_EMAIL]]"
-  llm: "[[SUBPROCESSOR_LLM]]"
-  monitoring: "[[SUBPROCESSOR_MONITORING]]"
+  hosting: "the hosting provider this deployment runs on — set it in config/legal.yaml before public distribution"
+  storage: "the storage provider this deployment keeps data on — set it in config/legal.yaml before public distribution"
+  email: "none by default — the desktop build sends no mail unless a mail server is configured; set it in config/legal.yaml before public distribution"
+  llm: "the LLM provider this deployment uses (the desktop build runs the model on your own machine) — set it in config/legal.yaml before public distribution"
+  monitoring: "the monitoring provider this deployment reports to — set it in config/legal.yaml before public distribution"

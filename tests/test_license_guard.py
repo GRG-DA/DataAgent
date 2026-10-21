@@ -38,7 +38,12 @@ def guard_env(billing_db, billing_env, monkeypatch):
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
     )
     monkeypatch.setenv("LICENSE_PUBLIC_KEY", pem.decode())
-    monkeypatch.setattr(kg_storage, "DEFAULT_DB", _P(settings.duckdb.database_path))
+    # The storage layer resolves the warehouse lazily (so a frozen build
+    # targets the writable runtime dir rather than the PyInstaller bundle).
+    # Patch the resolver, not a snapshot constant.
+    monkeypatch.setattr(
+        kg_storage, "default_db", lambda: _P(settings.duckdb.database_path)
+    )
     monkeypatch.delenv("BILLING_SYNC_URL", raising=False)
     monkeypatch.delenv("BILLING_SYNC_SECRET", raising=False)
     return billing_env

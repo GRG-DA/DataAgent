@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
+from export.bi_export import _sanitize_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,10 @@ def export_to_tde(table_name: str, df: pd.DataFrame) -> bytes:
 
     # ---- CSV fallback ----
     buf = io.BytesIO()
-    df.to_csv(buf, index=False, encoding="utf-8")
+    # Formula-injection guard: a cell starting with = + - @ becomes a
+    # live formula when the CSV is opened in Excel. The TDE fallback is a
+    # CSV, so the same sanitiser applies.
+    _sanitize_dataframe(df).to_csv(buf, index=False, encoding="utf-8")
     content = buf.getvalue()
     logger.info(
         "Exported to CSV (TDE fallback): %s (%d rows, %d bytes)",
@@ -121,7 +125,7 @@ def export_to_powerbi(table_name: str, df: pd.DataFrame) -> bytes:
         logger.warning("export_to_powerbi: DataFrame is empty; returning empty bytes.")
         return b""
 
-    clean_df = df.copy()
+    clean_df = _sanitize_dataframe(df)
     clean_df.columns = [_clean_powerbi_column(c) for c in clean_df.columns]
 
     buf = io.BytesIO()

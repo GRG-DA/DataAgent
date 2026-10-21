@@ -7,8 +7,8 @@ Guards the 4 plan authorities against silent drift:
   billing_server/config.py PLANS (real checkout amounts, paise)
   keygen_app/keygen.py PLANS (mintable key plans)
 
-FX reference (do not "correct"): USD $6/mo = 600c seed vs 49900 paise
-checkout; USD $120 lifetime = 12000c seed vs 1000000 paise checkout.
+ONE price list (C2): Pro INR 499/mo (49900 paise), Lifetime INR 10,000
+(1000000 paise) — the app and the checkout say the same thing.
 """
 from __future__ import annotations
 
@@ -49,14 +49,14 @@ def test_feature_flags_agree():
             assert seed_flags.get((code, key)) == bool(enabled), (code, key)
 
 
-def test_checkout_amounts_match_documented_fx():
-    """Seed cents and checkout paise must equal the documented FX pair."""
+def test_checkout_amounts_match_the_documented_price_list():
+    """The seed rows and the checkout carry the same amounts (one list)."""
     from api.billing.seed import PRICES
     import billing_server.config as cfg
 
     seed_prices = {(code, cycle): amount for code, cycle, amount, _ in PRICES}
-    assert seed_prices[("pro", "MONTHLY")] == 600
-    assert seed_prices[("lifetime", "ONETIME")] == 12000
+    assert seed_prices[("pro", "MONTHLY")] == 49900  # INR 499
+    assert seed_prices[("lifetime", "ONETIME")] == 1000000  # INR 10,000
     assert cfg.PLANS["pro"]["amount"] == 49900
     assert cfg.PLANS["pro"]["currency"] == "INR"
     assert cfg.PLANS["lifetime"]["amount"] == 1000000

@@ -1139,7 +1139,7 @@ class TestKeygen:
             __import__("cryptography.hazmat.primitives.serialization", fromlist=["PublicFormat"]).PublicFormat.SubjectPublicKeyInfo,
         )
         assert kg.load_public_key(pub_pem) is not None
-        kg.assert_not_dev_key(priv)  # dev fingerprint empty -> no raise
+        kg.assert_not_dev_key(priv)  # no dev fingerprint configured -> warn, not raise
         key = kg.generate_key(priv, plan="pro", email="A@B.com")
         assert key.startswith("DATAAGENT-")
         payload = kg.validate_key(key, priv.public_key())

@@ -12,8 +12,21 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
+import html
 
 logger = logging.getLogger(__name__)
+
+
+def _esc(value: Any) -> str:
+    """HTML-escape a value that reaches the report.
+
+    Column names come straight from an uploaded CSV header and the
+    recommendation / finding texts are LLM output, so both are untrusted
+    input into an HTML document.
+    """
+    return html.escape(str(value), quote=True)
+
+
 
 # Characters that are illegal in Windows filenames. A ":" would otherwise be
 # interpreted as an NTFS Alternate Data Stream and the report would silently be
@@ -59,7 +72,8 @@ class ReportGenerator:
 
         # Set up Jinja2 environment
         if REPORT_TEMPLATE_DIR.exists():
-            self.env = Environment(loader=FileSystemLoader(str(REPORT_TEMPLATE_DIR)))
+            self.env = Environment(loader=FileSystemLoader(str(REPORT_TEMPLATE_DIR)),
+                                autoescape=True)
         else:
             # Fallback: inline template
             self.env = Environment()
@@ -140,7 +154,7 @@ class ReportGenerator:
 
         # 1. Executive Summary
         summary_text = f"""
-        <p>Analysis of <strong>{table_name}</strong> revealed key insights about the data.</p>
+        <p>Analysis of <strong>{_esc(table_name)}</strong> revealed key insights about the data.</p>
         <ul>
             <li><strong>{profile.get('row_count', 0):,}</strong> rows across <strong>{profile.get('column_count', 0)}</strong> columns</li>
             <li>Data quality score: <strong>{quality.get('overall_score', 0):.1f}/100</strong></li>
@@ -161,7 +175,7 @@ class ReportGenerator:
                 <tr><th>Dimension</th><th>Score</th><th>Status</th></tr>
                 {
                 ''.join(
-                    f'<tr><td>{k.title()}</td><td>{v:.1f}</td><td>{"&#10004;" if v >= 80 else "&#9888;" if v >= 50 else "&#10008;"}</td></tr>'
+                    f'<tr><td>{_esc(k.title())}</td><td>{v:.1f}</td><td>{"&#10004;" if v >= 80 else "&#9888;" if v >= 50 else "&#10008;"}</td></tr>'
                     for k, v in dims.items()
                 )
                 }
@@ -169,7 +183,7 @@ class ReportGenerator:
             """
             if quality.get("recommendations"):
                 quality_text += "<h3>Recommendations</h3><ul>" + "".join(
-                    f"<li>{r}</li>" for r in quality["recommendations"][:3]
+                    f"<li>{_esc(r)}</li>" for r in quality["recommendations"][:3]
                 ) + "</ul>"
 
         sections.append(ReportSection(title="Data Quality Assessment", content=quality_text))
@@ -178,7 +192,7 @@ class ReportGenerator:
         if insights and insights.get("key_findings"):
             insights_text = "<ul>"
             for finding in insights["key_findings"]:
-                insights_text += f"<li>{finding}</li>"
+                insights_text += f"<li>{_esc(finding)}</li>"
             insights_text += "</ul>"
             sections.append(ReportSection(title="Key Findings", content=insights_text))
 
@@ -186,8 +200,8 @@ class ReportGenerator:
         if correlations and correlations.get("strongest"):
             s = correlations["strongest"]
             corr_text = f"""
-            <p><strong>Strongest correlation:</strong> {s.get('col1', '')} vs {s.get('col2', '')} ({s.get('correlation', 0):.3f})</p>
-            <p>Correlation strength: {s.get('strength', '')}, direction: {s.get('direction', '')}</p>
+            <p><strong>Strongest correlation:</strong> {_esc(s.get('col1', ''))} vs {_esc(s.get('col2', ''))} ({s.get('correlation', 0):.3f})</p>
+            <p>Correlation strength: {_esc(s.get('strength', ''))}, direction: {_esc(s.get('direction', ''))}</p>
             """
             sections.append(ReportSection(title="Correlation Analysis", content=corr_text))
 
@@ -196,7 +210,7 @@ class ReportGenerator:
             outlier_text = "<table><tr><th>Column</th><th>Outlier Count</th><th>Percentage</th></tr>"
             for o in outliers["outliers"][:5]:
                 outlier_text += f"""
-                <tr><td>{o.get('column', '')}</td><td>{o.get('outlier_count', 0)}</td><td>{o.get('outlier_pct', 0):.1f}%</td></tr>
+                <tr><td>{_esc(o.get('column', ''))}</td><td>{o.get('outlier_count', 0)}</td><td>{o.get('outlier_pct', 0):.1f}%</td></tr>
                 """
             outlier_text += "</table>"
             sections.append(ReportSection(title="Outlier Detection", content=outlier_text))
@@ -204,12 +218,12 @@ class ReportGenerator:
         # 6. Recommendations
         if insights and insights.get("recommendations"):
             rec_text = "<ul>" + "".join(
-                f"<li>{r}</li>" for r in insights["recommendations"]
+                f"<li>{_esc(r)}</li>" for r in insights["recommendations"]
             ) + "</ul>"
             sections.append(ReportSection(title="Recommendations", content=rec_text))
 
         return self.generate_html_report(
-            title=f"Executive Analysis Report: {table_name}",
+            title=f"Executive Analysis Report: {_esc(table_name)}",
             sections=sections,
             table_name=table_name,
             row_count=profile.get("row_count", 0),
@@ -235,11 +249,11 @@ class ReportGenerator:
             "th{background:#667eea;color:white}",
             ".section{background:#f8f9fa;padding:15px;border-radius:8px;margin:20px 0}",
             "</style></head><body>",
-            f"<h1>{title}</h1>",
-            f"<p>Generated: {generated_at} | {table_name} | {row_count:,} rows × {column_count} cols</p>",
+            f"<h1>{_esc(title)}</h1>",
+            f"<p>Generated: {generated_at} | {_esc(table_name)} | {row_count:,} rows × {column_count} cols</p>",
         ]
         for section in sections:
-            html.append(f"<div class='section'><h2>{section.title}</h2>{section.content}</div>")
+            html.append(f"<div class='section'><h2>{_esc(section.title)}</h2>{section.content}</div>")
         html.append("<div class='footer' style='margin-top:50px;color:#b2bec3;text-align:center;font-size:0.8em'>")
         html.append(f"<p>Generated by LLM Data Analytics Agent &mdash; {generated_at}</p>")
         html.append("</div></body></html>")

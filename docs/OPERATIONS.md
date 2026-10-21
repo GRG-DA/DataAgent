@@ -280,7 +280,7 @@ The billing server has its own probe: `GET /healthz` reports each component (`ra
 In order:
 
 1. **Freeze and branch.** Conventional commit message (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
-2. **Tests green.** `python -m pytest -q` — expect 2090 passed. Then `python -m pytest -q --cov=. --cov-report=term-missing` — the gate is `fail_under = 60` in `pyproject.toml`; the current measurement is **76.13%**. See `docs/COVERAGE.md`.
+2. **Tests green.** `python -m pytest -q` — expect 2456 passed. Then `python -m pytest -q --cov=. --cov-report=term-missing` — the gate is `fail_under = 74` in `pyproject.toml`; the current measurement is **76.6%**. See `docs/COVERAGE.md`.
 3. **Security pass** on anything touching auth, payments, user input or SQL: `agentshield scan --path .` plus the `security-reviewer` agent.
 4. **Bump the version** in `config/settings.yaml` → `app.version` (the shell's update check compares it against the GitHub release tag).
 5. **Build the secure zip**: `python scripts/build_secure_zip.py` — the self-check must print `self-check OK: no sensitive files in zip`.

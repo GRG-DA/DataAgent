@@ -47,7 +47,9 @@ def app_client(billing_db, billing_env, monkeypatch):
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
     )
     monkeypatch.setenv("LICENSE_PUBLIC_KEY", pem.decode())
-    monkeypatch.setattr(kg_storage, "DEFAULT_DB", _P(settings.duckdb.database_path))
+    monkeypatch.setattr(
+        kg_storage, "default_db", lambda: _P(settings.duckdb.database_path)
+    )
     # Deterministic offline default; remote-registry tests set these explicitly.
     monkeypatch.delenv("BILLING_SYNC_URL", raising=False)
     monkeypatch.delenv("BILLING_SYNC_SECRET", raising=False)

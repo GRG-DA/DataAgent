@@ -43,6 +43,7 @@ _FALLBACK = {
         "marketplace": False,
         "organization": False,
         "max_dashboards": 3,
+        "max_ai_requests": 25,
         "max_chat_history_days": 7,
     },
     "pro": {
@@ -67,6 +68,7 @@ _FALLBACK = {
         "marketplace": True,
         "organization": True,
         "max_dashboards": 50,
+        "max_ai_requests": 50,
         "max_chat_history_days": 365,
     },
     "lifetime": {
@@ -91,6 +93,7 @@ _FALLBACK = {
         "marketplace": True,
         "organization": True,
         "max_dashboards": 1000,
+        "max_ai_requests": 100,
         "max_chat_history_days": 3650,
     },
 }
@@ -324,7 +327,7 @@ def get_plan_prices() -> list[dict]:
                 "recommended": code == "pro",
                 "billing_cycle": "MONTHLY",
                 "amount": int(p["price"] * 100),
-                "currency": "USD",
+                "currency": "INR",
                 "amount_provider": None,
             })
     return prices

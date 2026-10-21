@@ -281,7 +281,9 @@ def app_env(billing_db, billing_env, monkeypatch):
     import keygen_app.storage as kg_storage
 
     monkeypatch.setenv("LICENSE_PUBLIC_KEY", _pub_pem(billing_env))
-    monkeypatch.setattr(kg_storage, "DEFAULT_DB", _P(settings.duckdb.database_path))
+    monkeypatch.setattr(
+        kg_storage, "default_db", lambda: _P(settings.duckdb.database_path)
+    )
     monkeypatch.delenv("BILLING_SYNC_URL", raising=False)
     monkeypatch.delenv("BILLING_SYNC_SECRET", raising=False)
     return billing_env

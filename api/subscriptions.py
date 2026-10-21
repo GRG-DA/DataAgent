@@ -4,6 +4,24 @@ Subscriptions — per-account plans (free / pro / lifetime).
 Stored in DuckDB table `analytics.user_subscriptions`, keyed by user_id.
 In-app payment checkout was removed; paid plans are granted by an admin
 (POST /subscriptions/{user_id}) or imported from the external billing site.
+
+**One price list.**  The amounts below are the *same* amounts the external
+checkout charges (``billing_server/config.py`` -> ``PLANS``): Indian rupees,
+paise in the smallest unit.  There is no second "display" price any more —
+the app used to show Pro at $6/mo while the checkout billed ₹499/mo, which
+is two price lists for one plan and a refund waiting to happen (C2).  The
+checkout is the authority for what a customer is charged; this dict and
+``api/billing/seed.py`` -> ``PRICES`` mirror it, and
+``tests/test_launch_billing_legal.py`` fails if they drift apart.
+
+**Lifetime is the headline tier** (LAUNCH-READINESS §8): it is the tier
+whose price can absorb a metered AI allowance, and it is the flow the
+keygen / offline-verification path already supports.  Pro stays as a
+capped, secondary tier.
+
+**No plan has unlimited AI.**  ``ai_requests_daily`` is a hard daily cap
+in requests; the arithmetic behind the numbers is documented in
+``api/billing/seed.py`` (C3).
 """
 import json
 from datetime import datetime, timedelta, timezone
@@ -18,27 +36,65 @@ router = APIRouter()
 TABLE = "user_subscriptions"
 SCHEMA = "analytics"
 
+#: The currency every price in this file is expressed in.  The checkout
+#: bills in INR (Razorpay), so the app shows INR too.
+CURRENCY = "INR"
+
 PLANS = {
     "free": {
         "label": "Free",
         "price": 0,
+        "currency": CURRENCY,
+        "cycle": "MONTHLY",
+        "recommended": False,
         "max_dashboards": 3,
         "max_chat_history_days": 7,
-        "features": ["Basic chat", "3 saved dashboards", "7-day history", "Ads shown — upgrade to remove", "AI without IP rotation"],
+        "ai_requests_daily": 25,
+        "features": [
+            "Basic chat",
+            "25 AI requests a day",
+            "3 saved dashboards",
+            "7-day history",
+            "Ads shown — upgrade to remove",
+            "AI without IP rotation",
+        ],
     },
     "pro": {
         "label": "Pro",
-        "price": 6,
+        "price": 499,
+        "currency": CURRENCY,
+        "cycle": "MONTHLY",
+        "recommended": False,
         "max_dashboards": 50,
         "max_chat_history_days": 365,
-        "features": ["Unlimited chat", "50 saved dashboards", "1-year history", "Priority support", "Ad-free experience", "AI with IP rotation"],
+        "ai_requests_daily": 50,
+        "features": [
+            "50 AI requests a day",
+            "50 saved dashboards",
+            "1-year history",
+            "Priority support",
+            "Ad-free experience",
+            "AI with IP rotation",
+        ],
     },
     "lifetime": {
         "label": "Lifetime",
-        "price": 120,
+        "price": 10000,
+        "currency": CURRENCY,
+        "cycle": "ONETIME",
+        "recommended": True,
         "max_dashboards": 1000,
         "max_chat_history_days": 3650,
-        "features": ["Everything in Pro", "Unlimited dashboards", "Lifetime access", "Early features", "Ad-free experience", "AI with IP rotation"],
+        "ai_requests_daily": 100,
+        "features": [
+            "100 AI requests a day",
+            "Everything in Pro",
+            "1000 saved dashboards",
+            "Lifetime access",
+            "Early features",
+            "Ad-free experience",
+            "AI with IP rotation",
+        ],
     },
 }
 

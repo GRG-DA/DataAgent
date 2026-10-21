@@ -439,10 +439,11 @@ def test_env_int_fallback_and_bad_value(monkeypatch):
 def test_get_currency_fallbacks(monkeypatch):
     from api.billing import seed
 
+    # The checkout bills in INR, so the app displays INR (one price list).
     monkeypatch.delenv("BILLING_CURRENCY", raising=False)
-    assert seed.get_currency() == "USD"
+    assert seed.get_currency() == "INR"
     monkeypatch.setenv("BILLING_CURRENCY", "")
-    assert seed.get_currency() == "USD"
+    assert seed.get_currency() == "INR"
     monkeypatch.setenv("BILLING_CURRENCY", "EUR")
     assert seed.get_currency() == "EUR"
 
@@ -469,7 +470,7 @@ def test_seed_idempotent(billing_db):
     assert before == after
     assert after == {
         "plans": 3,
-        "plan_prices": 4,
+        "plan_prices": 3,
         "plan_features": 60,
         "plan_limits": 9,
     }
@@ -491,7 +492,7 @@ def test_plan_price_hit_and_miss(billing_db):
     row = plan_price("pro", "MONTHLY")
     assert row is not None
     assert row["plan_id"] == "plan_pro"
-    assert row["amount"] == 600
+    assert row["amount"] == 49900
     assert row["currency"]
     assert plan_price("nope", "MONTHLY") is None
 

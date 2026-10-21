@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
+from typing import Dict
 
 from api.billing.schema import get_connection, SCHEMA
 
@@ -17,20 +18,38 @@ logger = logging.getLogger(__name__)
 
 
 def get_currency() -> str:
-    """Billing display currency (prices are seeded in this unit)."""
+    """Billing display currency (prices are seeded in this unit).
+
+    The checkout bills in INR (Razorpay), so the app shows INR too — the
+    app used to show $6/mo while the checkout billed ₹499/mo, i.e. two
+    price lists for one plan (C2).
+    """
     import os
 
-    return os.environ.get("BILLING_CURRENCY", "USD") or "USD"
+    return os.environ.get("BILLING_CURRENCY", "INR") or "INR"
+
+
+#: Plan code -> daily AI-request cap.  Mirrors ``api/subscriptions.PLANS``.
+AI_DAILY_CAPS = {
+    "free": 25,
+    "pro": 50,
+    "lifetime": 100,
+}
 
 
 def get_free_ai_daily_cap() -> int:
-    """Daily AI-request cap for the Free plan (-1 = unlimited)."""
-    return _env_int("BILLING_FREE_AI_DAILY_CAP", 25)
+    """Daily AI-request cap for the Free plan (finite; -1 = unlimited)."""
+    return _env_int("BILLING_FREE_AI_DAILY_CAP", AI_DAILY_CAPS["free"])
 
 
 def get_pro_ai_daily_cap() -> int:
-    """Daily AI-request cap for the Pro plan (-1 = unlimited, the default)."""
-    return _env_int("BILLING_PRO_AI_DAILY_CAP", -1)
+    """Daily AI-request cap for the Pro plan (finite; -1 = unlimited)."""
+    return _env_int("BILLING_PRO_AI_DAILY_CAP", AI_DAILY_CAPS["pro"])
+
+
+def get_lifetime_ai_daily_cap() -> int:
+    """Daily AI-request cap for the Lifetime plan (finite; -1 = unlimited)."""
+    return _env_int("BILLING_LIFETIME_AI_DAILY_CAP", AI_DAILY_CAPS["lifetime"])
 
 
 def _env_int(name: str, default: int) -> int:
@@ -41,13 +60,49 @@ def _env_int(name: str, default: int) -> int:
     except ValueError:
         return default
 
+
+# ── AI-request caps: why these numbers ──────────────────────────────────
+#
+# Two deployments, two cost models:
+#
+# * DESKTOP (what this release ships): the LLM runs on the user's own
+#   machine — Ollama by default (``llm.provider: "ollama"``) or a provider
+#   key the user configured themselves.  The platform's marginal cost per AI
+#   request is $0, so a cap is a PRODUCT limit, not a cost control.
+#
+# * HOSTED (ADR-009): the platform pays a shared cloud model.  Worst case
+#   per request: 10k input + 2k output tokens (the schema and the
+#   relationships for up to 25 tables are injected into every prompt —
+#   ``agent/sqlgen.py:402``) ≈ $0.04/request at Sonnet-class prices
+#   ($3/M input, $15/M output).
+#
+# The rule applied to the caps below:
+#
+#     requests/day x 30 x $0.04  <=  the hosted cost the plan can carry
+#
+#   free      25/day    750/month   hosted worst case  $30/month
+#   pro       50/day   1500/month   hosted worst case  $60/month
+#   lifetime 100/day   3000/month   hosted worst case $120/month
+#
+# A ₹499/month seat cannot pay for hosted Sonnet-class inference at any
+# useful volume ($6 of revenue against $0.04 a request), which is exactly
+# why the lifetime plan (₹10,000, the headline tier) is the primary
+# product and Pro is a capped secondary tier.  The HARD cost ceiling for
+# the hosted path is the tenant budget (``BILLING_TENANT_AI_DAILY_CAP``,
+# default 100 requests/day = $4/day = $120/month per tenant, whatever the
+# account count) — see ``config/settings.yaml``.
+#
+# The free tier's $30/month hosted worst case is a deliberate loss leader
+# on the hosted path; the tenant budget bounds it.  A hosted deployment
+# that wants a self-financing free tier sets BILLING_FREE_AI_DAILY_CAP=5.
+
 # Plan definitions: code, name, description, display order, recommended.
 PLANS = [
     {
         "id": "plan_free",
         "code": "free",
         "name": "Free",
-        "description": "Basic chat, 3 saved dashboards, 7-day history, daily AI request cap. Ads shown; AI without IP rotation.",
+        "description": "Basic chat, 3 saved dashboards, 7-day history, 25 AI requests a day. Ads shown; AI without IP rotation.",
         "display_order": 0,
         "is_recommended": False,
     },
@@ -55,34 +110,33 @@ PLANS = [
         "id": "plan_pro",
         "code": "pro",
         "name": "Pro",
-        "description": "Unlimited chat, 50 saved dashboards, 1-year history, ad-free, AI with IP rotation.",
+        "description": "50 AI requests a day, 50 saved dashboards, 1-year history, ad-free, AI with IP rotation.",
         "display_order": 1,
-        "is_recommended": True,
+        "is_recommended": False,
     },
     {
         "id": "plan_lifetime",
         "code": "lifetime",
         "name": "Lifetime",
-        "description": "Everything in Pro, 1000 dashboards, lifetime access, ad-free, AI with IP rotation.",
+        "description": "Everything in Pro, 100 AI requests a day, 1000 dashboards, lifetime access, ad-free, AI with IP rotation.",
         "display_order": 2,
-        "is_recommended": False,
+        "is_recommended": True,
     },
 ]
 
 # Prices: (plan_code, billing_cycle, amount, amount_provider).
 # amount_provider is unused (no payment gateway in-app); amounts are in the
-# smallest currency unit (cents for USD): Pro $6/mo, Pro $60/yr, Lifetime $120.
-# Source of truth is the external checkout (billing_server/config.py +
-# website/js/billing.js); these display rows must match it (see ADR 0008).
-# FX reference (do not "correct" these back): USD $6/mo ~= INR 499/mo
-# (49900 paise), USD $120 ~= INR 10,000 (1000000 paise). NOTE: checkout sells
-# only MONTHLY Pro + ONETIME Lifetime — the YEARLY row below is display-only
-# (10x monthly rule); adding a yearly SKU means billing_server + website too.
+# smallest currency unit (paise for INR).  These rows are the SAME amounts
+# the external checkout charges (`billing_server/config.py` -> PLANS):
+# Pro INR 499/mo (49900 paise), Lifetime INR 10,000 one-time (1000000
+# paise).  There is no second, display-only price any more — a yearly Pro
+# row that the checkout does not sell is exactly the kind of drift that
+# made the app and the checkout disagree (C2).  Adding a yearly SKU means
+# billing_server/config.py + website/js/billing.js as well.
 PRICES = [
     ("free", "MONTHLY", 0, None),
-    ("pro", "MONTHLY", 600, None),
-    ("pro", "YEARLY", 6000, None),
-    ("lifetime", "ONETIME", 12000, None),
+    ("pro", "MONTHLY", 49900, None),
+    ("lifetime", "ONETIME", 1000000, None),
 ]
 
 # Features: (plan_code, feature_key, enabled).
@@ -151,14 +205,17 @@ FEATURES = [
 ]
 
 # Limits: (plan_code, metric, limit_value). -1 = unlimited.
+# Every plan has a FINITE `ai_requests` cap: an unlimited AI allowance on a
+# paid plan is a guaranteed negative margin (the arithmetic is documented
+# above).  The free tier keeps a usable allowance (25/day).
 LIMITS = [
-    ("free", "ai_requests", -1),
+    ("free", "ai_requests", 25),
     ("free", "dashboards", 3),
     ("free", "chat_history_days", 7),
-    ("pro", "ai_requests", -1),
+    ("pro", "ai_requests", 50),
     ("pro", "dashboards", 50),
     ("pro", "chat_history_days", 365),
-    ("lifetime", "ai_requests", -1),
+    ("lifetime", "ai_requests", 100),
     ("lifetime", "dashboards", 1000),
     ("lifetime", "chat_history_days", 3650),
 ]
@@ -195,6 +252,19 @@ def seed_billing_data() -> None:
                         [p["id"], p["code"], p["name"], p["description"],
                          p["is_recommended"], p["display_order"]],
                     )
+                else:
+                    # Keep the plan row in sync: the headline tier, the
+                    # description and the order change when the price list
+                    # changes, and an existing install must not keep
+                    # recommending the old tier forever.
+                    con.execute(
+                        f"""UPDATE {SCHEMA}.plans
+                            SET name = ?, description = ?, is_recommended = ?,
+                                display_order = ?
+                            WHERE code = ?""",
+                        [p["name"], p["description"], p["is_recommended"],
+                         p["display_order"], p["code"]],
+                    )
 
             for code, cycle, amount, provider_id in PRICES:
                 plan_id = f"plan_{code}"
@@ -220,6 +290,28 @@ def seed_billing_data() -> None:
                         [get_currency(), amount, provider_id, plan_id, cycle],
                     )
 
+            # Drop the price rows for cycles that are no longer sold.  The
+            # display-only yearly Pro row is gone (one price list, C2) and an
+            # existing install must not keep advertising a SKU the checkout
+            # does not sell.
+            sold: Dict[str, set] = {}
+            for code, cycle, _amount, _provider in PRICES:
+                sold.setdefault(f"plan_{code}", set()).add(cycle)
+            for plan_id, cycles in sold.items():
+                rows = con.execute(
+                    f"SELECT id, billing_cycle FROM {SCHEMA}.plan_prices WHERE plan_id = ?",
+                    [plan_id],
+                ).fetchall()
+                for row_id, cycle in rows:
+                    if cycle not in cycles:
+                        con.execute(
+                            f"DELETE FROM {SCHEMA}.plan_prices WHERE id = ?", [row_id]
+                        )
+                        logger.info(
+                            "Removed the stale price row %s/%s — it is no longer sold",
+                            plan_id, cycle,
+                        )
+
             for code, feature_key, enabled in FEATURES:
                 plan_id = f"plan_{code}"
                 if not _row_exists(
@@ -233,14 +325,22 @@ def seed_billing_data() -> None:
                         [f"feat_{code}_{feature_key}", plan_id, feature_key, enabled],
                     )
 
-            free_ai_cap = get_free_ai_daily_cap()
-            pro_ai_cap = get_pro_ai_daily_cap()
+            # The AI caps are always re-synced, not only when the env var is
+            # set: an install that was seeded before the caps existed still
+            # holds `ai_requests = -1` (unlimited) rows, and this seed run
+            # is the migration that replaces them (C3).  Idempotent — the
+            # same value is written again on every run.
+            ai_caps = {
+                "free": get_free_ai_daily_cap(),
+                "pro": get_pro_ai_daily_cap(),
+                "lifetime": get_lifetime_ai_daily_cap(),
+            }
             for code, metric, limit_value in LIMITS:
                 plan_id = f"plan_{code}"
-                if code == "free" and metric == "ai_requests" and free_ai_cap != -1:
-                    limit_value = free_ai_cap
-                if code == "pro" and metric == "ai_requests" and pro_ai_cap != -1:
-                    limit_value = pro_ai_cap
+                if metric == "ai_requests":
+                    cap = ai_caps.get(code, limit_value)
+                    if cap != -1:
+                        limit_value = cap
                 if not _row_exists(
                     con, "plan_limits", "plan_id = ? AND metric = ?",
                     [plan_id, metric],
@@ -251,20 +351,13 @@ def seed_billing_data() -> None:
                             VALUES (?, ?, ?, ?)""",
                         [f"limit_{code}_{metric}", plan_id, metric, limit_value],
                     )
-                elif code == "free" and metric == "ai_requests" and free_ai_cap != -1:
-                    # Keep the free AI cap in sync with the configured env var.
+                elif metric == "ai_requests":
+                    # Keep the AI cap in sync with the configured value.
                     con.execute(
                         f"""UPDATE {SCHEMA}.plan_limits
                             SET limit_value = ?
                             WHERE plan_id = ? AND metric = ?""",
-                        [free_ai_cap, plan_id, metric],
-                    )
-                elif code == "pro" and metric == "ai_requests" and pro_ai_cap != -1:
-                    con.execute(
-                        f"""UPDATE {SCHEMA}.plan_limits
-                            SET limit_value = ?
-                            WHERE plan_id = ? AND metric = ?""",
-                        [pro_ai_cap, plan_id, metric],
+                        [limit_value, plan_id, metric],
                     )
 
             logger.info("Billing seed data ensured")

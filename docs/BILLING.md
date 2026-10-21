@@ -6,25 +6,34 @@ How DataAgent decides what a user may do: the three plans and their prices, the 
 
 ## 1. Plans and prices
 
-Prices live in `api/billing/seed.py` → `PRICES` (amounts in the smallest currency unit — **cents** for USD). The rows are seeded into `analytics.plan_prices`; `seed_billing_data()` also keeps existing rows in sync with the configured currency (`BILLING_CURRENCY`, default `USD`).
+**One price list, one currency (INR).** The checkout already charged in paise
+(Razorpay's smallest unit); the app used to display a *different* dollar list.
+That is fixed: the app now shows exactly what the checkout charges.
 
-| Plan | `id` | Cycle | Amount (cents) | Displayed as | Notes |
+Prices live in `billing_server/config.py` → `PLANS` (**what is charged**) and are
+mirrored by `api/billing/seed.py` → `PRICES` (amounts in **paise**) and
+`api/subscriptions.py` → `PLANS` (major units, for display). The three must
+agree — `tests/test_launch_billing_legal.py` fails if they drift.
+
+| Plan | `id` | Cycle | Amount (paise) | Displayed as | Notes |
 |---|---|---|---|---|---|
-| Free | `plan_free` | `MONTHLY` | `0` | $0 | 3 dashboards, 7-day history, daily AI cap |
-| Pro | `plan_pro` | `MONTHLY` | `600` | **$6/mo** ≈ ₹499/mo | auto-renewing Razorpay subscription |
-| Pro | `plan_pro` | `YEARLY` | `6000` | $60/yr | **display-only — not purchasable** |
-| Lifetime | `plan_lifetime` | `ONETIME` | `12000` | **$120** ≈ ₹10,000 | one-time Razorpay order |
-
-The INR figures are the reference the source comments pin: **USD $6/mo ≈ INR 499/mo (49900 paise)** and **USD $120 ≈ INR 10,000 (1000000 paise)**. The billing server charges in paise — `billing_server/config.py` → `PLANS`:
+| Free | `plan_free` | `MONTHLY` | `0` | ₹0 | 3 dashboards, 7-day history, 25 AI requests/day |
+| Pro | `plan_pro` | `MONTHLY` | `49900` | **₹499/mo** | auto-renewing Razorpay subscription |
+| Lifetime | `plan_lifetime` | `ONETIME` | `1000000` | **₹10,000** | one-time Razorpay order — **the headline product** |
 
 ```python
-"pro":      {"amount": 49900,  "currency": "INR", "cycle": "MONTHLY", "days": 31,    "subscription": True},
+# billing_server/config.py
+"pro":      {"amount": 49900,   "currency": "INR", "cycle": "MONTHLY", "days": 31,    "subscription": True},
 "lifetime": {"amount": 1000000, "currency": "INR", "cycle": "ONETIME", "days": None, "subscription": False},
 ```
 
-`website/js/billing.js` renders the same three prices (`$0`, `$6/mo` + `≈ ₹499/mo`, `$120` + `≈ ₹10,000`). The three sources must agree; `api/billing/seed.py` says so explicitly ("these display rows must match it").
+> **There is no yearly Pro row.** It used to exist as a *display-only* row
+> (`6000` cents) for a SKU the checkout never sold — the second price list that
+> made the app and the checkout disagree. It has been removed.
 
-> **The `YEARLY` Pro row is not purchasable.** Checkout sells only MONTHLY Pro + ONETIME Lifetime. The yearly row follows the 10×-monthly display rule and exists so the pricing UI can render an annual figure. Selling it means changing `billing_server/config.py` **and** `website/js/billing.js` as well.
+**Lifetime is the headline product.** ₹10,000 once beats a $14/user/mo Power BI
+Pro seat in year one, needs no metering story, and is verifiable offline by the
+product-key path. Pro survives as a capped secondary tier.
 
 ### Quotas (plan limits)
 
@@ -34,18 +43,38 @@ The INR figures are the reference the source comments pin: **USD $6/mo ≈ INR 4
 |---|---|---|---|
 | `dashboards` | 3 | 50 | 1000 |
 | `chat_history_days` | 7 | 365 | 3650 |
-| `ai_requests` | **25/day** (see below) | -1 (unlimited) | -1 (unlimited) |
+| `ai_requests` | **25/day** | **50/day** | **100/day** |
 
-### The Free-plan AI-request cap
+**No plan has unlimited AI.** The old `-1` on Pro and Lifetime was a
+guaranteed negative margin on a ₹499/mo seat: `agent/sqlgen.py` injects the
+schema and relationships for up to 25 tables into the prompt, so a request is
+~10 K input + ~2 K output tokens ⇒ ≈ $0.04/request at Sonnet-class prices.
+600 requests/month ≈ $30 of inference against ₹499 (~$6) of revenue.
+
+The seed re-syncs these rows on **every** run (`api/billing/seed.py` →
+limit re-sync), so an existing install with `ai_requests = -1` is repaired to
+the new caps without a manual migration.
+
+### The AI-request caps
 
 | Env var | Default | Meaning |
 |---|---|---|
 | `BILLING_FREE_AI_DAILY_CAP` | **25** | AI requests per day for the Free plan. `-1` = unlimited. |
-| `BILLING_PRO_AI_DAILY_CAP` | `-1` | AI requests per day for Pro (unlimited by default). |
+| `BILLING_PRO_AI_DAILY_CAP` | **50** | AI requests per day for Pro. |
+| `BILLING_LIFETIME_AI_DAILY_CAP` | **100** | AI requests per day for Lifetime. |
+| `BILLING_TENANT_AI_DAILY_CAP` | **100** | Aggregate AI budget per tenant, across every account. **This is the hard cost ceiling.** |
 
-`ai_requests` is metered **per day** (`_DAILY_METRICS` in `api/billing/metering.py`); every other metric is metered per calendar month. The cap is written into `analytics.plan_limits` at seed time and re-synced on every seed run.
+`ai_requests` is metered **per day** (`_DAILY_METRICS` in `api/billing/metering.py`);
+every other metric is metered per calendar month. The cap is written into
+`analytics.plan_limits` at seed time.
 
-When the cap is hit, `api/main.py::_meter_ai_request` raises **HTTP 429** with the same upgrade headers the feature gate emits:
+> **On the desktop build the marginal cost of an AI request is $0** — the LLM
+> runs on the user's own machine (Ollama is the default provider). The caps
+> there are product limits, not cost controls. They exist so that a *hosted*
+> deployment has a finite ceiling.
+
+When the cap is hit, `api/main.py::_meter_ai_request` raises **HTTP 429** with
+the same upgrade headers the feature gate emits:
 
 ```
 X-Upgrade-Required: true
@@ -57,6 +86,12 @@ X-Required-Feature: ai_unlimited
 ## 2. Premium feature keys and what they gate
 
 17 premium feature keys are declared in `api/billing/schema.py` (`FEATURE_RECREATE_FROM_IMAGE` … `FEATURE_ORGANIZATION`). All 17 are disabled for Free and enabled for Pro and Lifetime (`api/billing/seed.py` → `FEATURES`). Three further flags complete the matrix: `ads_visible` (True on Free, False on paid), `ip_rotation` and `ai_unlimited` (False on Free, True on paid).
+
+> **`ai_unlimited` is a legacy name, not a claim.** No plan has unlimited AI
+> any more (see the caps above). The key survives because it is a declared
+> schema column (`api/billing/schema.py` → `FEATURE_AI_UNLIMITED`) and because
+> the 429 response labels the upgrade hint with it. **Marketing copy must not
+> say "unlimited AI"** — the actual number is `max_ai_requests`.
 
 | Feature key | Flag name | Endpoints gated (count) | Representative endpoints |
 |---|---|---|---|

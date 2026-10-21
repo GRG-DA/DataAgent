@@ -49,15 +49,36 @@ DB_PATH = os.environ.get("BILLING_DB_PATH", str(Path(__file__).parent / "billing
 TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "").strip()
 TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip()
 
-# ── Pricing (paise; mirrors website/js/billing.js) ───────────────────
+# ── Pricing (paise; ONE price list) ────────────────────────────────────
+# The checkout is the authority for what a customer is charged; the app
+# mirrors it (`api/subscriptions.py` -> PLANS and `api/billing/seed.py` ->
+# PRICES) and `tests/test_launch_billing_legal.py` fails if they drift.
+#
+# The app used to advertise Pro at $6/mo while this list billed ₹499/mo —
+# two price lists for one plan, i.e. a refund generator (C2).  Both sides
+# now say the same thing: Pro ₹499/mo, Lifetime ₹10,000 one-time.
+#
 # Pro bills as an auto-renewing monthly Razorpay subscription (no one-time
-# orders); lifetime stays a one-time order.
+# orders); lifetime stays a one-time order and is the HEADLINE tier
+# (LAUNCH-READINESS §8: it is the only tier whose price absorbs a metered
+# AI allowance, and the keygen / offline-verification path already
+# supports it).  Pro is kept as a capped secondary tier: every plan has a
+# finite daily AI-request cap (`ai_requests_daily`), because unlimited AI
+# on a paid plan is a guaranteed negative margin (C3).
+#
+# `ai_requests_daily` is documentation for the checkout pages and the
+# support team; the enforced caps live in the app
+# (`api/billing/seed.py` -> LIMITS, `BILLING_*_AI_DAILY_CAP`).
 PLANS = {
     "pro": {"amount": 49900, "currency": "INR", "cycle": "MONTHLY", "days": 31,
-            "subscription": True, "label": "DataAgent Pro — monthly, auto-renews"},
+            "subscription": True, "recommended": False,
+            "ai_requests_daily": 50,
+            "label": "DataAgent Pro — monthly, auto-renews"},
     "lifetime": {"amount": 1000000, "currency": "INR", "cycle": "ONETIME",
                  "days": None, "subscription": False,
-                 "label": "DataAgent Lifetime"},
+                 "recommended": True,
+                 "ai_requests_daily": 100,
+                 "label": "DataAgent Lifetime — one-time, everything in Pro"},
 }
 
 

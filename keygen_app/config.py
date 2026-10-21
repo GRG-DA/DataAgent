@@ -61,7 +61,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from keygen_app.baked_public_key import PUBLIC_KEY_PEM
-from keygen_app.keygen import DEV_PUBLIC_FINGERPRINT, public_fingerprint
+from keygen_app.keygen import (
+    DEV_PUBLIC_FINGERPRINT,
+    dev_public_fingerprints,
+    public_fingerprint,
+)
 
 BASE_DIR = Path(__file__).parent
 KEYS_DIR = BASE_DIR / "keys"
@@ -129,7 +133,7 @@ def load_public_key() -> ed25519.Ed25519PublicKey:
             raise RuntimeError(
                 "Baked public key fingerprint mismatch — build tampered."
             )
-        if DEV_PUBLIC_FINGERPRINT and fp == DEV_PUBLIC_FINGERPRINT:
+        if fp in dev_public_fingerprints():
             raise RuntimeError("Frozen build uses a development key. Refusing.")
         return key
     pem = os.environ.get("LICENSE_PUBLIC_KEY")
@@ -158,7 +162,7 @@ def check_public_key_fingerprint() -> str:
     fingerprint so tests can inject their own keypair.
     """
     fp = public_fingerprint_of()
-    if DEV_PUBLIC_FINGERPRINT and fp == DEV_PUBLIC_FINGERPRINT:
+    if fp in dev_public_fingerprints():
         raise RuntimeError(
             "This build is using the development public key. Refusing to run."
         )

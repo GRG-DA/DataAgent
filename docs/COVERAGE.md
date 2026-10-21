@@ -17,7 +17,7 @@ python -m pytest -q --cov=api --cov-report=term            # coverage (package o
 
 `pytest.ini` and `pyproject.toml` both set `testpaths = ["tests"]` and `asyncio_default_fixture_loop_scope = "function"`. `pyproject.toml` adds `addopts = "-q -rs"` (short tracebacks, a summary of skipped tests) and a `filterwarnings` list that silences known-noisy deprecations (pyparsing, `datetime.utcnow`, `maxsplit` as a positional, etc.).
 
-The full suite is currently **2090 tests, all passing** (measured 2026-10-20).
+The full suite is currently **2456 tests, all passing** (measured 2026-10-21).
 
 ### The coverage gate
 
@@ -54,7 +54,7 @@ python -m pytest -q --cov=. --cov-report=term-missing
 ```
 TOTAL                                35927   7915  11674   1517    76%
 Required test coverage of 60.0% reached. Total coverage: 76.13%
-2090 passed, 1094 warnings in 489.34s (0:08:09)
+2456 passed, 108 warnings in 784.41s (0:13:04)
 ```
 
 **Total coverage: 76.13%** — produced by the command above. (An earlier measurement of this tree gave 76.29%; the difference is normal run-to-run drift from environment-dependent tests. The number to quote is the one from the most recent run, and the command above is how to reproduce it.)
@@ -224,7 +224,7 @@ These need real libraries, a GPU, or network access, and can fail on a bare Wind
 - **Billing-DB artifact** — a leftover `billing.sqlite3` in the working directory changes what the store fixture picks up.
 - **Subscription page drift** — a frontend string change breaks a static-content assertion.
 
-As recorded in `docs/decisions/ADR-006-live-agentic-chat-stream-steps.md` (2026-10-17), a full run then showed "1878 passed; 22 failures + 1 error, all pre-existing environment/platform issues". **The current tree is green — 2090 passed, 0 failures** — so those issues have since been fixed or the affected tests have been made environment-tolerant. Keep it that way: a new test that needs a GPU, a network, or a specific numpy version must skip explicitly rather than fail.
+As recorded in `docs/decisions/ADR-006-live-agentic-chat-stream-steps.md` (2026-10-17), a full run then showed "1878 passed; 22 failures + 1 error, all pre-existing environment/platform issues". **The current tree is green — 2456 passed, 0 failures** — so those issues have since been fixed or the affected tests have been made environment-tolerant. Keep it that way: a new test that needs a GPU, a network, or a specific numpy version must skip explicitly rather than fail.
 
 ### Windows-specific hazards
 

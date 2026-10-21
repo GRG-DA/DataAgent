@@ -118,8 +118,15 @@ def _clean_up_accounts():
 
 @pytest.fixture()
 def sent_mail(monkeypatch):
-    """Capture every email the account routes try to send."""
+    """Capture every email the account routes try to send.
+
+    The fixture also marks the install as "mail server configured": the
+    account-lifecycle endpoints answer with the generic message only when
+    the install CAN deliver mail, and with an explicit "mail is not
+    configured" notice otherwise (C1).
+    """
     import api.routes.account as account_mod
+    from api import mailer
 
     captured: List[Dict[str, Any]] = []
 
@@ -128,6 +135,7 @@ def sent_mail(monkeypatch):
         return True
 
     monkeypatch.setattr(account_mod, "send_email", _send)
+    monkeypatch.setattr(mailer.settings.notifications, "smtp_host", "smtp.example.com")
     return captured
 
 
@@ -656,11 +664,14 @@ def test_revocation_store_purges_expired_entries(tmp_path):
 # ── the mailer ─────────────────────────────────────────────────────────
 
 
-def test_mailer_returns_false_when_smtp_is_not_configured(monkeypatch):
+def test_mailer_reports_unconfigured_when_smtp_is_not_configured(monkeypatch):
+    """No mail server is reported as "unconfigured", not as a bare False."""
     from api import mailer
 
     monkeypatch.setattr(mailer.settings.notifications, "smtp_host", "")
-    assert mailer.send_email("a@example.com", "Subject", "Body") is False
+    result = mailer.send_email("a@example.com", "Subject", "Body")
+    assert result.status == "unconfigured"
+    assert not result
 
 
 def test_mailer_never_raises_when_the_server_is_down(monkeypatch):
@@ -668,7 +679,9 @@ def test_mailer_never_raises_when_the_server_is_down(monkeypatch):
 
     monkeypatch.setattr(mailer.settings.notifications, "smtp_host", "127.0.0.1")
     monkeypatch.setattr(mailer.settings.notifications, "smtp_port", 1)
-    assert mailer.send_email("a@example.com", "Subject", "Body") is False
+    result = mailer.send_email("a@example.com", "Subject", "Body")
+    assert result.status == "failed"
+    assert not result
 
 
 def test_mailer_never_raises_on_a_broken_configuration(monkeypatch):
@@ -679,7 +692,9 @@ def test_mailer_never_raises_on_a_broken_configuration(monkeypatch):
     monkeypatch.setattr(
         mailer.smtplib, "SMTP", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
     )
-    assert mailer.send_email("a@example.com", "Subject", "Body") is False
+    result = mailer.send_email("a@example.com", "Subject", "Body")
+    assert result.status == "failed"
+    assert not result
 
 
 def test_mailer_never_logs_the_token(monkeypatch, caplog):
@@ -722,7 +737,9 @@ def test_mailer_reports_a_delivered_mail(monkeypatch):
 
     monkeypatch.setattr(mailer.smtplib, "SMTP", _Server)
     monkeypatch.setattr(mailer.settings.notifications, "smtp_host", "smtp.example.com")
-    assert mailer.send_email("a@example.com", "Subject", "Body") is True
+    result = mailer.send_email("a@example.com", "Subject", "Body")
+    assert result.status == "sent"
+    assert result
     assert sent and sent[0]["To"] == "a@example.com"
 
 

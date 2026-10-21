@@ -40,7 +40,13 @@ from api.account_tokens import (
 )
 from api.audit import AuditEvent, AuditEventType, audit_logger
 from api.auth import revoke_user_sessions, user_manager
-from api.mailer import send_email
+from api.mailer import (
+    STATUS_FAILED,
+    STATUS_SENT,
+    STATUS_UNCONFIGURED,
+    mail_configured,
+    send_email,
+)
 from api.tenancy import DEFAULT_TENANT_ID
 
 logger = logging.getLogger(__name__)
@@ -50,6 +56,27 @@ router = APIRouter()
 #: The answer every "does this account exist?" question gets.  It must not
 #: depend on the input, or the endpoint becomes an account enumerator.
 GENERIC_MESSAGE = "If that account exists, a reset link has been sent"
+
+#: What the user is told when this install cannot deliver mail at all.
+#: The desktop build ships without a mail server, so this is the *normal*
+#: answer there — hiding it is what turned every forgotten password into an
+#: unrecoverable account and every "forgot password" click into a support
+#: ticket (C1).  It describes the INSTALL, never the account, so it cannot
+#: be used to find out whether an address is registered.
+MAIL_UNCONFIGURED_MESSAGE = (
+    "Email delivery is not configured on this install, so no reset link was "
+    "sent. Please ask the administrator to reset your password."
+)
+
+#: The same for the verification mail.
+VERIFICATION_UNCONFIGURED_MESSAGE = (
+    "Email delivery is not configured on this install, so no confirmation "
+    "mail was sent. Please ask the administrator to confirm your address."
+)
+
+#: The delivery state of an install that CAN deliver mail.  It says nothing
+#: about whether the request found an account — that must stay hidden.
+DELIVERY_AVAILABLE = "available"
 
 #: How long a reset link stays valid.
 RESET_TOKEN_TTL_SECONDS = 3600
@@ -218,8 +245,21 @@ def _policy_ok(password: str) -> None:
         raise HTTPException(status_code=400, detail="; ".join(errors))
 
 
-def _send_reset_link(account: Dict[str, Any]) -> bool:
-    """Mint a reset token and mail the link."""
+def _delivery_status(result: Any) -> str:
+    """Normalise a mail result into a delivery status.
+
+    ``api.mailer.send_email`` returns a :class:`~api.mailer.MailResult`;
+    a plain boolean is accepted too so a caller that patches the mailer
+    keeps working.
+    """
+    status = getattr(result, "status", None)
+    if status:
+        return str(status)
+    return STATUS_SENT if result else STATUS_FAILED
+
+
+def _send_reset_link(account: Dict[str, Any]) -> str:
+    """Mint a reset token and mail the link. Returns the delivery status."""
     token = create_token(
         KIND_PASSWORD_RESET,
         account.get("user_id", ""),
@@ -235,11 +275,13 @@ def _send_reset_link(account: Dict[str, Any]) -> bool:
         f"{link}\n\n"
         "If this was not you, ignore this mail — nothing has changed."
     )
-    return send_email(account.get("email", ""), "Reset your DataAgent password", body)
+    return _delivery_status(
+        send_email(account.get("email", ""), "Reset your DataAgent password", body)
+    )
 
 
-def _send_verification_link(account: Dict[str, Any]) -> bool:
-    """Mint a verification token and mail the link."""
+def _send_verification_link(account: Dict[str, Any]) -> str:
+    """Mint a verification token and mail the link. Returns the delivery status."""
     token = create_token(
         KIND_EMAIL_VERIFICATION,
         account.get("user_id", ""),
@@ -253,11 +295,13 @@ def _send_verification_link(account: Dict[str, Any]) -> bool:
         f"{link}\n\n"
         "The link works once."
     )
-    return send_email(account.get("email", ""), "Confirm your DataAgent account", body)
+    return _delivery_status(
+        send_email(account.get("email", ""), "Confirm your DataAgent account", body)
+    )
 
 
-def _send_invite_link(account: Dict[str, Any], token: str) -> bool:
-    """Mail the invitation link."""
+def _send_invite_link(account: Dict[str, Any], token: str) -> str:
+    """Mail the invitation link. Returns the delivery status."""
     link = _link("/accept-invite", token)
     body = (
         f"You have been invited to DataAgent as {account.get('username', '')}.\n\n"
@@ -265,17 +309,21 @@ def _send_invite_link(account: Dict[str, Any], token: str) -> bool:
         f"{link}\n\n"
         "The link works once."
     )
-    return send_email(account.get("email", ""), "You are invited to DataAgent", body)
+    return _delivery_status(
+        send_email(account.get("email", ""), "You are invited to DataAgent", body)
+    )
 
 
-def _send_welcome_mail(account: Dict[str, Any]) -> bool:
-    """Mail the welcome note."""
+def _send_welcome_mail(account: Dict[str, Any]) -> str:
+    """Mail the welcome note. Returns the delivery status."""
     body = (
         f"Welcome to DataAgent, {account.get('username', '')}.\n\n"
         "Your account is ready. Your password is the one you just chose.\n"
         "Please confirm your e-mail address so we can reach you."
     )
-    return send_email(account.get("email", ""), "Welcome to DataAgent", body)
+    return _delivery_status(
+        send_email(account.get("email", ""), "Welcome to DataAgent", body)
+    )
 
 
 # ── password reset ─────────────────────────────────────────────────────
@@ -288,12 +336,24 @@ async def forgot_password(body: ForgotPasswordRequest, request_ctx: Request):
     Always answers the same way, whether or not the account exists: an
     endpoint that says "no such account" hands an attacker the user list.
     The attempt is audited either way.
+
+    The answer is also honest about the INSTALL: when no mail server is
+    configured (the shipped desktop build) the user is told that no mail
+    was sent and to ask the administrator, instead of being told that a
+    reset link is on its way.  That state is a property of the install,
+    not of the account, so it cannot be used to enumerate accounts.
+
+    A mail server that is configured but refuses the message is a
+    per-request fact (only an existing account is mailed), so it is
+    recorded in the audit log instead of being reported here — reporting
+    it would turn the endpoint into an account enumerator.
     """
     _rate_limit(request_ctx)
     account = _find_account(body.email, body.username)
+    unconfigured = not mail_configured()
     delivered = False
     if account and account.get("email"):
-        delivered = _send_reset_link(account)
+        delivered = _send_reset_link(account) == STATUS_SENT
     _audit(
         "password_reset_requested",
         request_ctx,
@@ -301,9 +361,20 @@ async def forgot_password(body: ForgotPasswordRequest, request_ctx: Request):
         details={
             "username": (account or {}).get("username", ""),
             "delivered": bool(delivered),
+            "mail_configured": not unconfigured,
         },
     )
-    return {"success": True, "message": GENERIC_MESSAGE}
+    if unconfigured:
+        return {
+            "success": False,
+            "message": MAIL_UNCONFIGURED_MESSAGE,
+            "delivery": STATUS_UNCONFIGURED,
+        }
+    return {
+        "success": True,
+        "message": GENERIC_MESSAGE,
+        "delivery": DELIVERY_AVAILABLE,
+    }
 
 
 @router.post("/auth/reset-password")
@@ -373,7 +444,8 @@ async def resend_verification(body: ResendVerificationRequest, request_ctx: Requ
     """Send a fresh verification mail.
 
     Always answers the same way, so the endpoint cannot be used to find out
-    which addresses have an account.
+    which addresses have an account — and it never claims a mail was sent
+    when this install has no mail server (C1).
     """
     _rate_limit(request_ctx)
     email = (body.email or "").strip()
@@ -381,16 +453,27 @@ async def resend_verification(body: ResendVerificationRequest, request_ctx: Requ
         user = getattr(request_ctx.state, "user", None)
         email = str(getattr(user, "email", "") or "")
     account = user_manager.get_user_by_email(email) if email else None
+    unconfigured = not mail_configured()
     delivered = False
     if account and not account.get("email_verified"):
-        delivered = _send_verification_link(account)
+        delivered = _send_verification_link(account) == STATUS_SENT
     _audit(
         "verification_resent",
         request_ctx,
         user_id=(account or {}).get("user_id", ""),
-        details={"delivered": bool(delivered)},
+        details={"delivered": bool(delivered), "mail_configured": not unconfigured},
     )
-    return {"success": True, "message": "If that account exists, a confirmation mail has been sent"}
+    if unconfigured:
+        return {
+            "success": False,
+            "message": VERIFICATION_UNCONFIGURED_MESSAGE,
+            "delivery": STATUS_UNCONFIGURED,
+        }
+    return {
+        "success": True,
+        "message": "If that account exists, a confirmation mail has been sent",
+        "delivery": DELIVERY_AVAILABLE,
+    }
 
 
 # ── invitations ────────────────────────────────────────────────────────
@@ -402,6 +485,10 @@ async def invite_user(body: InviteRequest, request_ctx: Request, admin=Depends(_
 
     Admin only.  The account has no password yet, so it cannot be used
     before the invitee accepts.
+
+    The response never claims an invitation was sent when it was not: on an
+    install without a mail server the admin is told the account exists but
+    the invitation did not leave, and gets the link to hand over by hand.
     """
     from api.user_admin import validate_role
 
@@ -435,7 +522,7 @@ async def invite_user(body: InviteRequest, request_ctx: Request, admin=Depends(_
             "tenant_id": (body.tenant_id or "").strip(),
         },
     )
-    _send_invite_link(account, token)
+    delivery = _send_invite_link(account, token)
 
     _audit(
         "invite_sent",
@@ -443,13 +530,42 @@ async def invite_user(body: InviteRequest, request_ctx: Request, admin=Depends(_
         user_id=getattr(admin, "user_id", ""),
         resource=username,
         result=AuditEventType.USER_CREATED,
-        details={"role": role, "tenant_id": (body.tenant_id or "").strip()},
+        details={
+            "role": role,
+            "tenant_id": (body.tenant_id or "").strip(),
+            "delivery": delivery,
+        },
     )
-    return {
-        "success": True,
-        "message": f"An invitation has been sent to {email}",
-        "user": account,
-    }
+    if delivery == STATUS_SENT:
+        return {
+            "success": True,
+            "message": f"An invitation has been sent to {email}",
+            "delivery": delivery,
+            "user": account,
+        }
+    if delivery == STATUS_UNCONFIGURED:
+        message = (
+            "The account was created, but the invitation e-mail was not "
+            "delivered: email delivery is not configured on this install. "
+            "Configure notifications.smtp_host, or hand the invite link below "
+            "to the user directly."
+        )
+    else:
+        message = (
+            "The account was created, but the mail server refused the "
+            "invitation, so it was not delivered. Check the mail server, or "
+            "hand the invite link below to the user directly."
+        )
+    return JSONResponse(
+        status_code=503,
+        content={
+            "success": False,
+            "message": message,
+            "delivery": delivery,
+            "invite_link": _link("/accept-invite", token),
+            "user": account,
+        },
+    )
 
 
 @router.post("/auth/accept-invite")
@@ -478,15 +594,21 @@ async def accept_invite(body: AcceptInviteRequest, request_ctx: Request):
         tenant_id = assign_tenant(record.get("user_id", ""))
     user_manager.update_user(username, tenant_id=tenant_id)
 
-    _send_welcome_mail(user_manager.get_user_info(username) or account)
+    delivery = _send_welcome_mail(user_manager.get_user_info(username) or account)
     _audit(
         "invite_accepted",
         request_ctx,
         user_id=record.get("user_id", ""),
         resource=username,
-        details={"tenant_id": tenant_id},
+        details={"tenant_id": tenant_id, "delivery": delivery},
     )
-    return {"success": True, "message": "Your account is ready"}
+    # The account IS ready — the welcome note is a courtesy, so the answer
+    # stays successful but reports whether that mail actually left.
+    return {
+        "success": True,
+        "message": "Your account is ready",
+        "delivery": delivery,
+    }
 
 
 # ── self-serve delete ──────────────────────────────────────────────────

@@ -1,10 +1,10 @@
-"""AI request metering — daily cap for the Free plan, enforcement, bypasses.
+"""AI request metering — daily cap for every plan, enforcement, bypasses.
 
 Covers:
-- seed: free cap defaults to 25, pro unlimited; env overrides win.
+- seed: the free cap defaults to 25; the paid caps are finite too.
 - metering: ai_requests uses a DAILY period key; other metrics stay monthly.
-- /ask returns 429 with X-Upgrade-Required headers when the free cap is hit.
-- Paid plans are not capped (default seed).
+- /ask returns 429 with X-Upgrade-Required headers when the cap is hit.
+- No plan has unlimited AI (C3).
 """
 
 from __future__ import annotations
@@ -23,11 +23,21 @@ def test_free_ai_cap_defaults_to_25(billing_db):
     assert ent["max_ai_requests"] == 25
 
 
-def test_pro_and_lifetime_ai_requests_unlimited_by_default(billing_db):
+def test_pro_and_lifetime_ai_requests_are_capped(billing_db):
+    """No plan has unlimited AI any more (C3): every cap is finite.
+
+    Unlimited AI on a paid plan is a guaranteed negative margin — one
+    request costs up to ~$0.04 (10k input + 2k output tokens), so 600
+    requests a month is ~$30 of cost against $6 of revenue.
+    """
     from api.billing.entitlements import get_entitlements
 
-    assert get_entitlements("user-ai-pro", plan="pro")["max_ai_requests"] == -1
-    assert get_entitlements("user-ai-life", plan="lifetime")["max_ai_requests"] == -1
+    pro = get_entitlements("user-ai-pro", plan="pro")["max_ai_requests"]
+    lifetime = get_entitlements("user-ai-life", plan="lifetime")["max_ai_requests"]
+    assert pro > 0
+    assert lifetime > 0
+    assert pro != -1
+    assert lifetime != -1
 
 
 def test_env_overrides_change_seeded_caps(billing_db, monkeypatch):

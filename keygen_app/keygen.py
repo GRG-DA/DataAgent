@@ -23,6 +23,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 import os
 import secrets
 import sys
@@ -34,15 +35,121 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+logger = logging.getLogger(__name__)
+
 PRODUCT = "dataagent"
 KEY_PREFIX = "DATAAGENT"
 VERSION = 1
 SIG_LEN = 64
 PLANS = ("pro", "lifetime", "trial")
 
-# Fingerprint of the bundled development keypair (keys/dev_private.pem).
-# The admin build refuses to sign with this key so a dev key can never ship.
+# ── the development-key guard ───────────────────────────────────────────
+#
+# Fingerprint of the development keypair (the key the admin build must
+# NEVER sign with).  It is resolved from three places, in this order:
+#
+#   1. ``DEV_PUBLIC_FINGERPRINT`` below (the source-tree default),
+#   2. the ``DATAAGENT_DEV_PUBLIC_FINGERPRINT`` environment variable,
+#   3. the bundled development keypair ``keygen_app/keys/dev_private.pem``,
+#      if the operator unpacked one there.
+#
+# EMPTY means "not configured" — it does NOT disable the guard.  See
+# ``assert_not_dev_key``.
+#
+# ── RELEASE STEP R1 — MANDATORY BEFORE THE FIRST COMMERCIAL SALE ───────
+#
+# The public key baked into the shipped app (``keygen_app/baked_public_key.py``)
+# is the public half of a REAL Ed25519 key pair.  Before the first paid
+# sale that pair MUST be regenerated, because the shipped app trusts it:
+#
+#   1. ``python -m keygen_app.keygen gen-keys --out <new-private>.pem``
+#      (keep the private key OUT of the repository and out of logs),
+#   2. re-bake ``keygen_app/baked_public_key.py`` with the new public PEM
+#      (``PUBLIC_KEY_PEM``),
+#   3. update the hardcoded fingerprint in ``keygen_app/config.py`` (the
+#      ``_HARDCODED_FINGERPRINT`` constant and ``PRODUCT_PUBLIC_FINGERPRINT``)
+#      to the new public key's fingerprint,
+#   4. set ``DATAAGENT_DEV_PUBLIC_FINGERPRINT`` (or ``DEV_PUBLIC_FINGERPRINT``)
+#      to the fingerprint of the OLD / development keypair, so the guard
+#      below refuses to sign with it.
+#
+# Until step 1-3 are done, anybody who holds the private half of the
+# current pair can mint valid licences.  This procedure is also the
+# release checklist item in docs/LAUNCH-FIX-PLAN.md (C8).
 DEV_PUBLIC_FINGERPRINT = ""
+
+#: Environment variable carrying the development key's fingerprint (for
+#: deployments that keep it out of the source tree).
+DEV_FINGERPRINT_ENV = "DATAAGENT_DEV_PUBLIC_FINGERPRINT"
+
+#: The bundled development keypair, when there is one.
+DEV_PRIVATE_KEY_PATH = Path(__file__).parent / "keys" / "dev_private.pem"
+
+#: Explicit, loud opt-in that allows signing with the development key.
+#: Set it to 1 only on a machine that must mint throw-away keys.
+ALLOW_DEV_KEY_SIGNING_ENV = "DATAAGENT_ALLOW_DEV_KEY_SIGNING"
+
+#: Set it to 1 to make an unknown development fingerprint a hard refusal
+#: even outside a release build (the default for a frozen / production
+#: build).
+STRICT_SIGNING_ENV = "DATAAGENT_STRICT_KEY_SIGNING"
+
+
+def _truthy_env(name: str) -> bool:
+    """True when the environment variable is switched on."""
+    return str(os.environ.get(name, "") or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def _release_context() -> bool:
+    """True when this build must not sign with an unverified key.
+
+    A packaged (PyInstaller) build and a production deployment both have to
+    fail closed: there the operator is shipping licences.
+    """
+    if getattr(sys, "frozen", False):
+        return True
+    if _truthy_env(STRICT_SIGNING_ENV):
+        return True
+    return str(os.environ.get("APP_ENV", "") or "").strip().lower() == "production"
+
+
+def dev_public_fingerprints() -> set:
+    """Every fingerprint that identifies a development key.
+
+    Empty when the development key is unknown — which is NOT the same as
+    "there is no development key": the guard then fails closed (see
+    ``assert_not_dev_key``).
+    """
+    found = set()
+    if DEV_PUBLIC_FINGERPRINT:
+        found.add(DEV_PUBLIC_FINGERPRINT.strip().lower())
+    env_fp = str(os.environ.get(DEV_FINGERPRINT_ENV, "") or "").strip().lower()
+    if env_fp:
+        found.add(env_fp)
+    try:
+        if DEV_PRIVATE_KEY_PATH.exists():
+            dev_key = load_private_key(DEV_PRIVATE_KEY_PATH, env_var="")
+            found.add(public_fingerprint(dev_key.public_key()))
+    except Exception:  # noqa: BLE001 — an unreadable dev key is not fatal here
+        pass
+    return found
+
+
+def _dev_banner(reason: str) -> None:
+    """Print the loud banner that says a development key is in use."""
+    banner = (
+        "\n"
+        + "=" * 72 + "\n"
+        + "  DEV MODE — you are signing with a DEVELOPMENT key.\n"
+        + f"  Reason: {reason}\n"
+        + "  Any key signed with it is NOT a valid purchase. Never ship it,\n"
+        + "  never hand it to a customer, and never bake its public key into\n"
+        + "  the product (see the release procedure in keygen_app/keygen.py).\n"
+        + "=" * 72 + "\n"
+    )
+    print(banner, file=sys.stderr, flush=True)
 
 
 def _utcnow() -> datetime:
@@ -92,11 +199,54 @@ def load_public_key(public_pem: str | bytes) -> ed25519.Ed25519PublicKey:
 
 
 def assert_not_dev_key(private_key: ed25519.Ed25519PrivateKey) -> None:
-    """Refuse to sign with the bundled development keypair."""
-    if DEV_PUBLIC_FINGERPRINT and public_fingerprint(private_key.public_key()) == DEV_PUBLIC_FINGERPRINT:
+    """Refuse to sign with the bundled development keypair.
+
+    The check is never silently disabled:
+
+    * the signing key matches a known development fingerprint -> refuse;
+    * no development fingerprint is known at all -> the guard cannot prove
+      the key is safe, so a release build (frozen, or ``APP_ENV=production``,
+      or ``DATAAGENT_STRICT_KEY_SIGNING=1``) refuses as well;
+    * only a development checkout signs on, and it says so loudly.
+
+    ``DATAAGENT_ALLOW_DEV_KEY_SIGNING=1`` is the explicit opt-in: it signs
+    with the development key and prints a loud banner.
+    """
+    fingerprint = public_fingerprint(private_key.public_key())
+    dev_fingerprints = dev_public_fingerprints()
+    allowed = _truthy_env(ALLOW_DEV_KEY_SIGNING_ENV)
+
+    if fingerprint in dev_fingerprints:
+        if allowed:
+            _dev_banner("the signing key IS the development key")
+            return
         raise RuntimeError(
-            "Refusing to sign with the development key. Generate a real keypair "
-            "with `python -m keygen_app.keygen --gen-keys` and set the fingerprint."
+            "Refusing to sign with the development key. Generate a real "
+            "keypair with `python -m keygen_app.keygen gen-keys`, and set "
+            "the development key's fingerprint (DEV_PUBLIC_FINGERPRINT or "
+            f"{DEV_FINGERPRINT_ENV}) so this guard knows what to refuse."
+        )
+
+    if not dev_fingerprints:
+        if allowed:
+            _dev_banner(
+                "the development key's fingerprint is not configured, so the "
+                "signing key could not be verified"
+            )
+            return
+        if _release_context():
+            raise RuntimeError(
+                "Refusing to sign: the development key's fingerprint is not "
+                "configured, so the signing key cannot be verified. Set "
+                f"{DEV_FINGERPRINT_ENV} (or DEV_PUBLIC_FINGERPRINT) to the "
+                "fingerprint of the development keypair, or set "
+                f"{ALLOW_DEV_KEY_SIGNING_ENV}=1 to sign with this key anyway."
+            )
+        logger.warning(
+            "The development key's fingerprint is not configured — the "
+            "development-key guard cannot verify the signing key. Set %s "
+            "before you ship.",
+            DEV_FINGERPRINT_ENV,
         )
 
 
@@ -258,7 +408,13 @@ def _cli() -> None:
         print(f"private key: {args.out}")
         print(f"public  key: {pub_path}")
         print(f"public fingerprint: {fp}")
-        print("Set DEV_PUBLIC_FINGERPRINT / PRODUCT fingerprint in config.py.")
+        print(
+            "Keep the private key OUT of the repository and out of logs. "
+            "Set DEV_PUBLIC_FINGERPRINT (or the "
+            "DATAAGENT_DEV_PUBLIC_FINGERPRINT environment variable) to the "
+            "fingerprint of the DEVELOPMENT keypair, so the admin build "
+            "refuses to sign with it."
+        )
     elif args.cmd == "make":
         private_key = load_private_key(Path(args.key))
         print(generate_key(private_key, args.plan, args.days, email=args.email))

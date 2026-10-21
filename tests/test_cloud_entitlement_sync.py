@@ -239,7 +239,9 @@ def test_activated_key_unlocks_pro_features(billing_db, billing_env, tmp_path, m
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
     )
     monkeypatch.setenv("LICENSE_PUBLIC_KEY", pem.decode())
-    monkeypatch.setattr(kg_storage, "DEFAULT_DB", _P(settings.duckdb.database_path))
+    monkeypatch.setattr(
+        kg_storage, "default_db", lambda: _P(settings.duckdb.database_path)
+    )
 
     from api.auth import user_manager
     user_id = user_manager.add_user(
