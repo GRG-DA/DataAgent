@@ -207,3 +207,39 @@ Every item above was picked up by another agent and is now done:
    run -> uninstall cycle could not be executed here: the installer requires elevation and no
    UAC prompt can be answered in this session.
 6. **Run one live low-value purchase** -> webhook -> refund -> grant revoked.
+
+---
+
+## 7. The marketing site (second pass)
+
+The site went through the same treatment after the app was done. The full
+item-by-item status is in **`docs/WEBSITE-CHECKLIST.md`**; the highlights:
+
+### Found and fixed
+
+| Finding | Severity |
+|---|---|
+| **The WebGL hero never rendered.** The import map's *values* were bare specifiers (`vendor/?` with no `./`), which the import map spec treats as a bare specifier - Chromium dropped the value, stored a **null**, and refused to resolve `three`. No canvas, no error in the page. | major |
+| **The site loaded GSAP from a CDN** on every page - a third-party request that sends the visitor's IP to a CDN, on the site of a product that says "no telemetry", and a total loss of motion offline. | major |
+| **The webfonts were loaded from Google Fonts** - the same leak, on every page. Now vendored (32 woff2 files, SHA256 of each recorded). | major |
+| **The scroll reveals were dead.** `premium.css` froze the legacy vocabulary with `opacity:1 !important; transform:none !important; transition:none !important`, so every element carrying `.animate-on-scroll` was pinned visible: no reveal, no stagger, no tilt. 11 / 30 / 9 elements on three pages. | major |
+| **A 1.9 GB `DataAgent-public.rar` of the working tree** sat in the repo root, containing `config/users.json` (plaintext API keys), `.jwt_secret`, `.grant_key`, the warehouse and `.env`. | critical |
+| **`Cross-Origin-Opener-Policy: same-origin`** in the CSP would have severed `window.opener` and broken the Google sign-in popup. | major |
+| **The palette was defined three times** with different values; 113 distinct gradients; 20 gradient-text rules; 23 pure-white fills in a dark design; three competing `.btn` base rules; no `--link` token. | major |
+| **The legal pages published 38 placeholders** - the marker lookup derived config keys from their last path segment, which never matched the page markers. | critical |
+| **A set of elements was invisible** - the light theme's dark-ink colours leaking into the dark layer. | major |
+| **The comparison table was clipped** (`overflow:hidden` over `overflow-x:auto`), so the right-hand columns were unreachable on a phone. | major |
+| **17 accessibility findings** (skipped heading levels; two pages with no `<h1>`). | major |
+| **No sitemap, no robots.txt, no 404 page, no security headers** for three different hosts. | major |
+| **The asset cache-busters were not bumped** when the CSS changed, so a returning visitor kept the old stylesheet. | major |
+| **The site claimed the installer was 175 MB**; it is 499 MB. | minor |
+
+### Deliberately not done
+
+- **Google Analytics.** ADR-013. It contradicts the product's own claim, and
+  the metric that matters - installer downloads - is already reported by the
+  GitHub Release the site links to, with no script, no cookie and no third
+  party. A test now fails the build if a new third-party origin appears.
+- **A light theme.** The site is dark-only and every text colour clears
+  4.5:1 on all eight surface steps. Adding a light theme would be a large
+  change solving a problem this site does not have.
