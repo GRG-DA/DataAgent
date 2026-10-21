@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="calm">
 
@@ -46,82 +46,110 @@
     <div class="page-header animate-on-scroll">
       <div class="section-badge">FAQ</div>
       <h1>Questions, <span class="gradient-text">answered</span></h1>
-      <p>The things people ask before installing — setup, pricing, privacy, and how it all fits together.</p>
+      <p>The things a buyer asks before installing: what it replaces, what it costs, where the data goes, and what it cannot do.</p>
     </div>
 
     <section class="section" style="padding-top: 0;">
       <div class="faq-group">
-        <h2 class="faq-group-title">Getting started</h2>
+        <h2 class="faq-group-title">Buying and installing</h2>
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
-            <summary>What do I need to run DataAgent?</summary>
-            <div class="faq-a">A Windows PC and one download. Grab <strong>DataAgent-Setup.exe</strong>, double-click it, and launch the app from the Start Menu &mdash; Python, the backend, and all dependencies are bundled inside the executable. Nothing else to install first, and no developer tools involved. There is also a portable <code class="code-inline">DataAgent.exe</code> if you would rather not install anything at all.</div>
+            <summary>What does DataAgent replace?</summary>
+            <div class="faq-a">For a data team that already has a desktop BI licence, it replaces the "export a CSV, paste it into ChatGPT, screenshot the chart, rebuild the deck" loop: one Windows app holds the warehouse, writes the SQL, draws the chart and exports a real Power BI <code class="code-inline">.pbix</code> file. It does not replace a hosted multi-user BI service &mdash; there is no shared server, no live URL and no commenting on a dashboard. If you need ten analysts querying one cloud warehouse simultaneously, keep your cloud BI and use DataAgent for the offline, on-premise and .pbix work.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>What do I need to run it?</summary>
+            <div class="faq-a">A Windows 10 or 11 machine, 64-bit. One download: <strong>DataAgent-Setup.exe</strong> (roughly 175&nbsp;MB). The Python runtime, the DuckDB engine and the interface are inside the installer, so there is nothing else to install first and no developer tooling involved. Budget roughly 0.7&ndash;1&nbsp;GB of disk once installed, plus your own data, and about 4.7&nbsp;GB more if you add a local model. The <a href="download.html">download page</a> has the full system requirements.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Does it run on macOS or Linux?</summary>
-            <div class="faq-a">The packaged download is Windows-only today (Windows 10/11, 64-bit). The project is open source under the GNU AGPL v3 licence, so the same stack can be run from source on macOS or Linux if you are comfortable with a Python environment. The <a href="download.html">download page</a> lists exactly what the Windows build needs.</div>
+            <div class="faq-a">The packaged download is Windows-only today. The project is open source under the GNU AGPL v3 licence, so the same stack runs from source on macOS or Linux if you are comfortable with a Python environment &mdash; but there is no packaged build, and the desktop shell and installer are Windows-specific.</div>
           </details>
           <details class="faq-item animate-on-scroll">
-            <summary>Do I need my own LLM API key?</summary>
-            <div class="faq-a">No key is required to install. For AI answers you choose a provider: a fully local model via Ollama (free, offline), or a hosted provider such as OpenAI, Anthropic, or Gemini with your own key. Ten providers are supported and you can switch at any time in the config.</div>
+            <summary>Do I need an account, a card, or an API key to start?</summary>
+            <div class="faq-a">No account anywhere but inside the app: you register the first user yourself when the app opens. No card is needed to use the free tier. You only need an API key if you choose a hosted model provider; a local model through Ollama needs no key and no account at all.</div>
           </details>
           <details class="faq-item animate-on-scroll">
-            <summary>What data sources can I connect?</summary>
-            <div class="faq-a">Files upload directly — CSV, Excel, Parquet — and are ingested into the local DuckDB warehouse. Database connections are configured through <code class="code-inline">db_connections.json</code>. Dashboards can be imported from and exported to Power BI (PBIX).</div>
+            <summary>What happens if Windows blocks the installer?</summary>
+            <div class="faq-a">This release is not code-signed yet, so SmartScreen shows &ldquo;Windows protected your PC&rdquo; with an &ldquo;Unknown publisher&rdquo; warning. Choose <strong>More info</strong>, then <strong>Run anyway</strong>. The portable build (<code class="code-inline">DataAgent.exe</code>) sidesteps the installer entirely &mdash; it runs from any folder, including a USB drive.</div>
           </details>
         </div>
       </div>
 
       <div class="faq-group">
-        <h2 class="faq-group-title">Pricing</h2>
+        <h2 class="faq-group-title">Price and licence</h2>
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
             <summary>Is DataAgent really free?</summary>
-            <div class="faq-a">The core desktop app is free and open source under AGPL-3.0 — download it, read the code, self-host it. Paid plans exist and are optional: Pro at &#8377;499/mo, and a one-time Lifetime licence at &#8377;10,000 that unlocks the paid features for good. Checkout happens on Razorpay's secure payment page or our separate billing site. Self-host it with Docker and you get the full product — every feature — free forever, with no account and no card. Your hosted LLM provider (if you choose one) bills you directly.</div>
+            <div class="faq-a">There is a free tier and there are paid tiers &mdash; one price list, in rupees: Free is &#8377;0, Pro is &#8377;499/mo, and Lifetime is &#8377;10,000 once. The free tier gives you 25 AI requests a day, 3 saved dashboards and 7 days of chat history, with chat, SQL, file upload and the spreadsheet workbench available. The paid tiers raise the daily allowance and unlock the export, automation, live-connection, governance and enterprise tools. The <a href="billing.html">pricing page</a> has the full comparison. The source is open under AGPL-3.0, so you can also read it, fork it and run it yourself.</div>
           </details>
           <details class="faq-item animate-on-scroll">
-            <summary>What do paid plans add?</summary>
-            <div class="faq-a">Higher entitlements — a larger daily AI allowance, advanced analytics, and Power BI export — plus priority support. The free tier is designed to cover real work, not a demo. Compare the plans on the <a href="billing.html">pricing page</a>.</div>
+            <summary>Do I need a GPU?</summary>
+            <div class="faq-a">No. A local model runs on the CPU, just more slowly. A GPU is optional and only changes how fast the model answers. If you would rather not run a model at all, SQL, the spreadsheet workbench, dashboards and exports work without one &mdash; the assistant then answers from rules and tells you it did. Every hosted provider works on any machine, but your prompts go to that provider.</div>
           </details>
           <details class="faq-item animate-on-scroll">
-            <summary>Where does checkout happen?</summary>
-            <div class="faq-a">On Razorpay's hosted payment page (UPI, cards, netbanking) via a payment link on the <a href="billing.html">pricing page</a> — or on our separate billing site, depending on configuration. The app itself never handles card data. See <a href="contact.html">contact us</a> for invoices or team licenses.</div>
+            <summary>Where does checkout happen, and how do I get a refund?</summary>
+            <div class="faq-a">Checkout runs on Razorpay (UPI, cards, netbanking) or on the separate billing site, depending on the deployment. The app never sees your card details, and the plan is attached to the email you pay with &mdash; there is no code to paste. For a refund, write to us with the email you paid with and the payment id; the billing provider processes the refund and the plan is revoked automatically when it clears. We have not published a blanket refund window because a paid licence is a one-off purchase, and we would rather look at your case than argue about a rule.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>What support do I get?</summary>
+            <div class="faq-a">A small team, no SLA. Bug reports in the <a href="contact.html">contact page</a> and on the issue tracker get answered; feature requests get read. Paid plans are described as "priority support" in the plan table, which means they are looked at first &mdash; not that a response is guaranteed within a fixed time. Because the source is open, most questions are faster to answer by reading the code.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Can I use it for client work?</summary>
+            <div class="faq-a">Yes. DataAgent is open source under the GNU AGPL v3 licence: use it for personal projects, internal tools and client deliverables. The AGPL condition is that if you modify it and let other users interact with it over a network, you must offer those users the modified source. Running it unmodified for your own team, including self-hosting it, triggers none of that. The full terms are in the LICENSE file at the root of the <a data-repo-link="" href="#">repository</a>.</div>
           </details>
         </div>
       </div>
 
       <div class="faq-group">
-        <h2 class="faq-group-title">Privacy &amp; security</h2>
+        <h2 class="faq-group-title">Your data and privacy</h2>
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
             <summary>Does my data leave my machine?</summary>
-            <div class="faq-a">The desktop app ships no telemetry, no analytics, no crash reporting and no background sync. The warehouse is a local DuckDB file and the app runs on your machine. Outbound traffic goes to three places, and only these: the LLM provider <em>you</em> configure (choose Ollama for a fully offline setup); GitHub, for the update check; and, for paid plans only, the entitlement service plus the proxy pool used by the IP-rotation feature. Details on the <a href="security.html">security page</a>.</div>
+            <div class="faq-a">The desktop app ships no telemetry, no analytics, no crash reporting and no background sync. The warehouse is a local DuckDB file and the app runs on your machine. Outbound traffic goes to three places, and only these: the model provider <em>you</em> configure (choose Ollama or LM Studio for a fully offline setup); GitHub, for the update check; and, on paid plans only, the entitlement service and the proxy pool behind the IP-rotation feature. The <a href="security.html">security page</a> lists every connection, what triggers it and what data it carries.</div>
           </details>
           <details class="faq-item animate-on-scroll">
-            <summary>How is access controlled?</summary>
-            <div class="faq-a">JWT-based authentication with hashed passwords (and optional Google sign-in). Secrets and signing keys live in gitignored files, are redacted from logs, and never enter model context.</div>
+            <summary>Where does the data actually sit on disk?</summary>
+            <div class="faq-a">In <code class="code-inline">%LOCALAPPDATA%\DataAgent</code> &mdash; the warehouse, your uploads, the logs and your settings, in one folder you can back up by copying it. The application itself lives in Program Files. Your data folder survives an uninstall.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Can the AI modify or delete my data?</summary>
-            <div class="faq-a">No. Analysis opens the warehouse read-only and all SQL is parameterized. Writes happen only through explicit, user-triggered ETL runs handled by a single dedicated process.</div>
+            <div class="faq-a">No. Analysis opens the warehouse read-only and all SQL is parameterized. Writes happen only through explicit ETL runs handled by a single dedicated process, because DuckDB allows only one writer per file.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Who else can see my data?</summary>
+            <div class="faq-a">Nobody, unless you configure a hosted model provider &mdash; then that provider sees your question and the schema context it needs to answer it. If your data cannot leave the building, use a local model. Single sign-on and row-level security are implemented but ship disabled by default, so if you rely on them, switch them on deliberately rather than assuming they are running.</div>
           </details>
         </div>
       </div>
 
       <div class="faq-group">
-        <h2 class="faq-group-title">Technical</h2>
+        <h2 class="faq-group-title">What it does, and what it does not</h2>
         <div class="faq-list">
           <details class="faq-item animate-on-scroll">
-            <summary>Why DuckDB instead of a cloud warehouse?</summary>
-            <div class="faq-a">Because it's embedded: no server to run, no cluster to pay for, and the whole warehouse is one file you control. It's an analytical engine fast enough for real workloads while keeping the data local — exactly the trade-off local-first requires.</div>
+            <summary>What data sources can I connect?</summary>
+            <div class="faq-a">Files upload directly (CSV, TSV, TXT, JSON, JSONL, NDJSON, Parquet, XLSX and XLS) and are ingested into the local DuckDB warehouse. Live database connections are SQLite, PostgreSQL and MySQL, configured in <code class="code-inline">db_connections.json</code>. There are no cloud object-store connectors: no S3, no GCS, no Azure Blob. Dashboards can be imported from and exported to Power BI (<code class="code-inline">.pbix</code>).</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>How good are the analytics features?</summary>
+            <div class="faq-a">They are honest about their scope. <strong>Regression Explorer</strong> compares a linear fit against a polynomial one and reports adjusted R&sup2;; it is not a model search, and there is no cross-validation or ensembling. <strong>Segment Breakdown</strong> groups rows and aggregates them &mdash; it is a group-by, not clustering. <strong>Trend Forecast</strong> projects a least-squares line and decomposes a series &mdash; it is not ARIMA, ETS or Prophet. The names describe what the code actually does.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Is the PDF export a real report?</summary>
+            <div class="faq-a">Not in this build. The PDF export produces a plain text summary of the table, because the HTML-to-PDF renderer is not bundled into the installer. The fully formatted exports are Excel, PowerPoint, HTML, Markdown, CSV, Parquet and the Power BI <code class="code-inline">.pbix</code> &mdash; use those when the layout matters.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Does it work offline?</summary>
-            <div class="faq-a">Yes. The app installs with no setup &mdash; the runtime, the UI, the warehouse and ETL all ship inside the installer. For AI chat you additionally need a local model via Ollama: the app can install Ollama for you in one click from Settings, and it then downloads a model once (roughly 4.7&nbsp;GB for the recommended qwen2.5:7b). SQL, Excel, dashboards and exports work with no model at all. After that, the network is only needed to pull a model or to call a hosted LLM provider.</div>
+            <div class="faq-a">Yes. The runtime, the interface, the warehouse and ETL all ship inside the installer. For AI chat you additionally need a local model: the app can install Ollama for you in one click from Settings, and it then downloads a model once (roughly 4.7&nbsp;GB for the recommended qwen2.5:7b). After that, the network is only needed to pull a model or to call a hosted model provider.</div>
           </details>
           <details class="faq-item animate-on-scroll">
             <summary>Is there an API?</summary>
-            <div class="faq-a">Yes — the same FastAPI backend powers the UI, with REST endpoints for chat, SQL, data management, auth, and export. See the <a href="docs.html#api">API reference</a> in the docs.</div>
+            <div class="faq-a">Yes &mdash; the same FastAPI backend that serves the interface, on <code class="code-inline">127.0.0.1:8002</code>, with REST endpoints for auth, chat, SQL, data, dashboards and export. The <a href="docs.html#api">API reference</a> in the docs lists the real paths.</div>
+          </details>
+          <details class="faq-item animate-on-scroll">
+            <summary>Why DuckDB instead of a cloud warehouse?</summary>
+            <div class="faq-a">Because it is embedded: no server to run, no cluster to pay for, and the whole warehouse is one file you control. It is an analytical engine with columnar speed, which is the trade-off local-first requires. The cost of that choice is scale: one laptop DuckDB will not match a warehouse cluster on a five-billion-row join.</div>
           </details>
         </div>
       </div>
@@ -129,7 +157,7 @@
       <div class="inline-cta animate-on-scroll">
         <p>Still have a question?</p>
         <a href="contact.html" class="btn btn-primary">Ask us directly</a>
-        <a href="docs.html" class="btn btn-secondary">Browse the docs</a>
+        <a href="docs.html" class="btn btn-secondary">Read the docs</a>
       </div>
     </section>
   </div>
@@ -189,15 +217,18 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

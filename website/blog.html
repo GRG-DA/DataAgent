@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="blog">
 
@@ -46,14 +46,14 @@
     <div class="page-header animate-on-scroll">
       <div class="section-badge">Blog</div>
       <h1>Field notes from the <span class="gradient-text">warehouse</span></h1>
-      <p>Engineering write-ups, product thinking, and practical guides for local-first analytics.</p>
+      <p>Engineering write-ups about how DataAgent is built, and what we got wrong on the way. One post is published; the rest are in progress.</p>
     </div>
 
     <section class="section" style="padding-top: 0;">
       <a href="blog-post.html" class="card blog-card blog-featured animate-on-scroll">
         <div class="blog-featured-body">
           <div class="blog-meta">
-            <span class="chip chip-orange">Featured</span>
+            <span class="chip chip-orange">Published</span>
             <span>September 18, 2026</span>
             <span>8 min read</span>
           </div>
@@ -65,48 +65,48 @@
       </a>
 
       <div class="blog-grid">
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-1">
-          <div class="blog-meta"><span class="chip">Engineering</span><span>Sep 10, 2026</span></div>
+        <div class="card blog-card animate-on-scroll animate-delay-1">
+          <div class="blog-meta"><span class="chip">In progress</span><span>Engineering</span></div>
           <h3>Generated SQL you can actually trust</h3>
-          <p class="blog-excerpt">Every answer ships with the exact query behind it. How we constrain the model, validate at the API boundary, and keep parameterization non-negotiable.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-2">
-          <div class="blog-meta"><span class="chip chip-green">DuckDB</span><span>Sep 2, 2026</span></div>
+          <p class="blog-excerpt">How the model is constrained, how the query is validated before it runs, and why parameterization is non-negotiable. Drafted, not published.</p>
+          <span class="blog-more">Not published yet</span>
+        </div>
+        <div class="card blog-card animate-on-scroll animate-delay-2">
+          <div class="blog-meta"><span class="chip chip-green">In progress</span><span>DuckDB</span></div>
           <h3>One writer to rule them all: DuckDB on Windows</h3>
           <p class="blog-excerpt">Opening a DuckDB file read-write from two processes on Windows fails loudly. The single-writer discipline that made our ETL boring — in the good way.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-3">
-          <div class="blog-meta"><span class="chip chip-orange">Product</span><span>Aug 25, 2026</span></div>
-          <h3>Charts that load before you blink</h3>
-          <p class="blog-excerpt">We rebuilt dashboard rendering around transform-only animation and scrubbed scroll triggers. The frame budget we budgeted, and the one we actually hit.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-1">
-          <div class="blog-meta"><span class="chip">LLM</span><span>Aug 14, 2026</span></div>
+          <span class="blog-more">Not published yet</span>
+        </div>
+        <div class="card blog-card animate-on-scroll animate-delay-3">
+          <div class="blog-meta"><span class="chip chip-orange">In progress</span><span>Power BI</span></div>
+          <h3>What the .pbix round trip actually writes</h3>
+          <p class="blog-excerpt">A real Power BI Desktop file: the data model, the DAX measures, the theme, the slicers that cross-filter. What is in the archive, and how we verify it.</p>
+          <span class="blog-more">Not published yet</span>
+        </div>
+        <div class="card blog-card animate-on-scroll animate-delay-1">
+          <div class="blog-meta"><span class="chip">In progress</span><span>LLM</span></div>
           <h3>Ten providers, one runtime config</h3>
           <p class="blog-excerpt">Ollama on the laptop, a hosted model in CI, a different one behind the VPN. How <code class="code-inline">llm_runtime.json</code> keeps swaps boring.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-2">
-          <div class="blog-meta"><span class="chip chip-green">Security</span><span>Aug 3, 2026</span></div>
+          <span class="blog-more">Not published yet</span>
+        </div>
+        <div class="card blog-card animate-on-scroll animate-delay-2">
+          <div class="blog-meta"><span class="chip chip-green">In progress</span><span>Security</span></div>
           <h3>Secrets that never reach the model context</h3>
           <p class="blog-excerpt">JWT signing keys, DB credentials, OAuth state — where they live, how they're redacted, and the checklist we run before anything touches a log.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
-        <a href="blog-post.html" class="card blog-card animate-on-scroll animate-delay-3">
-          <div class="blog-meta"><span class="chip chip-orange">Open Source</span><span>Jul 27, 2026</span></div>
+          <span class="blog-more">Not published yet</span>
+        </div>
+        <div class="card blog-card animate-on-scroll animate-delay-3">
+          <div class="blog-meta"><span class="chip chip-orange">In progress</span><span>Open Source</span></div>
           <h3>Shipping a desktop app and a web app from one repo</h3>
           <p class="blog-excerpt">PyInstaller for the desktop build, one FastAPI core behind it, and a portable .exe for anyone who would rather not install. What we'd do the same and what we'd change.</p>
-          <span class="blog-more">Read more &#8594;</span>
-        </a>
+          <span class="blog-more">Not published yet</span>
+        </div>
       </div>
 
       <div class="inline-cta animate-on-scroll">
         <p>Want the release-by-release view instead?</p>
         <a href="changelog.html" class="btn btn-primary">See the changelog</a>
-        <a href="docs.html" class="btn btn-secondary">Browse the docs</a>
+        <a href="docs.html" class="btn btn-secondary">Read the docs</a>
       </div>
     </section>
   </div>
@@ -166,15 +166,18 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="calm">
 
@@ -46,7 +46,7 @@
     <div class="page-header animate-on-scroll">
       <div class="section-badge">Get In Touch</div>
       <h1>Let's <span class="gradient-text">connect</span></h1>
-      <p>Have a question, found a bug, or want to contribute? We'd love to hear from you.</p>
+      <p>A bug, a question, a feature you need, or a dataset you want to know is safe to load. Here is what happens when you write.</p>
     </div>
 
     <div class="contact-grid">
@@ -118,28 +118,68 @@
           </div>
         </div>
 
+        <!-- What to expect -->
+        <div class="card" style="padding:32px;margin-top:8px;">
+          <h4 style="font-size:1.05rem;font-weight:700;margin-bottom:16px;">What to expect</h4>
+
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:12px;">
+            <strong style="color:var(--text);">A reply, eventually.</strong> This is a small
+            project with no support SLA. Bug reports and paid-plan questions are answered
+            first; feature requests are read, and are often answered with the part of the plan
+            that already covers them. The form above only sends if this deployment has a form
+            endpoint configured &mdash; if it does not, it tells you so and points you at the
+            email address and the issue tracker, which always work.
+          </p>
+
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:8px;">
+            <strong style="color:var(--text);">What to include.</strong> The app version
+            (Settings &rarr; API Server), your Windows version, and what you expected to happen
+            instead. For a crash, attach only these three files from
+            <code>%LOCALAPPDATA%\DataAgent\logs</code>:
+          </p>
+          <ul style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin:0 0 12px 18px;">
+            <li><code>app.log</code></li>
+            <li><code>audit.log</code></li>
+            <li><code>runtime-stdout.log</code></li>
+          </ul>
+
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:12px;">
+            <strong style="color:var(--text);">Never send</strong> the warehouse file, your
+            uploaded data, your API keys, <code>data\.jwt_secret</code> or
+            <code>data\.grant_key</code>. If you are unsure whether a file is sensitive, leave
+            it out and describe the problem instead.
+          </p>
+
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.7;margin-bottom:0;">
+            <strong style="color:var(--text);">Security reports</strong> go to the same address
+            &mdash; there is no PGP key and no bug bounty, so please do not send anything
+            sensitive, and give us a reasonable amount of time to ship a fix before disclosing
+            details.
+          </p>
+        </div>
+
         <!-- FAQ -->
         <div class="card" style="padding:32px;margin-top:8px;">
           <h4 style="font-size:1.05rem;font-weight:700;margin-bottom:20px;">Frequently Asked</h4>
 
           <details style="margin-bottom:12px;">
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Is DataAgent really free?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. The core product is free and open source forever. Optional paid plans unlock higher entitlements such as a larger daily AI allowance and Power BI export — see <a href="billing.html">pricing</a>. If you use local LLMs via Ollama, there are zero ongoing costs.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">There is a free tier and there are paid tiers, and the only price list is in rupees: Free is &#8377;0 (25 AI requests a day), Pro is &#8377;499/mo, Lifetime is &#8377;10,000 once. The source is open under the GNU AGPL v3 licence, so you can also read it, fork it and run it yourself. See <a href="billing.html">pricing</a> for what each plan unlocks.</p>
           </details>
 
           <details style="margin-bottom:12px;">
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Does my data leave my computer?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Not unless you configure a cloud LLM provider. With Ollama running locally, everything stays on your machine — the analytics engine, the data warehouse, and the AI inference.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Not unless you configure a cloud LLM provider. With Ollama or LM Studio running locally, everything stays on your machine &mdash; the analytics engine, the data warehouse, and the AI inference. The <a href="security.html">security page</a> lists every outbound connection the app can make.</p>
           </details>
 
           <details style="margin-bottom:12px;">
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">Can I use it commercially?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. DataAgent is open source under the GNU AGPL v3 licence — you may use it for personal projects, internal tools and client deliverables. AGPL has one condition: if you modify it and let users interact with it over a network, you must offer those users the modified source. Running it unmodified, including self-hosting it for your own team, triggers none of that. Full terms are in the LICENSE file at the root of the <a data-repo-link="" href="#" target="_blank" rel="noopener">repository</a>.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">Yes. DataAgent is open source under the GNU AGPL v3 licence &mdash; you may use it for personal projects, internal tools and client deliverables. AGPL has one condition: if you modify it and let users interact with it over a network, you must offer those users the modified source. Running it unmodified, including self-hosting it for your own team, triggers none of that. Full terms are in the LICENSE file at the root of the <a data-repo-link="" href="#" target="_blank" rel="noopener">repository</a>.</p>
           </details>
 
           <details>
             <summary style="cursor:pointer;font-weight:600;font-size:0.9rem;color:var(--text);padding:8px 0;">How does Power BI export work?</summary>
-            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">DataAgent generates a real .pbix file that contains your data — not a screenshot, and not an empty .pbit template. The exported file carries your layout, themes, star-schema data model and DAX measures, and DataAgent also imports existing .pbix/.pbit files and rebuilds them locally. Double-click the export in Power BI Desktop and it works.</p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);padding:8px 0 0;line-height:1.7;">DataAgent generates a real .pbix file that contains your data &mdash; not a screenshot, and not an empty .pbit template. The exported file carries your layout, your theme, a star-schema data model and the DAX measures behind your KPI cards, so it opens in Power BI Desktop with the data already in it. DataAgent also imports existing .pbix and .pbit files and rebuilds them locally. The PDF export is the exception: in this build it is a plain text summary, not a laid-out report.</p>
           </details>
 
           <p style="margin-top:16px;font-size:.85rem;font-weight:600;">
@@ -205,16 +245,19 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 <script>
 /* ── Contact form delivery ──────────────────────────────────────────────
    The operator MUST set both values below before deploying this site:

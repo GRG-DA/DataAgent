@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="features">
 
@@ -64,29 +64,29 @@
           <div class="card-title">Finance &amp; FP&amp;A</div>
           <p class="card-text">Close the month without waiting on the data team. Reconcile, variance-analyze, and explain the numbers in one conversation.</p>
           <ul class="check-list">
-            <li>Ask "what drove the margin drop?" and get SQL you can audit</li>
-            <li>Board-ready charts exported straight to Power BI</li>
-            <li>Sensitive ledger data stays on-prem</li>
+            <li>Ask &ldquo;what drove the margin drop?&rdquo; and get the query that answered it</li>
+            <li>Charts exported straight to Power BI as a real .pbix</li>
+            <li>Ledger data stays in a warehouse file on your own disk</li>
           </ul>
         </div>
         <div class="card animate-on-scroll animate-delay-2">
           <div class="card-icon amber">&#127919;</div>
           <div class="card-title">Marketing &amp; Growth</div>
-          <p class="card-text">Campaign performance, funnels, and cohort cuts — without piping customer data through a third-party BI cloud.</p>
+          <p class="card-text">Campaign performance, funnels, and cohort cuts &mdash; without piping customer data through a third-party BI cloud.</p>
           <ul class="check-list">
             <li>Blend ad-spend CSVs with product events in minutes</li>
-            <li>Spot the channel that actually pays back</li>
-            <li>Share dashboards, not raw PII</li>
+            <li>Find the channel that actually pays back</li>
+            <li>Share dashboards and exports, not raw PII</li>
           </ul>
         </div>
         <div class="card animate-on-scroll animate-delay-3">
           <div class="card-icon green">&#9881;&#65039;</div>
           <div class="card-title">Operations &amp; Supply Chain</div>
-          <p class="card-text">Inventory, fulfilment, and SLA monitoring on live warehouse tables — with alerts you can query in plain English.</p>
+          <p class="card-text">Inventory, fulfilment, and SLA monitoring over warehouse tables &mdash; with questions you can ask in plain English.</p>
           <ul class="check-list">
             <li>Find the SKU that is always out of stock</li>
             <li>Join logistics exports without a pipeline project</li>
-            <li>Works air-gapped on the factory floor</li>
+            <li>Works with the network unplugged</li>
           </ul>
         </div>
         <div class="card animate-on-scroll animate-delay-1">
@@ -94,29 +94,29 @@
           <div class="card-title">Healthcare &amp; Life Sciences</div>
           <p class="card-text">De-identified operational analytics where compliance says the data cannot leave the building.</p>
           <ul class="check-list">
-            <li>Local LLMs — no PHI sent to external APIs</li>
+            <li>Run a local model and no PHI reaches an external API</li>
             <li>Parameterized SQL only; inputs validated at the boundary</li>
-            <li>Audit-friendly: every query is visible SQL</li>
+            <li>Audit-friendly: every query is recorded</li>
           </ul>
         </div>
         <div class="card animate-on-scroll animate-delay-2">
           <div class="card-icon pink">&#127891;</div>
           <div class="card-title">Education &amp; Research</div>
-          <p class="card-text">Teach SQL with an assistant that shows its work — or explore study data without a grant for cloud compute.</p>
+          <p class="card-text">Teach SQL with an assistant that shows its work &mdash; or explore study data without a grant for cloud compute.</p>
           <ul class="check-list">
-            <li>Students see the generated SQL for every answer</li>
-            <li>Free tier covers classroom workloads</li>
+            <li>Students can read the query behind every answer</li>
+            <li>The free tier is enough to try the whole workflow</li>
             <li>Runs on a laptop; no cluster required</li>
           </ul>
         </div>
         <div class="card animate-on-scroll animate-delay-3">
           <div class="card-icon purple">&#129504;</div>
           <div class="card-title">Public Sector &amp; Regulated Teams</div>
-          <p class="card-text">Procurement-friendly architecture: open source, self-hosted, inspectable end to end.</p>
+          <p class="card-text">Procurement-friendly architecture: open source, self-hostable, inspectable end to end.</p>
           <ul class="check-list">
-            <li>No telemetry, no analytics, no crash reporting from the app &mdash; no data leaves the machine</li>
+            <li>No telemetry, no analytics, no crash reporting from the app &mdash; the warehouse stays on the machine unless you configure a cloud model</li>
             <li>The app checks GitHub for updates, and two paid features route traffic externally &mdash; see the <a href="faq.html">full network disclosure</a></li>
-            <li>Install from a single signed Windows <code class="code-inline">.exe</code></li>
+            <li>Install from a single Windows <code class="code-inline">.exe</code></li>
             <li>Read the whole stack before you approve it</li>
           </ul>
         </div>
@@ -185,15 +185,18 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

@@ -9,13 +9,13 @@
 <link rel="manifest" href="favicon_io/site.webmanifest">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Download DataAgent for Windows — LLM Data Analytics Agent</title>
-  <meta name="description" content="Download DataAgent for Windows. One signed .exe installer, no setup required. A free tier covers the core workflow, and self-hosting with Docker gives you the full product for free.">
+  <meta name="description" content="Download DataAgent for Windows. One .exe installer, no setup required, roughly 175 MB. The free tier covers the core workflow with 25 AI requests a day.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="download">
 
@@ -49,7 +49,7 @@
       <div class="download-card">
         <div class="download-version">Version 1.0.0 &bull; Windows 64-bit</div>
         <h2 class="download-title">DataAgent for Windows</h2>
-        <p class="download-size">One signed installer &mdash; the whole platform inside, and no prerequisites to set up</p>
+        <p class="download-size">One installer &mdash; the whole platform inside, and no prerequisites to set up</p>
         <a data-download="setup" href="#"
            class="btn btn-primary btn-lg"
            style="width:100%;justify-content:center;margin-bottom:16px;"
@@ -58,7 +58,14 @@
           Download DataAgent-Setup.exe
         </a>
         <p style="font-size:0.82rem;color:var(--text-muted);">
-          The free tier covers the core workflow &mdash; upload, ask questions, chat, SQL, dashboards &mdash; with a daily AI-request cap. Power BI export, Dashboard Studio, automation, data catalog, org structure and enterprise controls are paid features. Self-host it with Docker and you get everything, free forever, with no account and no card.
+          The free tier covers the core workflow &mdash; upload, ask questions, chat, SQL and
+          dashboards &mdash; with a daily AI-request cap of 25. Power BI export, the export page,
+          automation, live database connections, the data catalog, scheduled reports and the
+          enterprise controls are paid features, and they are listed on the
+          <a href="billing.html">pricing page</a>. Self-hosting with Docker removes the checkout
+          entirely: there is no licence to buy and no card to enter. The plan still decides the
+          daily AI cap and which tools are unlocked, though, and only an admin on your own
+          instance can change it.
         </p>
         <p style="font-size:0.82rem;margin-top:6px;">
           <a data-download="portable" href="#">Prefer no install? Get the portable build &#8594;</a>
@@ -70,7 +77,7 @@
           </p>
         </noscript>
         <p style="font-size:0.82rem;margin-top:6px;font-weight:600;">
-          <a href="changelog.html">What's new in version 1.0.0 &#8594;</a>
+          <a href="changelog.html">What's in version 1.0.0 &#8594;</a>
         </p>
       </div>
     </div>
@@ -85,27 +92,23 @@
       <div class="req-grid">
         <div class="card req-card">
           <div class="req-label">Operating System</div>
-          <div class="req-value">Windows 10 or Windows 11 &bull; 64-bit</div>
+          <div class="req-value">Windows 10 or Windows 11 &bull; 64-bit (x86_64)</div>
         </div>
         <div class="card req-card">
           <div class="req-label">Memory</div>
-          <div class="req-value">8 GB minimum &bull; 16 GB recommended</div>
+          <div class="req-value">The app itself is light. The demanding part is a local LLM &mdash; qwen2.5:7b is a 7-billion-parameter model, and how fast it answers depends on your RAM and on whether you have a GPU</div>
         </div>
         <div class="card req-card">
           <div class="req-label">Storage</div>
           <div class="req-value">Roughly 0.7&ndash;1&nbsp;GB once the application is installed, plus your own data &mdash; and about 4.7&nbsp;GB more if you add a local AI model</div>
         </div>
         <div class="card req-card">
-          <div class="req-label">Processor</div>
-          <div class="req-value">x86_64 &bull; 4 or more cores recommended</div>
+          <div class="req-label">Graphics</div>
+          <div class="req-value">Optional. A local model runs on the CPU on its own; an NVIDIA GPU only makes it faster</div>
         </div>
         <div class="card req-card">
           <div class="req-label">Permissions</div>
-          <div class="req-value">Standard administrator approval for installation</div>
-        </div>
-        <div class="card req-card">
-          <div class="req-label">Graphics</div>
-          <div class="req-value">Optional NVIDIA GPU for faster local model inference</div>
+          <div class="req-value">Standard administrator approval for installation &mdash; the installer writes to C:\Program Files</div>
         </div>
         <div class="card req-card">
           <div class="req-label">Preparation</div>
@@ -126,13 +129,13 @@
       </div>
 
       <div class="highlight-box">
-        <h3>&#11015; Step 1 &mdash; Download the installer</h3>
-        <p>Select <strong>Download DataAgent-Setup.exe</strong> above (roughly 175&nbsp;MB &mdash; the exact size of the current release is shown on the release page). The complete platform ships in this one file, so there are no additional application components to obtain. The one optional extra download is the local model used for AI chat &mdash; see AI Setup below.</p>
+        <h3>Step 1 &mdash; Download the installer</h3>
+        <p>Select <strong>Download DataAgent-Setup.exe</strong> above (roughly 175&nbsp;MB). The complete platform ships in this one file, so there are no additional application components to obtain. The one optional extra download is the local model used for AI chat &mdash; see AI Setup below.</p>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#128187; Step 2 &mdash; Run the installer</h3>
-        <p>Open the downloaded file and follow the setup wizard. Windows SmartScreen may ask you to confirm the publisher &mdash; choose <strong>More info</strong>, then <strong>Run anyway</strong> to continue.</p>
+        <h3>Step 2 &mdash; Run the installer</h3>
+        <p>Open the downloaded file and follow the setup wizard. This release is not code-signed yet, so Windows SmartScreen will show &ldquo;Windows protected your PC&rdquo; and an &ldquo;Unknown publisher&rdquo; warning &mdash; choose <strong>More info</strong>, then <strong>Run anyway</strong> to continue.</p>
         <div class="code-block">
           <code>Installed to     C:\Program Files\DataAgent
 Start Menu       DataAgent, DataAgent (web)
@@ -141,13 +144,13 @@ Desktop          Optional shortcut</code>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#9889; Step 3 &mdash; Open your workspace</h3>
-        <p>DataAgent can start as soon as setup completes, or any time afterwards from the Start Menu. Your workspace opens automatically in the default browser &mdash; there are no addresses to remember and no services to start.</p>
+        <h3>Step 3 &mdash; Open your workspace</h3>
+        <p>DataAgent can start as soon as setup completes, or any time afterwards from the Start Menu. <strong>DataAgent</strong> opens the workspace in its own window; the <strong>DataAgent (web)</strong> shortcut opens the same workspace in your default browser. Either way there are no addresses to remember and no services to start.</p>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#128273; Step 4 &mdash; Create your account and connect your AI</h3>
-        <p>Open the app and register the first user, then choose your AI provider in Settings. Authentication is always required and there is no built-in admin account.</p>
+        <h3>Step 4 &mdash; Create your account and connect your AI</h3>
+        <p>Open the app and register the first user, then choose your AI provider in Settings. Authentication is always required and there is no built-in admin account. On a fresh install the first account you register is the local administrator &mdash; there is no bootstrap token and no cloud sign-up to get through first.</p>
         <div class="code-block">
           <code>First      Register your user in the app
 Next       Settings — AI Provider
@@ -156,13 +159,13 @@ Then       Settings — Account</code>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#128188; Prefer not to install?</h3>
+        <h3>Prefer not to install?</h3>
         <p>The <strong>portable build</strong> is a single self-contained application you can keep in any folder, including a USB drive. It leaves no trace in Program Files and needs no uninstallation &mdash; simply remove the file and its data folder when you are finished.</p>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#128465; Uninstalling</h3>
-        <p>Open Settings &gt; Apps &gt; Installed apps &gt; <strong>DataAgent</strong> &gt; Uninstall, or use the <strong>Uninstall DataAgent</strong> shortcut in the Start Menu. Your warehouse files remain in the data folder until you delete them, so backing up before removal is straightforward.</p>
+        <h3>Uninstalling</h3>
+        <p>Open Settings &gt; Apps &gt; Installed apps &gt; <strong>DataAgent</strong> &gt; Uninstall, or use the <strong>Uninstall DataAgent</strong> shortcut in the Start Menu. Your warehouse files stay in the data folder until you delete them, so back it up before you remove the app.</p>
       </div>
     </div>
 
@@ -174,8 +177,8 @@ Then       Settings — Account</code>
       </div>
 
       <div class="highlight-box">
-        <h3>&#127760; Local models with Ollama (Recommended)</h3>
-        <p>Run capable AI models on your own machine with no API costs and no data leaving the device. DataAgent can install Ollama for you in one click from Settings &mdash; or you can install it yourself &mdash; and it recognises Ollama automatically. The model is pulled once (about 4.7 GB for the recommended qwen2.5:7b) and then runs entirely offline. SQL, Excel, dashboards and exports do not need a model at all.</p>
+        <h3>Local models with Ollama (recommended)</h3>
+        <p>Run capable AI models on your own machine with no API costs and no data leaving the device. DataAgent can install Ollama for you in one click from Settings, or you can install it yourself; it recognises Ollama automatically. The model is pulled once (about 4.7 GB for the recommended qwen2.5:7b) and then runs entirely offline. SQL, Excel, dashboards and exports do not need a model at all.</p>
         <div class="code-block">
           <code>First    Install Ollama for Windows: https://ollama.ai/download
 Second   Pull a recommended model: ollama pull qwen2.5:7b
@@ -184,7 +187,7 @@ Third    Select Ollama under Settings — AI Provider</code>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>&#9889; Cloud models with an API key</h3>
+        <h3>Cloud models with an API key</h3>
         <p>Connect GPT-4o, Claude, Gemini, DeepSeek, or Groq by pasting a key into Settings. Providers can be switched at any time, and nothing is sent to them until you ask a question.</p>
         <div class="code-block">
           <code>OpenAI      GPT-4o, GPT-4o-mini
@@ -199,14 +202,42 @@ xAI         Grok-2</code>
 
     <!-- Where your files live -->
     <div class="highlight-box animate-on-scroll" style="margin-top:60px;max-width:780px;margin-left:auto;margin-right:auto;">
-      <h3>&#128193; Where your files live</h3>
-      <p>Every dataset, dashboard, and configuration file stays on your machine inside a single data folder.</p>
+      <h3>Where your files live</h3>
+      <p>Every dataset, dashboard and configuration file stays on your machine, inside one per-user data folder. The installer itself lives in Program Files; your data does not.</p>
       <div class="code-block">
-        <code>Installed version   C:\Program Files\DataAgent\data
-Portable version    data folder next to the application
+        <code>Installed version   %LOCALAPPDATA%\DataAgent
+Portable version    a data folder next to the application
 
-Backup or migration   Copy this folder to keep your workspace intact</code>
+In there            data\   the DuckDB warehouse and your uploads
+                    logs\   app.log, audit.log, runtime-stdout.log
+                    config\ your settings
+
+Backup or migration   Close the app, then copy the whole folder</code>
       </div>
+      <p style="margin-top:14px;font-size:0.9rem;">
+        Copy the folder while the app is closed: DuckDB allows a single writer per file, so a
+        warehouse copied mid-run can be inconsistent. The folder survives an uninstall &mdash;
+        reinstalling finds your data and your plan where you left them.
+      </p>
+    </div>
+
+    <!-- What this build does not do -->
+    <div class="highlight-box animate-on-scroll" style="margin-top:24px;max-width:780px;margin-left:auto;margin-right:auto;">
+      <h3>What this build does not do</h3>
+      <p>Better to say it now than to have you find out later:</p>
+      <div class="code-block">
+        <code>Windows only          The packaged download is Windows 10/11, 64-bit. macOS and Linux
+                    are not packaged; the source runs there if you bring your own Python.
+Cloud connectors      No S3, GCS or Azure Blob. Live database connections are
+                    SQLite, PostgreSQL and MySQL only.
+PDF export            The PDF in this build is a plain text summary, not a laid-out
+                    report. Excel, PowerPoint, HTML, Markdown, CSV, Parquet and
+                    .pbix are the fully formatted exports.
+One warehouse         Everything lives in one DuckDB file, and only one process may
+                    write to it at a time.
+No hosted service      There is no cloud DataAgent to sign up for. This release is the
+                    desktop app.</code>
+        </div>
     </div>
 
   </div>
@@ -266,15 +297,18 @@ Backup or migration   Copy this folder to keep your workspace intact</code>
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

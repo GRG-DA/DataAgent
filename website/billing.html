@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
   <style>
     .billing-notice {
       padding: 14px 20px;
@@ -90,11 +90,13 @@
         <div class="section-badge">Billing</div>
         <h2 class="section-title">Choose your <span class="gradient-text">plan</span></h2>
         <p class="section-subtitle">
-          Unlock a larger daily AI allowance, advanced analytics, and Power BI export.
-          Pro is &#8377;499/mo — auto-renews monthly, cancel anytime.
-          Lifetime is &#8377;10,000, one-time. Checkout is completed
-          securely on Razorpay (UPI, cards, netbanking) and unlocks with the
-          email you pay with — no codes to paste.
+          One price list, in rupees: Free is &#8377;0, Pro is &#8377;499/mo, and Lifetime is
+          &#8377;10,000 once. The free tier gives you 25 AI requests a day, 3 saved dashboards and
+          7 days of chat history — no card, no checkout. Pro auto-renews monthly (cancel
+          anytime), raises the allowance to 50 AI requests a day, and adds the export,
+          automation, live-connection and governance tools; Lifetime gives you 100 AI requests a
+          day and no further payment. Checkout is completed securely on Razorpay (UPI, cards,
+          netbanking) and attaches to the email you pay with, so there are no codes to paste.
         </p>
       </div>
 
@@ -163,16 +165,19 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 <script>
   /* Optional no-code fallback: a Razorpay Payment Link (Dashboard → Payment
      Links → Create Link), amount in INR. Lifetime only — monthly Pro must use

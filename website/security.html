@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="calm">
 
@@ -109,7 +109,7 @@
             <li>Log credentials, tokens, or signing keys</li>
           </ul>
           <ul class="check-list ink">
-            <li>Ship third-party code inside the signed build without review</li>
+            <li>Ship third-party code inside the build without review</li>
             <li>Run writes from multiple processes at once</li>
             <li>Require a cloud connection to open your own data</li>
             <li>Hide the SQL behind the answer</li>
@@ -131,7 +131,7 @@
           <p class="section-lead" style="text-align:left;">
             We would rather you hear this from us than find it. Below is the complete
             list of outbound connections the app can make, what triggers each one,
-            and what data — if any — is included.
+            and what data, if any, is included.
           </p>
         </div>
         <div class="grid-2">
@@ -148,7 +148,7 @@
             <ul class="check-list">
               <li><strong>Entitlement service</strong> — the billing server is asked whether your plan is current. Sends your email address and a signed request; returns a signed plan assertion.</li>
               <li><strong>IP rotation proxy pool</strong> — the <em>IP rotation</em> feature routes LLM traffic through third-party public proxies. Your prompts may transit machines you do not control. This is the one feature where a third party can see traffic, and it is off unless you enable it.</li>
-              <li><strong>Cloud vision model</strong> — the <em>recreate from image</em> feature sends a screenshot of the dashboard you asked to recreate to a cloud model. There is no local model for this yet.</li>
+              <li><strong>Cloud vision model</strong> — the <em>recreate from image</em> feature sends the screenshot you pick to your configured model provider. A local vision model keeps it on the machine; a cloud model does not.</li>
             </ul>
           </div>
         </div>
@@ -166,6 +166,15 @@
             our infrastructure. The only outbound traffic the app can make is listed above: the
             update check, the LLM provider you configured, cloud sign-in, and the entitlement
             service that a paid plan uses to confirm that your licence is current.
+          </p>
+          <p class="card-text" style="margin-top: 10px;">
+            One thing we will not overstate: single sign-on and row-level security are
+            implemented in the code base but <b>ship disabled by default</b>
+            (<code class="code-inline">config/settings.yaml</code>). If your policy depends on
+            them, switch them on deliberately and test them &mdash; do not assume they are
+            running in a fresh install. The same goes for the release itself: the installer is
+            not code-signed yet, so SmartScreen shows &ldquo;Unknown publisher&rdquo; until a
+            certificate is in place.
           </p>
         </div>
         <div class="inline-cta">
@@ -232,15 +241,18 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

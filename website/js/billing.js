@@ -27,25 +27,35 @@
     { lifetime: '' },
     window.RAZORPAY_PAYMENT_LINKS || {}
   );
-  var RAZORPAY_MARK = 'Pay with Razorpay';
-
+  /* The plan table mirrors api/subscriptions.py -> PLANS. The site and the
+     app must never quote different numbers: Free ₹0 (25 AI requests a day),
+     Pro ₹499/mo (50 a day), Lifetime ₹10,000 one-time (100 a day).
+     No plan has an unlimited allowance. */
   var plans = [
     {
       code: 'free', name: 'Free', price: '₹0',
-      desc: '25 AI requests a day, 3 dashboards, 7-day history.'
+      desc: '25 AI requests a day, 3 saved dashboards, 7 days of chat history. ' +
+            'Chat, SQL, file upload and the spreadsheet workbench.'
     },
     {
       code: 'pro', name: 'Pro', price: '₹499/mo',
       hint: 'auto-renews · cancel anytime',
-      desc: '50 AI requests a day, 50 dashboards, ad-free.'
+      desc: '50 AI requests a day, 50 saved dashboards and a year of history, ' +
+            'plus the export, automation, live-connection and governance tools.'
     },
     {
       code: 'lifetime', name: 'Lifetime', price: '₹10,000',
-      hint: 'one-time',
-      desc: 'Everything in Pro, 100 AI requests a day, lifetime access.',
+      hint: 'one-time · nothing to renew',
+      desc: 'Everything in Pro, 100 AI requests a day, 1000 saved dashboards, ' +
+            'and no further payment.',
       recommended: true
     },
   ];
+
+  /* The button says what happens next and what it costs. */
+  function payLabel(p) {
+    return 'Pay ' + String(p.price).replace(/\/mo$/, '') + ' with Razorpay';
+  }
 
   function hasPayLinks() {
     return !!LINKS.lifetime;
@@ -81,7 +91,7 @@
 
   function buy(planCode) {
     if (!BILLING_READY) {
-      toast('Checkout is not enabled on this deployment — no billing server is configured. Self-host DataAgent with Docker to get the full product free forever.', false);
+      toast('Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. The free tier needs no card: download the app and create your account in it.', false);
       return;
     }
     var email = (document.getElementById('email-' + planCode) || {}).value || '';
@@ -206,16 +216,16 @@
 
   function cta(p) {
     if (p.code === 'free') {
-      return EXTERNAL
-        ? '<a class="btn btn-secondary" href="' + EXTERNAL + '">Get started</a>'
-        : '';
+      /* There is no signup page on this site: the download IS the action.
+         The free tier needs no card and no checkout. */
+      return '<a class="btn btn-secondary" href="download.html">Download the free app</a>';
     }
     // No-code fallback: Razorpay Payment Links (Lifetime only — links cannot
     // create auto-renewing subscriptions).
     var link = p.code === 'lifetime' ? LINKS.lifetime : '';
     if (link) {
       return '<a class="btn btn-primary" href="' + link + '" target="_blank" rel="noopener noreferrer">' +
-        RAZORPAY_MARK + '</a>' +
+        payLabel(p) + '</a>' +
         '<input id="email-' + p.code + '" type="email" placeholder="you@example.com"' +
         ' style="margin-top:10px;width:100%;padding:8px 12px;border-radius:8px;' +
         'border:1px solid var(--border,#e2e8f0);font:400 14px Inter,sans-serif"' +
@@ -223,29 +233,28 @@
     }
     if (!BILLING_READY) {
       return '<p style="margin:10px 0 0;font-size:0.85rem;font-weight:500;color:var(--text-secondary,#64748b);line-height:1.6;">' +
-        'Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. ' +
+        'No payment can be taken on this deployment. ' +
         (EXTERNAL
           ? '<a href="' + EXTERNAL + '" target="_blank" rel="noopener noreferrer">Buy on our billing site &rarr;</a>'
-          : 'Self-host DataAgent with Docker and the whole product is free forever, with no account and no card. ' +
-            '<a href="download.html">Download &amp; self-host &rarr;</a>') +
+          : 'The free tier needs no card: <a href="download.html">download the app &rarr;</a> and create your account in it.') +
         '</p>';
     }
     return '<input id="email-' + p.code + '" type="email" placeholder="you@example.com"' +
       ' style="margin:10px 0;width:100%;padding:8px 12px;border-radius:8px;' +
       'border:1px solid var(--border,#e2e8f0);font:400 14px Inter,sans-serif"' +
       ' aria-label="Email for your account">' +
-      '<button class="btn btn-primary" data-buy="' + p.code + '">' + RAZORPAY_MARK + '</button>';
+      '<button class="btn btn-primary" data-buy="' + p.code + '">' + payLabel(p) + '</button>';
   }
 
   function render() {
     var root = document.getElementById('billing-root') || document.body;
     var notice = (!BILLING_READY && !hasPayLinks())
-      ? '<div class="billing-notice">Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. The app itself is fully usable: self-host it with Docker and every feature is free forever, with no account and no card.</div>'
+      ? '<div class="billing-notice">Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. The app itself is fully usable: download it, create your own account, and the free tier needs no card. Self-hosting with Docker removes the checkout entirely; an admin on your own instance can grant any plan.</div>'
       : (hasPayLinks()
-        ? '<div class="billing-notice">Secure checkout by Razorpay — pay with UPI, cards, or netbanking. Sign in with the same email after checkout — your plan unlocks on every device. Pro renews monthly; cancel anytime.</div>'
+        ? '<div class="billing-notice">Secure checkout by Razorpay — pay with UPI, cards, or netbanking. Sign in with the same email after checkout and your plan is attached to that account. Pro renews monthly; cancel anytime.</div>'
         : (EXTERNAL
           ? '<div class="billing-notice">Purchases are completed on our secure billing website.</div>'
-          : '<div class="billing-notice">Secure checkout by Razorpay — UPI, cards, netbanking. Your plan is tied to your email — no codes to paste; sign in with the same address. Pro renews monthly; cancel anytime.</div>'));
+          : '<div class="billing-notice">Secure checkout by Razorpay — UPI, cards, netbanking. Your plan is attached to the email you pay with — no codes to paste; sign in with the same address. Pro renews monthly; cancel anytime.</div>'));
     root.innerHTML =
       '<h1>Pricing</h1>' + notice +
       '<div class="plans">' +

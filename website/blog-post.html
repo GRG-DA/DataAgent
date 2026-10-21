@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="blog">
 
@@ -64,6 +64,10 @@
 
       <div class="docs-content">
         <p>
+          <em>This is a design note about how DataAgent is built and why. It is not a feature
+          announcement, and it does not describe a future release.</em>
+        </p>
+        <p>
           Cloud BI made everyone faster — until the compliance review. For a growing set of teams,
           the request "just put it in Looker" now triggers a six-week security questionnaire, and the
           answer is often <strong>no</strong>. Not because the tool is bad, but because the rows
@@ -105,15 +109,16 @@ DataAgent-Setup.exe          <span class="comment"># one installer, everything i
 
         <h2 id="trust">Trusting the SQL you didn't write</h2>
         <p>
-          An assistant that writes queries is only useful if you can audit them. Every DataAgent
-          answer reveals the exact SQL behind it — no hidden semantic layer, no vendor-defined
+          An assistant that writes queries is only useful if you can audit them. The query behind
+          an answer travels with the answer in the API response, and every executed query is
+          written to the audit log — there is no hidden semantic layer and no vendor-defined
           "metric store" you can't inspect. On the security side, the rules are deliberately
           boring:
         </p>
         <ul>
           <li>SQL is <strong>parameterized</strong> at execution; generated queries run read-only against the warehouse.</li>
           <li>Everything crossing the API boundary is validated with schemas before it touches business logic.</li>
-          <li>Secrets — JWT keys, DB credentials — live outside git and are never surfaced into the model context or logs.</li>
+          <li>Secrets (JWT keys, DB credentials) live outside git and are never surfaced into the model context or logs.</li>
         </ul>
         <blockquote style="margin: 26px 0; padding: 20px 26px; border-left: 4px solid var(--da-violet); background: rgba(109,40,217,.06); border-radius: 0 14px 14px 0; font-size: 1.05rem; line-height: 1.65; color: var(--da-ink);">
           "Boring security is the point. If the data plane can be explained in one paragraph, the
@@ -128,15 +133,27 @@ DataAgent-Setup.exe          <span class="comment"># one installer, everything i
           collaboration means sharing a dashboard file, not a live URL.
         </p>
         <p>
-          For the teams we built this for — the ones whose alternative is "no analytics at all"
-          — those trade-offs are easy. Control over rows beats scale you were never allowed to use.
+          There are limits that are not trade-offs but simply the state of this build, and they are
+          worth stating plainly:
+        </p>
+        <ul>
+          <li>The whole warehouse is <strong>one DuckDB file</strong>, and DuckDB allows a single writer per file. Two processes writing at once is an error, not a queue.</li>
+          <li>Live database connections are SQLite, PostgreSQL and MySQL. There are <strong>no cloud object-store connectors</strong> — no S3, no GCS, no Azure Blob.</li>
+          <li>The <strong>PDF export is basic</strong>: a plain text summary, because the HTML-to-PDF renderer is not bundled. Excel, PowerPoint, HTML, Markdown, CSV, Parquet and the Power BI <code class="code-inline">.pbix</code> are the fully formatted exports.</li>
+          <li>The release is <strong>not code-signed yet</strong>, so Windows SmartScreen shows "Unknown publisher" until a certificate is in place.</li>
+          <li>Single sign-on and row-level security are implemented but <strong>ship disabled</strong>. Switch them on deliberately rather than assuming they are running.</li>
+        </ul>
+        <p>
+          For the teams we built this for, the ones whose alternative is "no analytics at all",
+          those trade-offs are easy. Control over rows beats scale you were never allowed to use.
         </p>
 
-        <h2 id="start">Get started in five minutes</h2>
+        <h2 id="start">Get started</h2>
         <p>
-          Install is one .exe. Connect a source, ask a question, read the SQL, ship the chart.
-          If DataAgent doesn't fit your workflow, the FAQ covers the usual doubts — and the whole
-          thing is open source, so you can check our answers before you trust them.
+          Install is one <code class="code-inline">.exe</code>. Register your user, load a file,
+          ask a question, read the SQL, ship the chart. If DataAgent doesn't fit your workflow,
+          the FAQ covers the usual doubts — and the whole thing is open source under AGPL-3.0, so
+          you can check our answers before you trust them.
         </p>
         <div class="code-block">
           <code><span class="comment"># or skip the installer entirely</span>
@@ -205,15 +222,18 @@ DataAgent.exe               <span class="comment"># portable — runs from any f
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css?v=3000006">
   <link rel="stylesheet" href="css/pro.css?v=3000005">
-  <link rel="stylesheet" href="css/premium.css?v=2">
+  <link rel="stylesheet" href="css/premium.css?v=3">
 </head>
 <body data-fx-scene="about">
 
@@ -52,31 +52,35 @@
     <section class="section" style="padding-top: 0;">
       <div class="grid-2" style="align-items: start;">
         <div class="animate-on-scroll">
-          <div class="section-badge" style="margin-bottom: 16px;">The story</div>
-          <h2 class="section-title" style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Born from a blocked dashboard request</h2>
+          <div class="section-badge" style="margin-bottom: 16px;">Why this exists</div>
+          <h2 class="section-title" style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Most tools want your data first</h2>
           <p class="card-text" style="margin-top: 16px; font-size: 1rem;">
-            DataAgent started the way most internal tools do: a team needed answers, the cloud BI
-            rollout was six weeks out, and the security review hadn't even started. So we built
-            the thing we actually wanted — an agent you run yourself, over a warehouse that lives
-            on your own disk, with a model you choose.
+            You upload a file, a copy lands in someone else's bucket, and from then on it is
+            someone else's compliance problem &mdash; even when you only wanted one number. For a
+            growing set of teams that question is answered before the tool is ever chosen: the
+            rows are not allowed to leave the building.
           </p>
           <p class="card-text" style="margin-top: 14px; font-size: 1rem;">
-            Today it's a full product: natural-language chat, a SQL workbench, profiling and ETL
-            pipelines, dashboards with Power BI interop, ten LLM providers, and a web UI that feels
-            like one. Still one Python process. Still local.
+            DataAgent takes the other route. It is a Windows desktop app: the warehouse is a
+            DuckDB file on your disk, the model is one you choose (a local Ollama model, if you
+            want nothing to leave the machine), and the whole product is one installer you can
+            read top to bottom. The trade-offs are real (one laptop, one writer, no shared
+            dashboard URL) and we would rather name them than hide them.
           </p>
         </div>
         <div class="animate-on-scroll animate-delay-2">
           <div class="section-badge" style="margin-bottom: 16px;">How we build</div>
           <h2 class="section-title" style="font-size: clamp(1.6rem, 3vw, 2.2rem);">Open source, on purpose</h2>
           <p class="card-text" style="margin-top: 16px; font-size: 1rem;">
-            "Local-first" is only trustworthy if you can verify it. The whole stack — FastAPI
-            backend, DuckDB warehouse, ETL, auth, packaging — is open and inspectable. Security
-            claims that can't be read aren't claims; they're marketing.
+            &ldquo;Local-first&rdquo; is only trustworthy if you can verify it. The whole stack
+            (the FastAPI backend, the DuckDB warehouse, the ETL pipelines, authentication and
+            packaging) is open and inspectable under the GNU AGPL v3 licence. Security claims that
+            cannot be read are not claims; they are marketing.
           </p>
           <p class="card-text" style="margin-top: 14px; font-size: 1rem;">
-            We ship on a steady cadence (see the <a href="changelog.html">changelog</a>), keep the
-            docs honest, and treat boring reliability as a feature.
+            The <a href="changelog.html">changelog</a> is the honest record of what is in the
+            current build, including the parts that are still open. Read the code, or open an
+            issue &mdash; both reach the same handful of people.
           </p>
         </div>
       </div>
@@ -97,12 +101,12 @@
           <div class="card animate-on-scroll animate-delay-1">
             <div class="card-icon green">&#128274;</div>
             <div class="card-title">Privacy first</div>
-            <p class="card-text">No telemetry from the desktop app, no default egress. If data leaves, you configured the destination yourself.</p>
+            <p class="card-text">No telemetry from the desktop app and no default egress. If data leaves, you configured the destination yourself.</p>
           </div>
           <div class="card animate-on-scroll animate-delay-2">
             <div class="card-icon purple">&#128268;</div>
             <div class="card-title">Show the work</div>
-            <p class="card-text">Every answer exposes its SQL. An assistant you can't audit is a liability, not a feature.</p>
+            <p class="card-text">The query behind an answer travels with the answer and is written to the audit log. An assistant you can't audit is a liability, not a feature.</p>
           </div>
           <div class="card animate-on-scroll animate-delay-3">
             <div class="card-icon amber">&#9881;&#65039;</div>
@@ -122,20 +126,20 @@
       <div class="container">
         <div class="stats-grid">
           <div class="stat-panel animate-on-scroll animate-delay-1">
-            <span data-count="30" data-suffix="+">0</span>
-            <span class="stat-label">Features shipped</span>
+            <span data-count="10" data-suffix="">0</span>
+            <span class="stat-label">LLM providers to point it at</span>
           </div>
           <div class="stat-panel animate-on-scroll animate-delay-2">
-            <span data-count="10" data-suffix="">0</span>
-            <span class="stat-label">LLM providers</span>
+            <span data-count="9" data-suffix="">0</span>
+            <span class="stat-label">File formats you can load</span>
           </div>
           <div class="stat-panel animate-on-scroll animate-delay-3">
-            <span data-count="100" data-suffix="%">0</span>
-            <span class="stat-label">Local &amp; private</span>
+            <span data-count="1" data-suffix="">0</span>
+            <span class="stat-label">DuckDB file holds it all</span>
           </div>
           <div class="stat-panel animate-on-scroll animate-delay-4">
-            <span data-count="0" data-prefix="$">$0</span>
-            <span class="stat-label">To get started</span>
+            <span data-count="0" data-prefix="&#8377;">&#8377;0</span>
+            <span class="stat-label">To start on the free tier</span>
           </div>
         </div>
       </div>
@@ -205,15 +209,18 @@
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"></script>
-<!-- Offline vendored: Lenis 1.3.4 (MIT) — CDN fallback: https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js -->
+<script src="vendor/gsap/gsap.min.js"></script>
+<script src="vendor/gsap/ScrollTrigger.min.js"></script>
+<script src="vendor/gsap/SplitText.min.js"></script>
+<!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js"></script>
 <script src="js/main.js?v=3"></script>
-<script src="js/fx-core.js?v=1"></script>
-<!-- Offline vendored: Three.js 0.186.1 (MIT, core + postprocessing addons) — CDN fallbacks: https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js and https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/ -->
-<script type="importmap">{ "imports": { "three": "vendor/three/build/three.module.js", "three/addons/": "vendor/three/examples/jsm/" } }</script>
-<script type="module" src="js/fx-webgl.js?v=1"></script>
+<script src="js/fx-core.js?v=2"></script>
+<!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
+     The import-map values MUST stay URL-like ("./vendor/..."): a bare relative
+     path is parsed as a bare specifier, the mapping is dropped and the module
+     never resolves (no canvas, no hero). -->
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/examples/jsm/" } }</script>
+<script type="module" src="js/fx-webgl.js?v=2"></script>
 </body>
 </html>
