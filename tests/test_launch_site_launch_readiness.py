@@ -286,13 +286,33 @@ def test_error_pages_use_the_site_stylesheets():
 
 
 def test_error_pages_make_no_third_party_request():
+    """No SUBRESOURCE from another origin.
+
+    A URL in a meta tag (og:url, og:image) is metadata - a crawler reads
+    it, the browser does not fetch it. What must not happen is the page
+    LOADING something from another origin, so that is what is checked.
+    """
+    import re
+
     for path in (NOT_FOUND_PAGE, FORBIDDEN_PAGE):
         text = _read(path)
-        for marker in ("http://", "https://", "//cdn.", "//fonts."):
-            assert marker not in text, (
-                f"{path.name} references {marker!r} - the site must make no "
-                "third-party request"
+        for m in re.finditer(
+            r"<(script|img|iframe|source|video|audio|embed)\b[^>]*\bsrc\s*=\s*[\"\']([^\"\']+)",
+            text, re.I,
+        ):
+            url = m.group(2)
+            assert not url.startswith(("http://", "https://", "//")), (
+                f"{path.name} loads a subresource from another origin: {url}"
             )
+        for m in re.finditer(
+            r"<link\b[^>]*\brel\s*=\s*[\"\']?stylesheet[\"\']?[^>]*\bhref\s*=\s*[\"\']([^\"\']+)",
+            text, re.I,
+        ):
+            url = m.group(1)
+            assert not url.startswith(("http://", "https://", "//")), (
+                f"{path.name} loads a stylesheet from another origin: {url}"
+            )
+        assert "//cdn." not in text and "//fonts." not in text
 
 
 # --------------------------------------------------------------------------
@@ -483,3 +503,38 @@ def test_the_a11y_checker_runs_and_reports():
     assert "file" in proc.stdout.lower() or "finding" in proc.stdout.lower() or (
         proc.stdout.strip()
     ), "the a11y checker printed nothing"
+
+
+def test_every_page_has_social_sharing_tags():
+    """A link pasted into a chat must render a card, not a bare URL.
+
+    Every page needs the Open Graph and Twitter card tags, and they must
+    point at the site's own 1200x630 preview image.
+    """
+    import re
+
+    required = (
+        "og:title", "og:description", "og:url", "og:image",
+        "og:site_name", "twitter:card", "twitter:title", "twitter:image",
+    )
+    for page in sorted(WEBSITE.glob("*.html")):
+        html = page.read_text(encoding="utf-8")
+        for tag in required:
+            assert tag in html, f"{page.name} is missing the {tag} sharing tag"
+        assert "/og-image.png" in html, f"{page.name} does not point at the preview image"
+        m = re.search(r'<meta property="og:title" content="(.*?)"', html)
+        assert m and m.group(1).strip(), f"{page.name} has an empty og:title"
+        m = re.search(r'<meta property="og:description" content="(.*?)"', html)
+        assert m and len(m.group(1).strip()) > 30, (
+            f"{page.name} has a too-short og:description"
+        )
+
+
+def test_the_preview_image_exists_and_is_the_right_size():
+    """The preview image is what a link renders as - it must be 1200x630."""
+    from PIL import Image
+
+    img_path = WEBSITE / "og-image.png"
+    assert img_path.is_file(), "website/og-image.png is missing"
+    with Image.open(img_path) as im:
+        assert im.size == (1200, 630), f"the preview image is {im.size}, not 1200x630"
