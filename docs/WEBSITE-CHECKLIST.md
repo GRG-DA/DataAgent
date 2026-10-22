@@ -67,7 +67,7 @@ this site, that is said plainly rather than quietly ignored.
 | Oversized hero pushing content down | **fixed** | The hero is capped so the first section is visible on a laptop screen. |
 | Overcrowded sections | **fixed** | Section density reduced; the card grids breathe. |
 | Inconsistent spacing and padding | **fixed** | One spacing scale. |
-| Emojis as icons | **did not apply** | No emoji stands in for an icon in the UI. The ~100 pictographic entities on the pages are **content** ? the card glyphs in the feature and comparison grids ? and every one of them has a text label beside it. |
+| Emoji as icons | **fixed** | The pictographic entities have been replaced with a hand-drawn set of 24?24 SVG line glyphs (`scripts/site_glyphs.py`), sized in `em` so each one takes the font-size of whatever it sits in. The ? and ? that mark a comparison cell are status badges and stay ? each is paired with a colour AND a shape. |
 | Glassmorphism overuse | **fixed** | 22 `backdrop-filter` declarations → reduced to a single glass token used where it means something. |
 | Layout breaking on mobile | **done** | Verified at 390×844; no horizontal scroll. |
 | Fixed widths / horizontal scroll | **fixed** | 40 `width:NNNpx` → fluid. |

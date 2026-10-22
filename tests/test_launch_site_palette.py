@@ -862,3 +862,54 @@ def test_no_light_theme_was_introduced(sheets: dict[str, str]) -> None:
         assert "prefers-color-scheme" not in sheets[name], (
             f"{name} introduces a colour-scheme query; the site is dark-only"
         )
+
+
+#: The codepoints that render as a COLOUR emoji by default. A colour emoji
+#: is a hue on a black-and-white page, and a hue that is not part of the
+#: palette reads as an oversight rather than as an accent.
+_COLOUR_EMOJI_RANGES = (
+    (0x1F300, 0x1F5FF), (0x1F600, 0x1F64F), (0x1F680, 0x1F6FF),
+    (0x1F900, 0x1F9FF), (0x1FA70, 0x1FAFF),
+)
+_COLOUR_EMOJI_SINGLE = frozenset({0x26A1, 0x2709, 0x2753, 0x2757, 0x2764, 0x274C, 0x2B50})
+
+
+def test_the_site_carries_no_colour_emoji() -> None:
+    """The icon language is SVG, not emoji.
+
+    The pictographic entities were replaced with a set of 24x24 SVG line
+    glyphs (scripts/site_glyphs.py), so the page's only icons are vector
+    art drawn in ``currentColor``.
+
+    The plain glyphs - the check marks, the cross marks, the arrows, the
+    rupee sign - are NOT colour emoji and they stay: a check mark that
+    marks a comparison cell is a status badge, and it is paired with a
+    colour and a shape as well as a tick.
+    """
+    offenders = []
+    for path in sorted(CSS_DIR.parent.glob("*.html")) + sorted(CSS_DIR.parent.glob("js/*.js")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for match in re.finditer(r"&#(\d{4,7});", text):
+            code = int(match.group(1))
+            in_range = any(low <= code <= high for low, high in _COLOUR_EMOJI_RANGES)
+            if not in_range and code not in _COLOUR_EMOJI_SINGLE:
+                continue
+            line = text[: match.start()].count("\n") + 1
+            offenders.append(f"{path.name}:{line}: U+{code:04X}")
+    assert not offenders, (
+        "colour emoji on a monochrome page:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_glyphs_are_real_svg() -> None:
+    """Every glyph is an inline SVG, sized and stroked by the stylesheet."""
+    total = 0
+    for path in sorted(CSS_DIR.parent.glob("*.html")):
+        text = path.read_text(encoding="utf-8")
+        found = re.findall(r'<svg class="glyph" viewBox="0 0 24 24"[^>]*>', text)
+        total += len(found)
+        for tag in found:
+            assert 'aria-hidden="true"' in tag, (
+                f"{path.name}: a glyph must be hidden from assistive technology"
+            )
+    assert total > 50, f"expected the icon set to be in use, found {total} glyphs"

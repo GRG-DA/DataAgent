@@ -25,7 +25,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
 <link rel="apple-touch-icon" href="favicon_io/apple-touch-icon.png">
 <link rel="manifest" href="favicon_io/site.webmanifest">
-  <link rel="stylesheet" href="css/style.css?v=ee0d972b">
+  <link rel="stylesheet" href="css/style.css?v=e74dcf18">
   <link rel="stylesheet" href="css/pro.css?v=7ca81bf1">
   <link rel="stylesheet" href="css/premium.css?v=c06631c7">
 <link href="css/fonts.css?v=d45f7dc1" rel="stylesheet">
@@ -76,32 +76,32 @@
 
       <div class="grid-3">
         <div class="card animate-on-scroll animate-delay-1">
-          <div class="card-icon green">&#128274;</div>
+          <div class="card-icon green"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
           <div class="card-title">Local-first by default</div>
           <p class="card-text">The warehouse is a DuckDB file on your disk. The web UI, API, and ETL run as one process on your machine. Nothing is uploaded unless you configure an external LLM provider yourself.</p>
         </div>
         <div class="card animate-on-scroll animate-delay-2">
-          <div class="card-icon purple">&#129333;</div>
+          <div class="card-icon purple"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c0-1.7 1.3-2.6 3-2.6s3 .9 3 2.6M13.5 10h4.5M13.5 13.5h3"/></svg></div>
           <div class="card-title">Auth &amp; sessions</div>
           <p class="card-text">JWT-based authentication with bcrypt-hashed passwords. Signing keys live in a gitignored key file — never in the repo, never in logs, never in model context.</p>
         </div>
         <div class="card animate-on-scroll animate-delay-3">
-          <div class="card-icon blue">&#128269;</div>
+          <div class="card-icon blue"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>
           <div class="card-title">Safe SQL by construction</div>
           <p class="card-text">All queries are parameterized; user input never gets concatenated into SQL. Every generated query runs against a read-only connection, so the assistant can explore but not mutate.</p>
         </div>
         <div class="card animate-on-scroll animate-delay-1">
-          <div class="card-icon amber">&#128737;&#65039;</div>
+          <div class="card-icon amber"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 4 6v6c0 4.5 3.4 7.6 8 9 4.6-1.4 8-4.5 8-9V6l-8-3Z"/></svg></div>
           <div class="card-title">Input validation at the boundary</div>
           <p class="card-text">Every API endpoint validates payloads with schemas before business logic runs. File uploads are checked for size and type. Error responses stay generic; details stay in server logs.</p>
         </div>
         <div class="card animate-on-scroll animate-delay-2">
-          <div class="card-icon pink">&#128203;</div>
+          <div class="card-icon pink"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9.5h18M3 15h18M9 9.5V20M15 9.5V20"/></svg></div>
           <div class="card-title">Secrets hygiene</div>
           <p class="card-text">Credentials, JWT material, and OAuth state live in gitignored runtime files. Redaction rules keep them out of chat, logs, and any context sent to a model.</p>
         </div>
         <div class="card animate-on-scroll animate-delay-3">
-          <div class="card-icon green">&#128737;</div>
+          <div class="card-icon green"><svg class="glyph" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 4 6v6c0 4.5 3.4 7.6 8 9 4.6-1.4 8-4.5 8-9V6l-8-3Z"/></svg></div>
           <div class="card-title">Single-writer warehouse</div>
           <p class="card-text">Analysis opens the warehouse read-only; ETL writes go through one dedicated process. Fewer writers means fewer corruption risks and a clear audit trail for every write.</p>
         </div>
