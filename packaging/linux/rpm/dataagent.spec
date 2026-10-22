@@ -32,6 +32,9 @@ install -d %{buildroot}/usr/share/dataagent/app
 cp -a %{buildroot}/opt/dataagent %{buildroot}/usr/share/dataagent/app
 install -m 0755 %{_sourcedir}/warp-install.sh %{buildroot}/usr/share/dataagent/warp-install.sh
 install -m 0755 %{_sourcedir}/opencode-install.sh %{buildroot}/usr/share/dataagent/opencode-install.sh
+# The pinned opencode hashes: the install-time helper verifies the release
+# tarball against them before it extracts it, and refuses without them.
+install -m 0644 opencode-*.sha256 %{buildroot}/usr/share/dataagent/
 
 %post
 APP_DIR="/opt/dataagent"

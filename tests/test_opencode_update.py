@@ -7,9 +7,23 @@ strictly newer, and every network touch fails silent with caching.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 import agent.opencode_bootstrap as ob
+
+
+async def _no_latest():
+    """The upstream latest-version lookup, offline."""
+    return None
+
+
+def _latest(version):
+    """The upstream latest-version lookup, reporting ``version``."""
+    async def _fn():
+        return version
+    return _fn
 
 
 @pytest.fixture(autouse=True)
@@ -157,19 +171,24 @@ def test_safe_extract_rejects_traversal(tmp_path):
     assert not (tmp_path / "pwned.txt").exists()
 
 
-def test_ensure_updated_skips_when_runtime_has_latest(tmp_path, monkeypatch):
-    import json as _json
-    import time as _time
+def test_ensure_updated_skips_when_the_runtime_has_the_pinned_release(tmp_path, monkeypatch):
+    """The updater installs the PINNED release - not the upstream 'latest'.
+
+    ADR-012: the app ships exactly one pinned opencode release, so a
+    runtime copy that already carries that release is the finished job -
+    nothing is downloaded.
+    """
+    pinned = ob.OPENCODE_VERSION.lstrip("v")
+    name = f"opencode-{pinned}.exe" if os.name == "nt" else f"opencode-{pinned}"
 
     _patch_resolution(monkeypatch, tmp_path, "1.0.0", None)
-    (tmp_path / "opencode-1.1.0.exe").write_bytes(b"x")
-    (tmp_path / ".opencode-latest.json").write_text(
-        _json.dumps({"version": "1.1.0", "checked_at": _time.time()}))
+    (tmp_path / name).write_bytes(b"x")
 
     async def _no_download(*a, **k):
-        raise AssertionError("must not download when runtime already has latest")
+        raise AssertionError("must not download when the pinned release is installed")
 
     monkeypatch.setattr(ob, "_download", _no_download)
+    monkeypatch.setattr(ob, "get_latest_opencode_version", _no_latest)
     assert __import__("asyncio").run(ob.ensure_opencode_updated()) is True
 
 
@@ -187,18 +206,20 @@ def test_check_update_snapshot(tmp_path, monkeypatch):
     assert snap["source"] == "runtime"
 
 
-def test_ensure_updated_noop_when_current(tmp_path, monkeypatch):
-    _patch_resolution(monkeypatch, tmp_path, "1.1.0", "1.1.0")
-    import json as _json
-    import time as _time
+def test_ensure_updated_noop_when_the_current_cli_is_the_pinned_release(tmp_path, monkeypatch):
+    """Nothing to install when the CLI we would use IS the pinned release.
 
-    (tmp_path / ".opencode-latest.json").write_text(
-        _json.dumps({"version": "1.1.0", "checked_at": _time.time()}))
+    A newer upstream release may well exist - that is information, not an
+    instruction: the app installs the pin, so the download is skipped.
+    """
+    pinned = ob.OPENCODE_VERSION.lstrip("v")
+    _patch_resolution(monkeypatch, tmp_path, pinned, pinned)
 
     async def _no_download(*a, **k):
-        raise AssertionError("must not download when current")
+        raise AssertionError("must not download when the current CLI is the pin")
 
     monkeypatch.setattr(ob, "_download", _no_download)
+    monkeypatch.setattr(ob, "get_latest_opencode_version", _latest("9.9.9"))
     assert __import__("asyncio").run(ob.ensure_opencode_updated()) is True
 
 

@@ -189,8 +189,9 @@ def main():
         asyncio.run(get_latest_opencode_version())  # refresh (cached 24h, silent offline)
         snap = check_opencode_update()
         print(f"  installed: {snap['current']} ({snap['source'] or 'none'})")
+        print(f"  pinned:    {snap.get('pinned')} (the release this build ships)")
         print(f"  latest:    {snap['latest'] or 'unknown (offline?)'}")
-        print(f"  update:    {'available' if snap['update_available'] else 'not needed'}")
+        print(f"  update:    {'a newer upstream release exists (informational)' if snap['update_available'] else 'not needed'}")
         return
 
     if "--warp-reset-test" in sys.argv:

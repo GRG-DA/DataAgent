@@ -2013,10 +2013,18 @@ class TestOpencodeBootstrap:
     @pytest.mark.asyncio
     async def test_ensure_updated_and_prune(self, monkeypatch, tmp_path):
         import agent.opencode_bootstrap as ob
+        # The pinned release is installed from the PINNED url; the upstream
+        # "latest" lookup is information only (ADR-012), so the download is
+        # attempted even when that lookup fails.
+        monkeypatch.setattr(ob, "_runtime_bin_dir", lambda: tmp_path)
+        monkeypatch.setattr(ob, "opencode_bin_path", lambda: None)
+        monkeypatch.setattr(ob, "_download", AsyncMock(return_value=False))
         monkeypatch.setattr(ob, "get_latest_opencode_version", AsyncMock(return_value=None))
         assert await ob.ensure_opencode_updated() is False
+        # A CLI that is newer than the pin is left alone - never downgraded.
         monkeypatch.setattr(ob, "get_latest_opencode_version", AsyncMock(return_value="9.9.9"))
-        monkeypatch.setattr(ob, "_runtime_candidates", lambda: [(tmp_path / "a", "9.9.9")])
+        monkeypatch.setattr(ob, "opencode_bin_path", lambda: tmp_path / "a")
+        monkeypatch.setattr(ob, "get_binary_version", lambda p: "9.9.9")
         assert await ob.ensure_opencode_updated() is True
         # prune
         monkeypatch.setattr(ob, "_runtime_bin_dir", lambda: tmp_path)

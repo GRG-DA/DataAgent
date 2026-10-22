@@ -48,15 +48,15 @@ Progress = Callable[[str, int, str], Awaitable[None]]
 #
 # It used to be "releases/latest", which made the install unreproducible and
 # unverified: a different binary arrived on every run, with no way to check
-# it. Keep this version in sync with $OpenCodeVersion in
-# scripts/build_windows.ps1 and with packaging/linux/opencode-install.sh.
+# it. This constant is the SINGLE source of truth: the download URL, the
+# name of the installed file and the version reported to the user all
+# derive from it. Keep it in sync with $OpenCodeVersion in
+# scripts/build_windows.ps1, with OPENCODE_VERSION in
+# scripts/build_linux.sh and with packaging/linux/opencode-install.sh.
 OPENCODE_VERSION = "v1.19.3"
 
-# Official release base — single source of truth for the download fallback.
-_OPENCODE_RELEASE_URL = (
-    "https://github.com/anomalyco/opencode/releases/download/"
-    f"{OPENCODE_VERSION}/opencode-{{target}}{{ext}}"
-)
+# Official release base — always the PINNED release, never "latest".
+_RELEASE_URL_BASE = "https://github.com/anomalyco/opencode/releases/download"
 
 # GitHub API for the latest release. Used ONLY to report "a newer version
 # exists" — it never decides WHAT is downloaded.
@@ -78,6 +78,26 @@ _OPENCODE_INSTALL_DIRS = {
 
 
 # ── platform helpers ─────────────────────────────────────────────
+
+def _pinned_version() -> str:
+    """The pinned release as a bare X.Y.Z string ('v1.19.3' -> '1.19.3')."""
+    return OPENCODE_VERSION.lstrip("v")
+
+
+def _release_url(target: str, ext: str) -> str:
+    """The pinned release URL for a target (never the moving 'latest')."""
+    return f"{_RELEASE_URL_BASE}/{OPENCODE_VERSION}/opencode-{target}{ext}"
+
+
+def _runtime_filename(version: str) -> str:
+    """The on-disk name of a versioned runtime copy.
+
+    The name carries the version that was DOWNLOADED and verified, so a
+    runtime copy's name always matches the bytes it holds (ADR-012). It is
+    never named after the upstream "latest" release.
+    """
+    return f"opencode-{version}.exe" if os.name == "nt" else f"opencode-{version}"
+
 
 def _os_platform() -> str:
     """Normalized platform name: windows / linux / darwin."""
@@ -238,6 +258,40 @@ def _safe_extract_zip(archive: Path, dest: Path) -> None:
         zf.extractall(dest)
 
 
+def _extract_opencode(archive: Path, dest: Path, ext: str) -> tuple:
+    """Extract a release archive; return (binary path, error message).
+
+    The binary path is None when the archive could not be extracted or
+    does not hold an opencode binary; the message is then safe to show
+    to the user.
+    """
+    try:
+        if ext == ".tar.gz":
+            import tarfile
+
+            with tarfile.open(archive, "r:gz") as tf:
+                tf.extractall(dest, filter="data")
+        else:
+            _safe_extract_zip(archive, dest)
+    except Exception as e:  # noqa: BLE001
+        return None, f"Extract failed: {e}"
+    exe = "opencode.exe" if _os_platform() == "windows" else "opencode"
+    src = dest / exe
+    if not src.is_file():
+        return None, "opencode binary not found in archive."
+    return src, ""
+
+
+def _install_runtime_copy(src: Path, dest: Path) -> bool:
+    """Copy an extracted binary into the runtime bin dir. Never raises."""
+    try:
+        shutil.copy2(src, dest)
+        os.chmod(dest, 0o755)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 async def _download(url: str, dest: Path, progress: Optional[Progress]) -> bool:
     try:
         async with httpx.AsyncClient(
@@ -303,33 +357,19 @@ async def ensure_opencode_installed(progress: Optional[Progress] = None) -> bool
     dest_dir.mkdir(parents=True, exist_ok=True)
     os_name = _os_platform()
     ext = ".tar.gz" if os_name == "linux" else ".zip"
-    url = _OPENCODE_RELEASE_URL.format(target=_download_target(), ext=ext)
+    url = _release_url(_download_target(), ext)
     with tempfile.TemporaryDirectory(prefix="opencode_install_") as tmp:
         archive = Path(tmp) / f"opencode{ext}"
         if not await _download(url, archive, progress):
             return False
         await _p("installing", 60, "Extracting opencode…\n")
-        try:
-            if ext == ".tar.gz":
-                import tarfile
-                with tarfile.open(archive, "r:gz") as tf:
-                    tf.extractall(tmp, filter="data")
-            else:
-                _safe_extract_zip(archive, Path(tmp))
-        except Exception as e:  # noqa: BLE001
-            await _p("error", 0, f"Extract failed: {e}\n")
+        src, error = _extract_opencode(archive, Path(tmp), ext)
+        if src is None:
+            await _p("error", 0, f"{error}\n")
             return False
-        exe = "opencode.exe" if os_name == "windows" else "opencode"
-        src = Path(tmp) / exe
-        if not src.is_file():
-            await _p("error", 0, "opencode binary not found in archive.\n")
-            return False
-        dest = dest_dir / exe
-        try:
-            shutil.copy2(src, dest)
-            os.chmod(dest, 0o755)
-        except Exception as e:  # noqa: BLE001
-            await _p("error", 0, f"Copy failed: {e}\n")
+        dest = dest_dir / ("opencode.exe" if os_name == "windows" else "opencode")
+        if not _install_runtime_copy(src, dest):
+            await _p("error", 0, "Copy failed.\n")
             return False
     await _p("installed", 100, "opencode installed.\n")
     return True
@@ -425,7 +465,20 @@ async def get_latest_opencode_version() -> Optional[str]:
 
 
 def check_opencode_update() -> Dict[str, object]:
-    """Synchronous status snapshot: {current, latest, update_available, source}."""
+    """Synchronous status snapshot.
+
+    ``{current, latest, pinned, update_available, source}``:
+
+    * ``current`` — the version of the CLI that is actually on disk. It is
+      read from the binary itself, never guessed from a file name, so it
+      always matches the bytes that run.
+    * ``latest`` — the newest upstream release (informational only).
+    * ``pinned`` — the release this build ships (ADR-012).
+    * ``update_available`` — an upstream release newer than the installed
+      CLI exists. It is INFORMATIONAL: the app installs the pinned release
+      only, so adopting a newer one is a deliberate pin bump (a reviewable
+      commit), never a silent install.
+    """
     current: Optional[str] = None
     source = ""
     binary = opencode_bin_path()
@@ -455,98 +508,111 @@ def check_opencode_update() -> Dict[str, object]:
     update_available = bool(
         current and latest and _compare_versions(latest, current) > 0
     )
-    return {"current": current, "latest": latest,
+    return {"current": current, "latest": latest, "pinned": _pinned_version(),
             "update_available": update_available, "source": source}
 
 
+async def _report_newer_upstream_release(pinned: str) -> None:
+    """Log that a newer upstream release exists — information, nothing more.
+
+    The app installs the pinned release only (ADR-012). Adopting a newer
+    upstream release is a deliberate pin bump: a reviewed commit that
+    moves OPENCODE_VERSION and the committed hashes together.
+    """
+    latest = await get_latest_opencode_version()
+    if latest and _compare_versions(latest, pinned) > 0:
+        logger.info(
+            "opencode: upstream release %s is newer than the pinned %s - "
+            "adopting it is a deliberate pin bump (ADR-012), not an "
+            "automatic install", latest, pinned)
+
+
 async def ensure_opencode_updated(progress: Optional[Progress] = None) -> bool:
-    """Download the latest opencode CLI into the runtime bin dir when stale.
+    """Install the PINNED opencode CLI into the runtime bin dir.
+
+    ADR-012: the download is pinned to ``OPENCODE_VERSION`` and the
+    installed file is named after that same version, so the name on disk
+    always matches the bytes on disk. The upstream "latest" lookup stays
+    but is INFORMATIONAL only — it never decides what is downloaded or
+    how the file is named.
 
     Never elevates and never touches Program Files / the app dir — the
     runtime copy wins resolution whenever it is newer (see opencode_bin_path).
-    Returns True when already current or successfully updated; False (with a
-    progress line, never an exception) when offline or the download fails —
-    the existing binary keeps working.
+    Returns True when the pinned release is already in place or was
+    installed; False (with a progress line, never an exception) when the
+    download fails — the existing binary keeps working.
     """
     async def _p(stage: str, pct: int, line: str = "") -> None:
         if progress:
             await progress(stage, pct, line)
 
-    latest = await get_latest_opencode_version()
-    if not latest:
-        return False
-    # Already have it? A versioned runtime copy at/above latest means a
-    # previous update landed (the running server may still use the older
-    # file — it picks the new one up on restart).
-    try:
-        for _path, _ver in _runtime_candidates():
-            if _ver and _compare_versions(latest, _ver) <= 0:
-                return True
-    except Exception:  # noqa: BLE001
-        pass
+    pinned = _pinned_version()
+    dest_dir = _runtime_bin_dir()
+
+    # Informational only: a newer upstream release exists. Refreshed first
+    # so the "latest" cache stays current even when there is nothing to
+    # install (the snapshot the Settings UI reads comes from that cache).
+    await _report_newer_upstream_release(pinned)
+
+    # The pinned release is already installed as a versioned runtime copy.
+    if (dest_dir / _runtime_filename(pinned)).is_file():
+        return True
+
+    # The CLI we would use is already at (or above) the pinned release:
+    # never install a downgrade over it.
     binary = opencode_bin_path()
     current = get_binary_version(binary) if binary else None
-    if current and _compare_versions(latest, current) <= 0:
+    if current and _compare_versions(current, pinned) >= 0:
         return True
-    await _p("downloading", 10,
-             f"Updating opencode {current or 'unknown'} → {latest}…\n")
-    dest_dir = _runtime_bin_dir()
+
+    await _p("downloading", 10, f"Installing opencode {pinned}…\n")
     dest_dir.mkdir(parents=True, exist_ok=True)
     os_name = _os_platform()
     ext = ".tar.gz" if os_name == "linux" else ".zip"
-    url = _OPENCODE_RELEASE_URL.format(target=_download_target(), ext=ext)
-    import tempfile as _tf
+    url = _release_url(_download_target(), ext)
 
-    with _tf.TemporaryDirectory(prefix="opencode_update_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="opencode_update_") as tmp:
         archive = Path(tmp) / f"opencode{ext}"
         if not await _download(url, archive, progress):
             return False
-        await _p("installing", 60, "Installing opencode update…\n")
-        try:
-            if ext == ".tar.gz":
-                import tarfile
-                with tarfile.open(archive, "r:gz") as tf:
-                    tf.extractall(tmp, filter="data")
-            else:
-                _safe_extract_zip(archive, Path(tmp))
-        except Exception as e:  # noqa: BLE001
-            await _p("error", 0, f"Update extract failed: {e}\n")
-            return False
-        exe = "opencode.exe" if os_name == "windows" else "opencode"
-        src = Path(tmp) / exe
-        if not src.is_file():
-            await _p("error", 0, "opencode binary not found in update archive.\n")
+        await _p("installing", 60, "Installing opencode…\n")
+        src, error = _extract_opencode(archive, Path(tmp), ext)
+        if src is None:
+            await _p("error", 0, f"{error}\n")
             return False
         # Versioned filename: installing must never overwrite a running
         # binary (Windows locks those — WinError 32), so each release gets
         # its own file and resolution picks the newest (see opencode_bin_path).
-        stem = "opencode.exe" if os_name == "windows" else "opencode"
-        dest = dest_dir / stem.replace("opencode", f"opencode-{latest}", 1)
-        try:
-            shutil.copy2(src, dest)
-            os.chmod(dest, 0o755)
-        except Exception as e:  # noqa: BLE001
-            await _p("error", 0, f"Update install failed: {e}\n")
+        # The name carries the version that was DOWNLOADED — never the
+        # upstream "latest" (ADR-012).
+        dest = dest_dir / _runtime_filename(pinned)
+        if not _install_runtime_copy(src, dest):
+            await _p("error", 0, "Update install failed.\n")
             return False
         _prune_old_runtime_copies(keep=2)
     _version_cache.pop(str(dest), None)
-    await _p("installed", 100, f"opencode updated to {latest}.\n")
+    await _p("installed", 100, f"opencode {pinned} installed.\n")
     return True
 
 
 def _prune_old_runtime_copies(keep: int = 2) -> None:
     """Delete older versioned runtime copies, keeping the newest ``keep``.
 
+    The copy that carries the PINNED release is never deleted: its name is
+    the only one guaranteed to match the bytes it holds, and the ranking
+    below trusts names (ADR-012).
+
     Best-effort: a running binary cannot be deleted on Windows, so failures
     are ignored — the next update prunes again.
     """
     try:
         bin_dir = _runtime_bin_dir()
+        pinned_name = _runtime_filename(_pinned_version())
         ranked = [(p, v) for p, v in _runtime_candidates()
                   if v and p.name != ("opencode.exe" if os.name == "nt" else "opencode")]
         for path, _version in ranked[keep:]:
             try:
-                if path.parent != bin_dir:
+                if path.parent != bin_dir or path.name == pinned_name:
                     continue
                 path.unlink()
             except OSError:

@@ -42,8 +42,31 @@ committed hash.** The opencode CLI is pinned to `v1.19.3`:
 - A mismatch is a hard `throw`. A missing hash file is written and loudly
   reported — verification is never silently skipped.
 
-Rotation is two edits: bump `$OpenCodeVersion`, and commit the new
-`installers/opencode-<version>.sha256`.
+The Linux install path follows the same contract. The `.deb`/`.rpm` does not
+bundle the CLI (~180 MB); the install-time helper
+`packaging/linux/opencode-install.sh` downloads it, and that download is
+pinned and verified too:
+
+- `scripts/build_linux.sh` — `OPENCODE_VERSION = "v1.19.3"`, and
+  `packaging/linux/opencode-install.sh` — `OPENCODE_VERSION = "v1.19.3"`:
+  the same release, downloaded from `releases/download/<version>/...`.
+- `installers/opencode-<version>-<target>.sha256` — the SHA256 of the release
+  **tarball**, committed next to the Windows pin. The committed files are
+  `installers/opencode-v1.19.3-linux-x64.sha256`,
+  `installers/opencode-v1.19.3-linux-arm64.sha256` and
+  `installers/opencode-v1.19.3-linux-x64-baseline.sha256`.
+- The tarball is verified **before** it is extracted: an unverified archive
+  is never unpacked, so a crafted tarball cannot write outside the temp dir.
+- With no pinned hash for the target the install **refuses** (non-zero exit,
+  nothing installed) — an unverified binary must never become a root-owned
+  one. A warning is not enough.
+- `scripts/build_linux.sh` produces and exports those hashes (it downloads
+  the pinned tarball, compares the SHA256 with the committed pin and fails
+  the build on a mismatch) and ships the pin files inside the package.
+
+Rotation is two edits: bump `$OpenCodeVersion` (and the two
+`OPENCODE_VERSION` constants), and commit the new
+`installers/opencode-<version>.sha256` (plus the Linux per-target pins).
 
 ## Consequences
 
@@ -51,8 +74,10 @@ Rotation is two edits: bump `$OpenCodeVersion`, and commit the new
 - A compromised or truncated download fails the build instead of shipping.
 - Upgrading opencode is a deliberate, reviewable commit rather than a surprise
   at build time.
-- **Known gap:** `packaging/linux/opencode-install.sh` still downloads
-  `releases/latest` at *install* time, so the .deb/.rpm install is not
-  hash-verifiable. `scripts/build_linux.sh` prints that warning. The fix is to
-  pin it to the same version and ship the same hash.
+- The app installs the **pinned** release on every platform, and names the
+  installed file after the version it actually holds: the runtime copy
+  `opencode-<version>.exe` carries the version of the bytes inside it, so
+  the name and the reported version can never disagree. A newer upstream
+  release is reported as information only — adopting it is a pin bump, never
+  a silent install.
 - The download is retried three times: the CDN resets large transfers.

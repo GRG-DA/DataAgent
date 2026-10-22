@@ -277,15 +277,28 @@ def test_windows_workflow_builds_on_the_release_python_and_runs_the_preflight():
     )
 
 
-def test_linux_packaging_does_not_fetch_opencode_at_build_time():
-    """The .deb/.rpm build does not bundle opencode - the pin is Windows-only.
+def test_linux_packaging_fetches_only_the_pinned_opencode_tarball():
+    """The .deb/.rpm build does not BUND opencode - it pins the tarball.
 
     The Linux package ships an installer helper that downloads the CLI at
-    install time, so the D4 pin only covers the Windows bundle.
+    install time, so the ~180 MB binary is never bundled. The build does
+    download the PINNED release tarball - to produce and verify the
+    committed hash pin that the helper verifies the download against
+    (ADR-012). It must never touch the moving 'latest' release.
     """
     sh = _read(BUILD_SH)
     assert "releases/latest" not in sh
-    assert "github.com/anomalyco/opencode/releases/download" not in sh
+    assert "github.com/anomalyco/opencode/releases/download" in sh, (
+        "the build must download the PINNED release tarball to produce the "
+        "hash pin the installer verifies the download against"
+    )
+    assert "releases/download/${OPENCODE_VERSION}" in sh, (
+        "the download URL must be built from the pinned version"
+    )
+    assert "installers/opencode/" not in sh, (
+        "the Linux build must not pull the CLI binary out of the gitignored "
+        "installers/opencode/ directory - it is fetched per release"
+    )
 
 
 def test_build_never_clobbers_the_hand_maintained_spec():

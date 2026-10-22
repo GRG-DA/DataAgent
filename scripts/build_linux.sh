@@ -57,6 +57,101 @@ check_arch
 
 echo "==> Building DataAgent $VERSION for $ARCH (.deb arch: $DEB_ARCH)"
 
+# ---------------------------------------------------------------------------
+# PINNED THIRD-PARTY BINARY: the opencode CLI (ADR-012)
+# ---------------------------------------------------------------------------
+# The .deb/.rpm does NOT bundle the CLI (~180 MB); the install-time helper
+# downloads it. That download is PINNED and HASH-VERIFIED, so the build has
+# to know the SHA256 of the release tarball: it downloads the pinned
+# tarball, computes the hash and compares it with the committed pin in
+# installers/opencode-<version>-<target>.sha256. A mismatch fails the build
+# (the upstream artefact changed under the pin); a missing pin is written
+# and loudly reported - it MUST be verified out of band and committed
+# before the package is released.
+#
+# To rotate the pin (two edits):
+#   1. bump OPENCODE_VERSION below (and $OpenCodeVersion in
+#      scripts/build_windows.ps1 + OPENCODE_VERSION in
+#      agent/opencode_bootstrap.py + packaging/linux/opencode-install.sh),
+#      and
+#   2. commit installers/opencode-<version>-<target>.sha256.
+OPENCODE_VERSION="v1.19.3"
+
+# The Linux release targets this build ships a pin for. The x64 build ships
+# both variants: the install-time helper picks the baseline one on a CPU
+# without AVX2, and both tarballs must be verifiable there.
+opencode_targets() {
+  case "$ARCH" in
+    x86_64|amd64) echo "linux-x64 linux-x64-baseline" ;;
+    aarch64|arm64) echo "linux-arm64" ;;
+    *) echo "linux-x64" ;;
+  esac
+}
+
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    echo ""
+  fi
+}
+
+# Produce (or verify) the committed pin for one target; print its SHA256 on
+# stdout (the progress lines go to stderr, so the caller can capture it).
+pin_opencode_target() {
+  local target="$1"
+  local asset="opencode-${target}.tar.gz"
+  local url="https://github.com/anomalyco/opencode/releases/download/${OPENCODE_VERSION}/${asset}"
+  local pin="installers/opencode-${OPENCODE_VERSION}-${target}.sha256"
+  local tmp actual expected attempt
+  tmp="$(mktemp -d)"
+  echo "    downloading $asset ($OPENCODE_VERSION) to compute its SHA256 ..." >&2
+  # A transient network error must not kill a release build: the CDN behind
+  # GitHub resets big transfers often enough to matter.
+  for attempt in 1 2 3; do
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$url" -o "$tmp/$asset" && break
+    else
+      wget -qO "$tmp/$asset" "$url" && break
+    fi
+    echo "    download attempt $attempt of 3 failed for $asset" >&2
+    sleep 5
+  done
+  if [ ! -s "$tmp/$asset" ]; then
+    echo "ERROR: could not download $url after 3 attempts" >&2
+    exit 1
+  fi
+  actual="$(sha256_of "$tmp/$asset")"
+  rm -rf "$tmp"
+  if [ -z "$actual" ]; then
+    echo "ERROR: no sha256 tool available - cannot pin $asset" >&2
+    exit 1
+  fi
+  if [ -f "$pin" ]; then
+    expected="$(awk 'NR==1 {print $1}' "$pin")"
+    if [ "$actual" != "$expected" ]; then
+      echo "ERROR: $asset SHA256 mismatch for $OPENCODE_VERSION :" \
+           "expected $expected got $actual" >&2
+      exit 1
+    fi
+    echo "    $asset SHA256 verified: $actual" >&2
+  else
+    # No pin for this version yet. Verification is NEVER silently skipped:
+    # record what we got and make the maintainer verify it out of band.
+    printf '%s  %s\n' "$actual" "$asset" > "$pin"
+    echo "==============================================================" >&2
+    echo " opencode $OPENCODE_VERSION ($target) was NOT verified against a" >&2
+    echo " committed hash." >&2
+    echo " Recorded $actual in $pin." >&2
+    echo " Verify it out of band (publish the release checksum, compare by" >&2
+    echo " hand) and COMMIT $pin before releasing this build." >&2
+    echo "==============================================================" >&2
+  fi
+  echo "$actual"
+}
+
 echo "==> [1/5] Building PyInstaller binaries"
 
 if [ "$SKIP_WEB" -eq 0 ]; then
@@ -98,14 +193,20 @@ install -m 0755 "$PKG_DIR/warp-install.sh" "$STAGE/warp-install.sh"
 install -m 0755 "$PKG_DIR/opencode-install.sh" "$STAGE/opencode-install.sh"
 install -m 0755 scripts/dataagent-launch.sh "$STAGE/dataagent-launch.sh"
 
-# NOTE (D4): unlike the Windows bundle, the .deb/.rpm does NOT ship the
-# opencode CLI - it is downloaded at INSTALL time by opencode-install.sh, and
-# that script still resolves the moving "latest" release. The Windows build
-# pins the CLI (scripts/build_windows.ps1: $OpenCodeVersion + the committed
-# installers/opencode-<version>.sha256); the Linux install path does not, so
-# a Linux install is NOT hash-verifiable. Pin it in
-# packaging/linux/opencode-install.sh before publishing a package.
-echo "    NOTE: the opencode CLI is downloaded at install time (unpinned 'latest')."
+# Pinned opencode hashes: the install-time helper verifies the release
+# tarball against these BEFORE it extracts it, and refuses to install
+# without them (ADR-012). The pins live next to the Windows one in
+# installers/ and are shipped inside the package.
+for target in $(opencode_targets); do
+  sha="$(pin_opencode_target "$target")"
+  case "$target" in
+    linux-x64)          export OPENCODE_SHA256_LINUX_X64="$sha" ;;
+    linux-arm64)        export OPENCODE_SHA256_LINUX_ARM64="$sha" ;;
+    linux-x64-baseline) export OPENCODE_SHA256_LINUX_X64_BASELINE="$sha" ;;
+  esac
+  install -m 0644 "installers/opencode-${OPENCODE_VERSION}-${target}.sha256" "$STAGE/"
+done
+echo "    opencode CLI: pinned to $OPENCODE_VERSION, hash-verified at install time."
 
 echo "==> [3/5] Building .deb"
 DEB_ROOT="$DIST/deb-root"
@@ -127,6 +228,9 @@ if [ "$SKIP_RPM" -eq 0 ] && command -v rpmbuild >/dev/null 2>&1; then
   rm -rf "$RPM_SRC"
   mkdir -p "$RPM_SRC"
   tar -C "$STAGE" -czf "$RPM_SRC/dataagent-app.tar.gz" .
+  # The spec installs the install-time helpers from the source dir; the
+  # pinned opencode hashes travel inside the app payload.
+  cp "$PKG_DIR/warp-install.sh" "$PKG_DIR/opencode-install.sh" "$RPM_SRC/"
   rpmbuild --define "_topdir $RPM_SRC" \
            --define "_sourcedir $RPM_SRC" \
            --define "dataagent_version $VERSION" \

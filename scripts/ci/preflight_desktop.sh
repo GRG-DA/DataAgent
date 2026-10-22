@@ -133,6 +133,37 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 4b. the pinned Linux opencode hashes (the .deb/.rpm install verifies them)
+# ---------------------------------------------------------------------------
+LINUX_BUILD_SCRIPT="$ROOT/scripts/build_linux.sh"
+if [ ! -f "$LINUX_BUILD_SCRIPT" ]; then
+  report SKIP "opencode linux pins" "scripts/build_linux.sh is missing"
+else
+  LINUX_OC_VERSION="$(grep -o 'OPENCODE_VERSION[[:space:]]*=[[:space:]]*"[^"]*"' "$LINUX_BUILD_SCRIPT" | head -1 | sed 's/.*"\(.*\)"/\1/')"
+  MISSING_LINUX_PINS=""
+  for target in linux-x64 linux-arm64 linux-x64-baseline; do
+    LINUX_SHA_FILE="$ROOT/installers/opencode-$LINUX_OC_VERSION-$target.sha256"
+    if [ ! -f "$LINUX_SHA_FILE" ]; then
+      MISSING_LINUX_PINS="$MISSING_LINUX_PINS $target"
+      continue
+    fi
+    LINUX_DIGEST="$(awk '{print $1}' "$LINUX_SHA_FILE" | head -1 | tr 'A-Z' 'a-z')"
+    case "$LINUX_DIGEST" in
+      [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
+      *) LINUX_DIGEST="" ;;
+    esac
+    if [ ${#LINUX_DIGEST} -ne 64 ]; then
+      MISSING_LINUX_PINS="$MISSING_LINUX_PINS $target(bad-sha256)"
+    fi
+  done
+  if [ -n "$MISSING_LINUX_PINS" ]; then
+    report FAIL "opencode linux pins" "no valid committed hash for:$MISSING_LINUX_PINS (expected installers/opencode-$LINUX_OC_VERSION-<target>.sha256)"
+  else
+    report PASS "opencode linux pins" "version $LINUX_OC_VERSION, pins for linux-x64, linux-arm64, linux-x64-baseline"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # 5. no credential state would be bundled
 # ---------------------------------------------------------------------------
 REQUIRED_CREDENTIAL_NAMES="users.json db_connections.json google_login_pending.json llm_runtime.json revoked_jtis.json .jwt_secret .grant_key .grant_migrated .env"
