@@ -121,6 +121,9 @@ Invoke-Gate 'Site: accessibility' {
 Invoke-Gate 'Site: palette (rendered pixels)' {
     python scripts/ci/check_site_pixels.py
 } | Out-Null
+Invoke-Gate 'Site: every page renders' {
+    python scripts/ci/check_site_renders.py
+} | Out-Null
 Invoke-Gate 'Site: cache-busters' {
     python scripts/site_asset_versions.py
 } | Out-Null
