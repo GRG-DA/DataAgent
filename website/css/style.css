@@ -1,5 +1,5 @@
 /* ============================================================
-   LLM Data Analytics Agent — Purple Aesthetic Theme
+   LLM Data Analytics Agent — Monochrome (black & white) Theme
    Version: 1.0.0
    ============================================================ */
 
@@ -18,19 +18,40 @@
    pro.css and premium.css consume these tokens and never redefine one.
 
    THE SITE IS DARK ONLY. There is no light theme: every value below is
-   tuned against the near-black indigo surface (#070707).
+   tuned against the near-black surface (#070707).
 
-   BRAND HUES — five, fixed
-     --primary       violet  · filled buttons, brand marks, borders
-     --primary-hi    violet  · headings, hairlines, hover states
-     --primary-deep  violet  · the solid primary fill (white text: 5.7:1)
-     --accent        cyan    · small accents, glows, thin strokes (neon)
-     --accent-hi     cyan    · text sitting on a saturated fill
-     --accent-soft   cyan    · LARGE fills and body text on a fill (muted)
-     --emphasis      orange  · RARE emphasis only (one word, one chip)
-     --emphasis-hi   orange  · the light partner of --emphasis
-     --pink          rose    · RARE emphasis only (gradient endpoint)
+   THE SITE IS MONOCHROME. Every decorative colour is a NEUTRAL GREY, and
+   the greys are separated by LIGHTNESS rather than by hue. That is the
+   whole point of the brand: the product is local-first, offline and
+   private, and a page with no colour in it says that before a word is
+   read.
+
+   Each value below is the ORIGINAL colour converted to the neutral of the
+   same relative luminance, so every light/dark relationship the design
+   was built on survives the conversion untouched.
+
+   THE ONE EXCEPTION — the four STATUS hues. A green tick and a red cross
+   that are the same grey are worse than useless, so status keeps a
+   colour, muted to a low-chroma tint. Every status state also carries a
+   glyph, a shape or a label, so the state is readable with the colour
+   removed entirely.
+
+   BRAND RAMP — neutral, separated by lightness
+     --primary       grey    · borders, brand marks, brand hairlines
+     --primary-hi    grey    · headings, hover states (light)
+     --primary-deep  grey    · the solid primary fill (near-white)
+     --accent        grey    · small accents, glows, thin strokes
+     --accent-hi     grey    · text sitting on a saturated fill
+     --accent-soft   grey    · LARGE fills and body text on a fill (muted)
+     --emphasis      grey    · RARE emphasis only (one word, one chip)
+     --emphasis-hi   grey    · the light partner of --emphasis
+     --pink          grey    · RARE emphasis only (gradient endpoint)
      --success       green   · status only, always with a non-colour cue
+
+   THE INVERTED CTA
+     --primary-deep is near-white, so the primary button's label is
+     --text-inverse (near-black). The strongest action on the page is the
+     only thing that inverts. It reads at a glance on a dark surface.
 
    SURFACE RAMP — dark, five steps
      --surface        the page surface
@@ -38,18 +59,21 @@
      --surface-3      card
      --surface-4      elevated card (hover)
      --surface-deep   floor: footer, code blocks, page wipe
-     --surface-violet / -mint / -peach   the three tinted bands
+     --surface-violet / -mint / -peach   the three band surfaces
      --glass / --glass-2 / --glass-3     translucent glass fills
      --line / --line-2 / --line-glow     hairlines
 
    TEXT RAMP
-     --text       18.3:1  body copy + headings
-     --text-2      8.5:1  secondary copy
-     --text-muted  5.0:1  meta, captions, table labels
+     --text       body copy + headings
+     --text-2     secondary copy
+     --text-muted meta, captions, table labels
+     --text-inverse   text ON a light surface (the inverted CTA)
 
    LINKS
      --link / --link-hover / --link-visited  — a colour of its own, so a
      link never reads as body text and a visited link never disappears.
+     Prose links are underlined: in monochrome the underline, not the hue,
+     is what says "this is a link".
 
    STATUS
      --success / --warning / --danger / --info (+ the *-bg tints).
@@ -57,22 +81,23 @@
      state is readable without relying on hue.
 
    GRADIENTS
-     The eleven tokens below are the only gradient literals in the site.
+     The eleven tokens below are the only gradient literals in the site,
+     and every stop in every one of them is a tone.
    ══════════════════════════════════════════════════════════════════════ */
 :root {
-  /* ── Brand hues ─────────────────────────────────────────────────── */
-  --primary:       #7b7b7b;  /* violet — brand hue                     */
-  --primary-hi:    #9d9d9d;  /* violet, light — headings, hairlines    */
-  --primary-deep:  #f2f2f2;  /* violet, deep — the solid primary fill  */
-  --accent:        #c1c1c1;  /* cyan — small accents, glows            */
-  --accent-hi:     #d6d6d6;  /* cyan, light — text on a saturated fill */
-  --accent-soft:   #adadad;  /* cyan, muted — LARGE fills, long text   */
-  --emphasis:      #a9a9a9;  /* orange — RARE emphasis only            */
+  /* ── Brand ramp — neutral, separated by LIGHTNESS not by hue ─────── */
+  --primary:       #7b7b7b;  /* grey — borders, marks, hairlines        */
+  --primary-hi:    #9d9d9d;  /* grey, light — headings, hover states   */
+  --primary-deep:  #f2f2f2;  /* grey, near-white — the solid CTA fill   */
+  --accent:        #c1c1c1;  /* grey — small accents, glows            */
+  --accent-hi:     #d6d6d6;  /* grey, light — text on a saturated fill */
+  --accent-soft:   #adadad;  /* grey, muted — LARGE fills, long text   */
+  --emphasis:      #a9a9a9;  /* grey — RARE emphasis only              */
   --emphasis-hi:   #bdbdbd;
   --emphasis-soft: #9f9f9f;
-  --pink:          #9f9f9f;  /* rose — RARE emphasis only              */
+  --pink:          #9f9f9f;  /* grey — RARE emphasis only              */
   --pink-soft:     #989898;
-  --success:       #a2c3a7;  /* green — status only                    */
+  --success:       #a2c3a7;  /* green — status only, muted             */
   --text:          #f4f4f4;  /* the near-white                         */
 
   /* ── Surface ramp (dark only) ───────────────────────────────────── */
@@ -81,9 +106,9 @@
   --surface-3:      #0d0d0d;  /* card                                  */
   --surface-4:      #141414;  /* elevated card (hover)                  */
   --surface-deep:   #040404;  /* floor: footer, code, page wipe         */
-  --surface-violet: #0d0d0d;  /* tinted band — violet                   */
-  --surface-mint:   #121212;  /* tinted band — mint                     */
-  --surface-peach:  #0f0f0f;  /* tinted band — peach                    */
+  --surface-violet: #0d0d0d;  /* band surface (the name is legacy)        */
+  --surface-mint:   #121212;  /* band surface (the name is legacy)        */
+  --surface-peach:  #0f0f0f;  /* band surface (the name is legacy)        */
   --glass:          rgba(255, 255, 255, 0.045);
   --glass-2:        rgba(255, 255, 255, 0.072);
   --glass-3:        rgba(255, 255, 255, 0.10);
@@ -115,7 +140,7 @@
   --grad-brand:    linear-gradient(120deg, #585858 0%, #676767 100%);
   /* the warm ramp: gradient TEXT and rare accent hairlines only       */
   --grad-accent:   linear-gradient(115deg, #9d9d9d 0%, #9f9f9f 52%, #a9a9a9 100%);
-  /* one tinted-surface ramp; --tint carries the per-card hue          */
+  /* one tinted-surface ramp; --tint carries the per-card wash         */
   --grad-surface:  linear-gradient(160deg, var(--tint, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0.035) 70%);
   /* the hero aurora: one violet core fading out through the accent    */
   --grad-aurora:   radial-gradient(circle at 26% 32%, rgba(123, 123, 123, 0.42), rgba(186, 186, 186, 0.10) 52%, transparent 72%);
@@ -127,7 +152,7 @@
   --grad-mask-line: linear-gradient(#000 0 0);
   /* the readability veil that sits over the WebGL stage              */
   --grad-scrim:     linear-gradient(180deg, rgba(5, 5, 5, 0.46) 0%, rgba(5, 5, 5, 0.04) 30%, rgba(5, 5, 5, 0.16) 66%, rgba(5, 5, 5, 0.48) 100%);
-  /* one ambient orb; --orb-tint carries the hue                      */
+  /* one ambient orb; --orb-tint carries the wash                     */
   --grad-orb:      radial-gradient(closest-side, var(--orb-tint, rgba(123, 123, 123, 0.30)), transparent 72%);
   /* one pointer spotlight; --spot-size / --spot-alpha carry the rest  */
   --grad-spot:     radial-gradient(var(--spot-size, 300px) circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, var(--spot-alpha, 0.14)), transparent 68%);

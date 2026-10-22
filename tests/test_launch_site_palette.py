@@ -382,8 +382,16 @@ def test_the_canonical_block_documents_the_palette(sheets: dict[str, str]) -> No
     assert "THE ONE PALETTE" in header, (
         "the canonical palette must carry a header comment explaining the system"
     )
-    for topic in ("BRAND HUES", "SURFACE RAMP", "TEXT RAMP", "LINKS", "STATUS", "GRADIENTS"):
+    for topic in ("BRAND RAMP", "SURFACE RAMP", "TEXT RAMP", "LINKS", "STATUS", "GRADIENTS"):
         assert topic in header, f"the palette header must document the {topic.lower()}"
+    assert "MONOCHROME" in header, (
+        "the palette header must say the palette is monochrome - that is the "
+        "rule the whole conversion rests on"
+    )
+    assert "STATUS" in header and "EXCEPTION" in header, (
+        "the palette header must name the status hues as the one exception, so "
+        "nobody reads the four coloured tokens as a mistake"
+    )
 
 
 # ── 2. gradients ──────────────────────────────────────────────────────────
