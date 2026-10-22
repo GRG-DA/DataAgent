@@ -5,7 +5,7 @@ against baseline commit `3e03571` (the tree had **no version control** before th
 baseline was created as the first commit).
 
 **Baseline:** `python -m pytest -q` → **2456 passed, 3 skipped** (13 min).
-**Final:** → **3033 passed, 3 skipped** (6 min) — see §5 for the final numbers.
+**Final:** → **3053 passed, 3 skipped** (11 min) — see §5 for the final numbers.
 
 This document is the evidence index required by the project's TDD workflow. It says **what each
 test proves**, not what was intended. Every claim below is backed by a command that was run and
