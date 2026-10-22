@@ -47,14 +47,35 @@ MAX_RECIPIENT_LENGTH = 254
 #: Elements removed together with their content.
 _STRIP_ELEMENTS = frozenset({"script", "style", "iframe", "object", "embed",
                              "form", "link", "meta", "base", "applet", "frame",
-                             "frameset"})
+                             "frameset", "svg", "math"})
 
 #: Elements removed, but their content is kept.
-_STRIP_TAGS_ONLY = frozenset({"input", "button", "textarea", "select", "option"})
+_STRIP_TAGS_ONLY = frozenset({"input", "button", "textarea", "select", "option",
+                              "source", "track", "param"})
 
-#: Attributes that carry a URL.
-_URL_ATTRS = frozenset({"href", "src", "action", "formaction", "background",
-                        "poster", "data", "codebase", "cite"})
+#: Attributes that carry a URL.  Every one of them is a way to name a remote
+#: resource, so every one of them is probed: a ``srcset`` names a pixel just
+#: as surely as a ``src`` does, and an ``xlink:href`` runs script just as
+#: surely as an ``href`` does.
+_URL_ATTRS = frozenset({
+    "href", "src", "srcset", "action", "formaction", "background",
+    "poster", "data", "codebase", "cite", "xlink:href", "ping",
+    "longdesc", "usemap", "profile", "manifest", "icon", "archive",
+    "classid", "code", "dynsrc", "lowsrc", "xml:base",
+})
+
+#: Attributes a mail client FETCHES by itself, with no click and no reader
+#: action.  A remote URL in one of these is a tracking pixel: it reports the
+#: open back to whoever put it there.  Remote is never allowed in these.
+_FETCH_URL_ATTRS = frozenset({
+    "src", "srcset", "poster", "background", "data", "codebase", "manifest",
+    "icon", "archive", "classid", "dynsrc", "lowsrc", "xml:base", "usemap",
+    "profile", "ping", "longdesc", "xlink:href",
+})
+
+#: URL prefixes that cannot reach the network: a fragment, or a root-relative
+#: path that resolves against nothing.
+_SAFE_LOCAL_PREFIXES = ("#", "/")
 
 #: URL schemes that are never allowed.
 _DANGEROUS_SCHEMES = ("javascript:", "vbscript:", "data:text/html", "data:application/")
@@ -67,11 +88,24 @@ _SAFE_URL_SCHEMES = ("http:", "https:", "mailto:", "#", "/")
 _SAFE_DATA_IMAGES = ("data:image/png;base64,", "data:image/jpeg;base64,", "data:image/gif;base64,")
 
 #: CSS constructs that can execute or fetch.  A style attribute is kept (the
-#: report is styled), but these are removed from it.
+#: report is styled), but these are removed from it.  Each alternative
+#: matches the WHOLE construct, so removing it cannot leave a working
+#: remainder behind.
 _DANGEROUS_CSS = re.compile(
-    r"(expression\s*\(|url\s*\(|javascript\s*:|vbscript\s*:|@import|behaviou?r\s*:|-moz-binding)",
+    r"url\s*\([^)]*\)"
+    r"|expression\s*\([^)]*\)"
+    r"|@import[^;]*;?"
+    r"|behaviou?r\s*:[^;]*;?"
+    r"|-moz-binding\s*:[^;]*;?"
+    r"|javascript\s*:"
+    r"|vbscript\s*:",
     re.IGNORECASE,
 )
+
+#: A CSS escape.  The browser decodes these BEFORE it parses the value, so
+#: ``u\72l(`` is ``url(`` and a filter that matches the literal text is
+#: defeated by a single backslash.
+_CSS_ESCAPE = re.compile(r"\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\(.)")
 
 #: Whitespace and control characters are stripped from a URL before its
 #: scheme is tested: every HTML and URL parser removes them, so
@@ -83,6 +117,79 @@ _EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$")
 
 #: Characters that must never appear in a header value.
 _HEADER_UNSAFE = re.compile(r"[\r\n\x00]")
+
+
+def _decode_css(value: str) -> str:
+    """Decode the CSS escapes a browser decodes before it parses a value.
+
+    ``u\\72l(`` is ``url(`` and ``e\\78pression(`` is ``expression(``.  A
+    filter that matches the literal text is defeated by one backslash, so
+    the value is decoded first and the DECODED value is what gets checked
+    and what gets written back out.
+    """
+
+    def _replace(match: re.Match) -> str:
+        if match.group(1):
+            try:
+                point = int(match.group(1), 16)
+            except ValueError:
+                return ""
+            if point == 0 or point > 0x10FFFF:
+                return ""
+            return chr(point)
+        return match.group(2)
+
+    return _CSS_ESCAPE.sub(_replace, value)
+
+
+def _clean_style(value: str) -> Optional[str]:
+    """Return the safe form of a style attribute, or None to drop it."""
+    decoded = _decode_css(value)
+    if "\\" in decoded:
+        # An escape we could not read: the browser might read it, we cannot.
+        # Fail closed.
+        return None
+    cleaned = _DANGEROUS_CSS.sub("", decoded)
+    if not cleaned.strip():
+        return None
+    return cleaned
+
+
+def _url_is_safe(value: str, *, allow_remote: bool = True) -> bool:
+    """Is this URL safe to put in an email body?
+
+    Every whitespace/control character is stripped first: browsers do the
+    same before resolving a URL, so "java\\nscript:alert(1)" IS
+    "javascript:alert(1)".  Testing the raw value let it through.
+
+    ``allow_remote`` is False for the attributes a mail client fetches on
+    its own - there, a remote URL is a tracking pixel, not a link.
+    """
+    probe = _URL_NOISE.sub("", value).lower()
+    if probe.startswith(_DANGEROUS_SCHEMES):
+        return False
+    if probe.startswith("data:"):
+        # An SVG data URI can carry <script> - only real raster images are
+        # allowed.
+        return probe.startswith(_SAFE_DATA_IMAGES)
+    if allow_remote and probe.startswith(_SAFE_URL_SCHEMES):
+        return True
+    return probe.startswith(_SAFE_LOCAL_PREFIXES)
+
+
+def _srcset_is_safe(value: str) -> bool:
+    """Is every candidate URL in a srcset safe?
+
+    A srcset is a comma-separated list of "URL descriptor" pairs.  One
+    remote candidate is enough to phone home, so the whole attribute goes.
+    """
+    for candidate in value.split(","):
+        parts = candidate.strip().split()
+        if not parts:
+            continue
+        if not _url_is_safe(parts[0], allow_remote=False):
+            return False
+    return True
 
 
 class _EmailHtmlSanitizer(HTMLParser):
@@ -106,25 +213,17 @@ class _EmailHtmlSanitizer(HTMLParser):
             lname = (name or "").lower()
             if lname.startswith("on"):
                 continue  # event handler
-            if lname in ("style",) and value:
+            if lname == "style" and value:
                 # Keep the formatting, drop the constructs that can execute
                 # or fetch (expression(), url(), @import, behaviour:).
-                value = _DANGEROUS_CSS.sub("", value)
-                if not value.strip():
+                value = _clean_style(value)
+                if value is None:
                     continue
-            if lname in _URL_ATTRS and value:
-                # Strip every whitespace/control char first: browsers do the
-                # same before resolving a URL, so "java\nscript:alert(1)" IS
-                # "javascript:alert(1)".  Testing the raw value let it through.
-                probe = _URL_NOISE.sub("", value).lower()
-                if probe.startswith(_DANGEROUS_SCHEMES):
+            elif lname == "srcset" and value:
+                if not _srcset_is_safe(value):
                     continue
-                if probe.startswith("data:"):
-                    # An SVG data URI can carry <script> - only real raster
-                    # images are allowed.
-                    if not probe.startswith(_SAFE_DATA_IMAGES):
-                        continue
-                elif not probe.startswith(_SAFE_URL_SCHEMES):
+            elif lname in _URL_ATTRS and value:
+                if not _url_is_safe(value, allow_remote=lname not in _FETCH_URL_ATTRS):
                     continue
             if value is None:
                 out.append(f' {name}')

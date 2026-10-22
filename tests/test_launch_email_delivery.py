@@ -138,6 +138,111 @@ class TestHtmlSanitisation:
         assert "&amp;" in out
 
 
+class TestUrlAttributeBypasses:
+    """Every attribute that can carry a URL is a URL attribute.
+
+    A remote image in an email body is a tracking pixel: the mail client
+    fetches it and reports the open back to whoever put it there.  That is
+    true of every attribute that can name a remote resource, not just
+    ``src``.
+    """
+
+    def test_a_srcset_pixel_is_removed(self):
+        out = ed.sanitize_email_html(
+            '<img src="data:image/png;base64,AAAA" '
+            'srcset="https://tracker.example/pixel.gif 1x">'
+        )
+        assert "tracker.example" not in out
+
+    def test_a_srcset_candidate_is_removed(self):
+        out = ed.sanitize_email_html(
+            '<img src="data:image/png;base64,AAAA" '
+            'srcset="https://ok.example/a.png 1x, https://tracker.example/b.png 2x">'
+        )
+        assert "tracker.example" not in out
+
+    def test_a_source_element_cannot_fetch(self):
+        out = ed.sanitize_email_html(
+            '<picture><source srcset="https://tracker.example/pixel.gif">'
+            '<img src="data:image/png;base64,AAAA"></picture>'
+        )
+        assert "tracker.example" not in out
+
+    def test_xlink_href_javascript_urls_are_removed(self):
+        out = ed.sanitize_email_html(
+            '<a xlink:href="javascript:alert(1)">click</a>'
+        )
+        assert "javascript:" not in out.lower()
+
+    def test_svg_is_removed(self):
+        """An SVG carries <script> and event handlers of its own."""
+        out = ed.sanitize_email_html(
+            '<svg><a xlink:href="javascript:alert(1)"><text>go</text></a></svg>'
+        )
+        assert "<svg" not in out.lower()
+        assert "javascript:" not in out.lower()
+
+    def test_math_is_removed(self):
+        out = ed.sanitize_email_html(
+            '<math><mtext><a href="javascript:alert(1)">go</a></mtext></math>'
+        )
+        assert "<math" not in out.lower()
+        assert "javascript:" not in out.lower()
+
+
+class TestCssEscapeBypasses:
+    """A CSS escape is decoded by the browser before it parses a value.
+
+    ``u\\72l(`` IS ``url(`` and ``e\\78pression(`` IS ``expression(``, so a
+    filter that matches the literal text is defeated by one backslash.
+    """
+
+    @staticmethod
+    def _decoded(out: str) -> str:
+        """Decode the CSS escapes in the output the way a browser would."""
+        import re as _re
+
+        def _replace(match):
+            if match.group(1):
+                try:
+                    return chr(int(match.group(1), 16))
+                except (ValueError, OverflowError):
+                    return ""
+            return match.group(2)
+
+        return _re.sub(r"\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\(.)", _replace, out)
+
+    def test_an_escaped_url_call_is_removed(self):
+        out = ed.sanitize_email_html(
+            '<td style="background:u\\72l(https://tracker.example/x.png)">x</td>'
+        )
+        assert "tracker.example" not in out
+        assert "url(" not in self._decoded(out).lower()
+
+    def test_an_escaped_expression_is_removed(self):
+        out = ed.sanitize_email_html(
+            '<td style="width:e\\78pression(alert(1))">x</td>'
+        )
+        assert "expression" not in self._decoded(out).lower()
+        assert "alert(" not in out
+
+    def test_a_residual_backslash_drops_the_attribute(self):
+        """A CSS line continuation: the browser removes the backslash-newline.
+
+        What the filter reads is not what the browser reads, so a value that
+        still contains a backslash after decoding is dropped outright.
+        """
+        out = ed.sanitize_email_html('<td style="color:red\\\n">x</td>')
+        assert "style=" not in out.lower()
+
+    def test_a_plain_style_still_survives(self):
+        out = ed.sanitize_email_html(
+            '<td style="color:#333333;font-weight:bold">x</td>'
+        )
+        assert "color" in out
+        assert "bold" in out
+
+
 class TestSendBehaviour:
     def _capture(self, monkeypatch):
         """Intercept the SMTP send and return the captured message."""
