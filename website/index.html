@@ -38,6 +38,23 @@
 </head>
 <body data-fx-scene="home">
 
+<!-- ═══════ Hero film ═══════
+     A monochrome dashboard loop that sits BEHIND the lattice and the hero
+     copy.  It REPLACES the WebGL stage on this page (fx-webgl.js skips the
+     canvas when the film is present) — two full-viewport motion layers
+     behind one hero is a bug, not a design.
+
+     The clip is a LOCAL file.  The site loads no subresource from a third
+     party (tests/test_launch_site_privacy.py), and a remote <video> would
+     break that promise as well as ADR-013.  It is decorative, so it is
+     muted, looping, and hidden from assistive technology. -->
+<video class="hero-film" data-hero-film
+       autoplay muted loop playsinline preload="metadata"
+       poster="media/hero-poster.jpg" aria-hidden="true" tabindex="-1">
+  <source src="media/hero-loop.webm" type="video/webm">
+  <source src="media/hero-loop.mp4" type="video/mp4">
+</video>
+
 <div class="bg-grid"></div>
 <div class="bg-orbs"></div>
 
@@ -124,11 +141,11 @@
             <span class="hf-label">Private by default</span>
           </div>
           <svg class="da-mark hero-mark" viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="84" height="84" rx="22" fill="#140B2E"/>
-            <rect x="14" y="14" width="26" height="26" rx="8" fill="#6D28D9"/>
-            <rect x="44" y="14" width="26" height="26" rx="13" fill="#F5841F"/>
-            <rect x="14" y="44" width="26" height="26" rx="13" fill="#22D3EE"/>
-            <rect x="44" y="44" width="26" height="26" rx="8" fill="#EEE9FF"/>
+            <rect width="84" height="84" rx="22" fill="#121212"/>
+            <rect x="14" y="14" width="26" height="26" rx="8" fill="#585858"/>
+            <rect x="44" y="14" width="26" height="26" rx="13" fill="#a2a2a2"/>
+            <rect x="14" y="44" width="26" height="26" rx="13" fill="#c1c1c1"/>
+            <rect x="44" y="44" width="26" height="26" rx="8" fill="#ececec"/>
           </svg>
         </div>
       </div>
@@ -166,9 +183,9 @@
             <p class="card-text">Raw SQL against the warehouse with syntax highlighting, autocomplete, query history, and one-click result export.</p>
             <div class="tile-art" aria-hidden="true">
               <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="10" width="132" height="14" rx="7" fill="#22D3EE"/>
+                <rect x="4" y="10" width="132" height="14" rx="7" fill="#c1c1c1"/>
                 <rect x="4" y="34" width="96" height="14" rx="7" fill="rgba(255,255,255,0.35)"/>
-                <rect x="4" y="58" width="114" height="14" rx="7" fill="#F5841F"/>
+                <rect x="4" y="58" width="114" height="14" rx="7" fill="#a2a2a2"/>
               </svg>
             </div>
           </div>
@@ -265,11 +282,11 @@ GROUP BY region;</code>
             <span data-dot="3"></span>
           </div>
           <svg class="da-mark" viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="84" height="84" rx="22" fill="#140B2E"/>
-            <rect x="14" y="14" width="26" height="26" rx="8" fill="#6D28D9"/>
-            <rect x="44" y="14" width="26" height="26" rx="13" fill="#F5841F"/>
-            <rect x="14" y="44" width="26" height="26" rx="13" fill="#22D3EE"/>
-            <rect x="44" y="44" width="26" height="26" rx="8" fill="#EEE9FF"/>
+            <rect width="84" height="84" rx="22" fill="#121212"/>
+            <rect x="14" y="14" width="26" height="26" rx="8" fill="#585858"/>
+            <rect x="44" y="14" width="26" height="26" rx="13" fill="#a2a2a2"/>
+            <rect x="14" y="44" width="26" height="26" rx="13" fill="#c1c1c1"/>
+            <rect x="44" y="44" width="26" height="26" rx="8" fill="#ececec"/>
           </svg>
         </div>
 
@@ -280,10 +297,10 @@ GROUP BY region;</code>
             <p class="card-text">30+ chart types on a drag-and-drop canvas. Export a real .pbix with your data, star schema and DAX measures — double-click it in Power BI Desktop and it works.</p>
             <div class="tile-art" aria-hidden="true">
               <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="8" y="46" width="22" height="36" rx="6" fill="rgba(20,11,46,0.35)"/>
-                <rect x="38" y="28" width="22" height="54" rx="6" fill="rgba(20,11,46,0.55)"/>
-                <rect x="68" y="12" width="22" height="70" rx="6" fill="rgba(20,11,46,0.8)"/>
-                <rect x="98" y="34" width="22" height="48" rx="6" fill="rgba(20,11,46,0.45)"/>
+                <rect x="8" y="46" width="22" height="36" rx="6" fill="rgba(17, 17, 17, 0.35)"/>
+                <rect x="38" y="28" width="22" height="54" rx="6" fill="rgba(18, 18, 18, 0.55)"/>
+                <rect x="68" y="12" width="22" height="70" rx="6" fill="rgba(18, 18, 18, 0.8)"/>
+                <rect x="98" y="34" width="22" height="48" rx="6" fill="rgba(17, 17, 17, 0.45)"/>
               </svg>
             </div>
           </div>
@@ -293,11 +310,11 @@ GROUP BY region;</code>
             <p class="card-text">Full spreadsheet with formula bar, formatting, AutoSum, multi-sheet, and CSV / XLSX import-export — all in-browser.</p>
             <div class="tile-art" aria-hidden="true">
               <svg viewBox="0 0 140 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="6" y="8" width="128" height="74" rx="10" fill="rgba(20,11,46,0.2)"/>
-                <rect x="6" y="8" width="128" height="18" rx="10" fill="rgba(20,11,46,0.45)"/>
-                <rect x="14" y="34" width="50" height="10" rx="5" fill="rgba(20,11,46,0.35)"/>
-                <rect x="14" y="52" width="70" height="10" rx="5" fill="rgba(20,11,46,0.25)"/>
-                <rect x="14" y="70" width="40" height="6" rx="3" fill="rgba(20,11,46,0.2)"/>
+                <rect x="6" y="8" width="128" height="74" rx="10" fill="rgba(17, 17, 17, 0.2)"/>
+                <rect x="6" y="8" width="128" height="18" rx="10" fill="rgba(17, 17, 17, 0.45)"/>
+                <rect x="14" y="34" width="50" height="10" rx="5" fill="rgba(17, 17, 17, 0.35)"/>
+                <rect x="14" y="52" width="70" height="10" rx="5" fill="rgba(17, 17, 17, 0.25)"/>
+                <rect x="14" y="70" width="40" height="6" rx="3" fill="rgba(17, 17, 17, 0.2)"/>
               </svg>
             </div>
           </div>
@@ -489,10 +506,10 @@ GROUP BY region;</code>
       <div class="learn-panel animate-on-scroll">
         <div class="learn-shapes" aria-hidden="true">
           <svg viewBox="0 0 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="70" height="70" rx="18" fill="#6D28D9" opacity="0.35"/>
+            <rect width="70" height="70" rx="18" fill="#585858" opacity="0.35"/>
           </svg>
           <svg viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="43" cy="43" r="43" fill="#F5841F" opacity="0.35"/>
+            <circle cx="43" cy="43" r="43" fill="#a2a2a2" opacity="0.35"/>
           </svg>
         </div>
         <h2 class="display">New to DataAgent?</h2>

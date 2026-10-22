@@ -272,6 +272,31 @@
     doc.body.appendChild(scrim);
   }
 
+  /* The hero film replaces the WebGL stage on the home page.  It is
+     revealed only once it is actually PLAYING, so a clip that never loads
+     leaves the CSS aurora to carry the hero on its own. */
+  function initHeroFilm() {
+    var film = doc.querySelector('video[data-hero-film]');
+    if (!film) return;
+    if (REDUCED) {
+      /* Motion is off: the clip is hidden by CSS and the aurora stays. */
+      return;
+    }
+    film.addEventListener('playing', function () {
+      film.classList.add('is-live');
+      doc.body.classList.add('fx-film-live');
+    });
+    film.addEventListener('error', function () {
+      film.classList.remove('is-live');
+      doc.body.classList.remove('fx-film-live');
+    });
+    /* A clip that is already running when this runs still counts. */
+    if (!film.paused && film.readyState > 2) {
+      film.classList.add('is-live');
+      doc.body.classList.add('fx-film-live');
+    }
+  }
+
   function initProgress() {
     if (REDUCED) return;
     var bar = doc.createElement('div');
@@ -945,6 +970,7 @@
     scheduleHero();
     initScrim();
     initProgress();
+    initHeroFilm();
     initHeadings();
     initReveals();
     initTilt();

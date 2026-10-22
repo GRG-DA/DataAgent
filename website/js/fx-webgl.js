@@ -76,11 +76,11 @@ const PALETTE = (function () {
     }
   };
   return [
-    new THREE.Color(css('--primary', '#8b5cf6')),
-    new THREE.Color(css('--primary-hi', '#a78bfa')),
-    new THREE.Color(css('--primary-deep', '#7c3aed')),
-    new THREE.Color(css('--accent', '#22d3ee')),
-    new THREE.Color(css('--accent-soft', '#5fb8d6')),
+    new THREE.Color(css('--primary', '#7b7b7b')),
+    new THREE.Color(css('--primary-hi', '#9d9d9d')),
+    new THREE.Color(css('--primary-deep', '#676767')),
+    new THREE.Color(css('--accent', '#c1c1c1')),
+    new THREE.Color(css('--accent-soft', '#adadad')),
   ];
 })();
 
@@ -117,6 +117,17 @@ function boot() {
     return;
   }
 
+  /* The hero film REPLACES the WebGL stage rather than stacking with it.
+     Two full-viewport motion layers behind one hero is a bug, not a
+     design.  If the clip never plays, fx-core.js simply never adds
+     .fx-film-live and the CSS aurora carries the hero on its own. */
+  if (document.querySelector('video[data-hero-film]')) {
+    body.classList.add('fx-hero-film');
+    body.setAttribute('data-fx-webgl', 'off');
+    if (window.FX) window.FX.webgl = false;
+    return;
+  }
+
   const key = body.dataset.fxScene || 'home';
   const cfg = Object.assign({}, PRESETS.home, PRESETS[key] || {});
 
@@ -147,19 +158,19 @@ function boot() {
   renderer.toneMappingExposure = 1.15;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05040f, 0.019);
+  scene.fog = new THREE.FogExp2(0x050505, 0.019);
 
   const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(0, 0.6, cfg.camZ);
   camera.lookAt(0, 0, 0);
 
   /* ── Lights ───────────────────────────────────────────────────── */
-  scene.add(new THREE.AmbientLight(0x6d5bd0, 0.55));
-  const key1 = new THREE.PointLight(0xa78bfa, 90, 60, 2);
+  scene.add(new THREE.AmbientLight(0x8a8a8d, 0.55));
+  const key1 = new THREE.PointLight(0xebebeb, 90, 60, 2);
   key1.position.set(-12, 10, 12);
-  const key2 = new THREE.PointLight(0x22d3ee, 70, 60, 2);
+  const key2 = new THREE.PointLight(0xcfcfd2, 70, 60, 2);
   key2.position.set(14, -8, 10);
-  const key3 = new THREE.PointLight(0xf472b6, 60, 50, 2);
+  const key3 = new THREE.PointLight(0xb4b4b8, 60, 50, 2);
   key3.position.set(0, 6, -14);
   scene.add(key1, key2, key3);
 
@@ -251,11 +262,11 @@ function boot() {
   if (cfg.core) {
     const shell = new THREE.Mesh(
       new THREE.IcosahedronGeometry(2.2, 1),
-      new THREE.MeshBasicMaterial({ color: 0xb69bff, wireframe: true, transparent: true, opacity: 0.26 })
+      new THREE.MeshBasicMaterial({ color: 0x9a9a9e, wireframe: true, transparent: true, opacity: 0.26 })
     );
     const inner = new THREE.Mesh(
       new THREE.IcosahedronGeometry(0.95, 2),
-      new THREE.MeshStandardMaterial({ color: 0x8b5cf6, emissive: 0x7c3aed, emissiveIntensity: 0.85, metalness: 0.6, roughness: 0.25 })
+      new THREE.MeshStandardMaterial({ color: 0xcfcfd2, emissive: 0x9a9a9e, emissiveIntensity: 0.85, metalness: 0.6, roughness: 0.25 })
     );
     core.add(shell, inner);
     core.userData.shell = shell;
@@ -266,7 +277,7 @@ function boot() {
     for (let r = 0; r < 3; r++) {
       const ring = new THREE.Mesh(
         new THREE.TorusGeometry(3.1 + r * 0.7, 0.012, 6, 160),
-        new THREE.MeshBasicMaterial({ color: r === 1 ? 0xf472b6 : 0xa78bfa, transparent: true, opacity: 0.45 })
+        new THREE.MeshBasicMaterial({ color: r === 1 ? 0xb4b4b8 : 0xebebeb, transparent: true, opacity: 0.45 })
       );
       ring.rotation.set(Math.PI / 2 + r * 0.34, r * 0.5, r * 0.2);
       core.add(ring);
@@ -276,7 +287,7 @@ function boot() {
 
   /* ── Data floor ───────────────────────────────────────────────── */
   if (cfg.floor) {
-    const grid = new THREE.GridHelper(160, 80, 0x5b3fa8, 0x241a45);
+    const grid = new THREE.GridHelper(160, 80, 0x3a3a3d, 0x1a1a1c);
     grid.material.transparent = true;
     grid.material.opacity = 0.2;
     grid.position.y = -18;

@@ -511,14 +511,148 @@ def test_fill_and_border_colours_clear_3_to_1(root_tokens: dict[str, str]) -> No
     assert not offenders, "fill / border colours below 3:1:\n  " + "\n  ".join(offenders)
 
 
-def test_primary_button_text_clears_4_5_to_1(root_tokens: dict[str, str]) -> None:
-    """The primary button's own text must clear 4.5:1 on its own fill."""
+def test_primary_button_text_clears_4_5_to_1(
+    root_tokens: dict[str, str], sheets: dict[str, str]
+) -> None:
+    """The primary button's own label must clear 4.5:1 on its own fill.
+
+    The label is resolved from the RULE, not assumed: a monochrome palette
+    inverts the button (a near-white fill with a near-black label), so the
+    test has to read what the button actually says.
+    """
     fill = _resolve(root_tokens, "--primary-deep")
-    label = _resolve(root_tokens, "--text")
-    assert fill and label
+    assert fill
+
+    label = None
+    for name in STYLESHEETS:
+        for selector, body in _rules(sheets[name]):
+            # The selector must BE .btn-primary - not ".btn-primary:hover",
+            # and not a comment that mentions it.  And the property must be
+            # `color`, not `border-color`.
+            clean = re.sub(r"/\*.*?\*/", "", selector, flags=re.S).strip()
+            if clean != ".btn-primary":
+                continue
+            m = re.search(r"(?<![\w-])color\s*:\s*var\((--[\w-]+)\)", body)
+            if m:
+                label = _resolve(root_tokens, m.group(1))
+                break
+        if label:
+            break
+    assert label, "could not resolve the primary button's label colour"
     ratio = _contrast(label, fill)
     assert ratio >= 4.5, (
-        f"--text ({label}) on the primary fill --primary-deep ({fill}) = {ratio:.2f}:1"
+        f"the primary label ({label}) on the primary fill --primary-deep "
+        f"({fill}) = {ratio:.2f}:1"
+    )
+
+
+# ── 5b. a near-white fill must carry a near-black label ───────────────────
+#: A colour at or above this relative luminance is a near-white panel.
+NEAR_WHITE_LUMINANCE = 0.75
+
+
+def _solid_colour(value: str, root_tokens: dict[str, str]) -> str | None:
+    """Return the hex colour a declaration resolves to, or None.
+
+    A TRANSLUCENT colour is not a solid fill: ``rgba(255,255,255,0.07)`` is
+    a glass veil over the dark page, not a white panel, and white type on
+    it is correct.  A gradient is not a colour either.
+    """
+    value = (value or "").replace("!important", "").strip()
+    if not value:
+        return None
+    token = re.fullmatch(r"var\(\s*(--[\w-]+)\s*\)", value)
+    if token:
+        resolved = _resolve(root_tokens, token.group(1))
+        if not resolved or not resolved.startswith("#"):
+            return None
+        return resolved
+    literal = re.fullmatch(r"#([0-9a-fA-F]{3,8})", value)
+    if literal:
+        body = literal.group(1)
+        if len(body) == 3:
+            body = "".join(ch * 2 for ch in body)
+        if len(body) < 6:
+            return None
+        return "#" + body[:6]
+    rgb = re.fullmatch(r"rgba?\(([^)]*)\)", value)
+    if rgb:
+        parts = [part.strip() for part in rgb.group(1).split(",")]
+        if len(parts) == 4:
+            try:
+                if float(parts[3]) < 1:
+                    return None  # translucent: a veil, not a fill
+            except ValueError:
+                return None
+        if len(parts) < 3:
+            return None
+        try:
+            red, green, blue = (int(float(part)) for part in parts[:3])
+        except ValueError:
+            return None
+        return "#%02x%02x%02x" % (red, green, blue)
+    return None
+
+
+def _effective(entries: list[tuple[int, int, bool, str]]) -> str | None:
+    """The declaration the cascade actually picks.
+
+    ``entries`` are (stylesheet index, rule index, is_important, value) in
+    source order.  An ``!important`` declaration beats every normal one
+    regardless of order; among equals the later stylesheet wins, and
+    within a stylesheet the later rule wins.
+    """
+    if not entries:
+        return None
+    important = [entry for entry in entries if entry[2]]
+    pool = important if important else entries
+    return max(pool, key=lambda entry: (entry[0], entry[1]))[3]
+
+
+def test_a_near_white_fill_never_takes_a_light_label(
+    sheets: dict[str, str], root_tokens: dict[str, str]
+) -> None:
+    """A near-white panel must carry a near-black label.
+
+    In the monochrome palette the primary fill is near-white, so anything
+    sitting on it has to be INVERTED.  The fill and the label can be set
+    by different rules in different stylesheets - all of them with
+    !important - so the check is per SELECTOR across every stylesheet, not
+    per rule.  A per-rule check passes each rule on its own and misses
+    exactly the bug this exists to catch: the nav CTA is given a near-white
+    fill in pro.css and a near-white label in premium.css, and the label
+    wins.
+    """
+    fills: dict[str, list[tuple[int, int, bool, str]]] = {}
+    labels: dict[str, list[tuple[int, int, bool, str]]] = {}
+    for sheet_index, name in enumerate(STYLESHEETS):
+        for rule_index, (selector, body) in enumerate(_rules(sheets[name])):
+            clean = re.sub(r"/\*.*?\*/", "", selector, flags=re.S).strip()
+            if not clean:
+                continue
+            for prop, raw in re.findall(
+                r"(?<![-\w])(background(?:-color)?|color)\s*:\s*([^;}]+)", body
+            ):
+                value = raw.replace("!important", "").strip()
+                entry = (sheet_index, rule_index, "important" in raw, value)
+                bucket = labels if prop == "color" else fills
+                bucket.setdefault(clean, []).append(entry)
+
+    violations: list[str] = []
+    for selector, fill_entries in fills.items():
+        fill = _solid_colour(_effective(fill_entries) or "", root_tokens)
+        if not fill or _luminance(fill) < NEAR_WHITE_LUMINANCE:
+            continue
+        label_value = _effective(labels.get(selector, []))
+        label = _solid_colour(label_value or "", root_tokens)
+        if label and _luminance(label) >= NEAR_WHITE_LUMINANCE:
+            violations.append(
+                f"{selector} has a near-white fill ({fill}) but takes the "
+                f"light label {label}"
+            )
+    assert not violations, (
+        "a near-white fill must carry a near-black label:\n  "
+        + "\n  ".join(violations)
     )
 
 

@@ -68,10 +68,10 @@
       el.id = 'billing-toast';
       el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
         'padding:12px 20px;border-radius:10px;font:500 14px Inter,sans-serif;z-index:9999;' +
-        'background:var(--surface-deep,#04030b);color:var(--text,#f5f3ff);box-shadow:0 8px 30px rgba(0,0,0,.35)';
+        'background:var(--surface-deep,#040404);color:var(--text,#f4f4f4);box-shadow:0 8px 30px rgba(0,0,0,.35)';
       document.body.appendChild(el);
     }
-    el.style.background = ok ? 'var(--success,#34d399)' : 'var(--danger,#ef4444)';
+    el.style.background = ok ? 'var(--success,#a2c3a8)' : 'var(--danger,#b07474)';
     el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(el._t);
@@ -130,7 +130,7 @@
         name: sub.name,
         description: sub.description,
         prefill: { email: email },
-        theme: { color: '#8b5cf6' },
+        theme: { color: '#7b7b7b' },
         handler: function (resp) {
           fetch(API + '/verify-subscription', {
             method: 'POST',
@@ -184,7 +184,7 @@
         name: order.name,
         description: order.description,
         prefill: { email: email },
-        theme: { color: '#8b5cf6' },
+        theme: { color: '#7b7b7b' },
         handler: function (resp) {
           fetch(API + '/verify', {
             method: 'POST',
@@ -228,11 +228,11 @@
         payLabel(p) + '</a>' +
         '<input id="email-' + p.code + '" type="email" placeholder="you@example.com"' +
         ' style="margin-top:10px;width:100%;padding:8px 12px;border-radius:8px;' +
-        'border:1px solid var(--border,#e2e8f0);font:400 14px Inter,sans-serif"' +
+        'border:1px solid var(--border,#e4e8ed);font:400 14px Inter,sans-serif"' +
         ' aria-label="Email for your account">';
     }
     if (!BILLING_READY) {
-      return '<p style="margin:10px 0 0;font-size:0.85rem;font-weight:500;color:var(--text-secondary,#64748b);line-height:1.6;">' +
+      return '<p style="margin:10px 0 0;font-size:0.85rem;font-weight:500;color:var(--text-secondary,#607493);line-height:1.6;">' +
         'No payment can be taken on this deployment. ' +
         (EXTERNAL
           ? '<a href="' + EXTERNAL + '" target="_blank" rel="noopener noreferrer">Buy on our billing site &rarr;</a>'
@@ -241,7 +241,7 @@
     }
     return '<input id="email-' + p.code + '" type="email" placeholder="you@example.com"' +
       ' style="margin:10px 0;width:100%;padding:8px 12px;border-radius:8px;' +
-      'border:1px solid var(--border,#e2e8f0);font:400 14px Inter,sans-serif"' +
+      'border:1px solid var(--border,#e4e8ed);font:400 14px Inter,sans-serif"' +
       ' aria-label="Email for your account">' +
       '<button class="btn btn-primary" data-buy="' + p.code + '">' + payLabel(p) + '</button>';
   }

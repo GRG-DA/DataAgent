@@ -132,8 +132,8 @@ html.fx-ready
   background:
     linear-gradient(105deg,
       transparent 38%,
-      rgba(167, 139, 250, 0.22) 50%,
-      rgba(244, 114, 182, 0.16) 56%,
+      rgba(158, 158, 158, 0.22) 50%,
+      rgba(155, 155, 155, 0.16) 56%,
       transparent 66%) 0 0 / 200% 100% no-repeat;
 }
 
@@ -193,8 +193,8 @@ html.fx-ready
     background:
       linear-gradient(180deg,
         transparent 0%,
-        rgba(167, 139, 250, 0.9) 44%,
-        rgba(244, 114, 182, 0.95) 54%,
+        rgba(157, 157, 157, 0.9) 44%,
+        rgba(159, 159, 159, 0.95) 54%,
         transparent 100%) 0 0 / 100% 260% no-repeat;
   }
 

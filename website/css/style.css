@@ -18,7 +18,7 @@
    pro.css and premium.css consume these tokens and never redefine one.
 
    THE SITE IS DARK ONLY. There is no light theme: every value below is
-   tuned against the near-black indigo surface (#070613).
+   tuned against the near-black indigo surface (#070707).
 
    BRAND HUES — five, fixed
      --primary       violet  · filled buttons, brand marks, borders
@@ -61,74 +61,74 @@
    ══════════════════════════════════════════════════════════════════════ */
 :root {
   /* ── Brand hues ─────────────────────────────────────────────────── */
-  --primary:       #8b5cf6;  /* violet — brand hue                     */
-  --primary-hi:    #a78bfa;  /* violet, light — headings, hairlines    */
-  --primary-deep:  #7c3aed;  /* violet, deep — the solid primary fill  */
-  --accent:        #22d3ee;  /* cyan — small accents, glows            */
-  --accent-hi:     #67e8f9;  /* cyan, light — text on a saturated fill */
-  --accent-soft:   #5fb8d6;  /* cyan, muted — LARGE fills, long text   */
-  --emphasis:      #ff8a3d;  /* orange — RARE emphasis only            */
-  --emphasis-hi:   #ffa96b;
-  --emphasis-soft: #e08a52;
-  --pink:          #f472b6;  /* rose — RARE emphasis only              */
-  --pink-soft:     #cf7fa8;
-  --success:       #34d399;  /* green — status only                    */
-  --text:          #f5f3ff;  /* the near-white                         */
+  --primary:       #7b7b7b;  /* violet — brand hue                     */
+  --primary-hi:    #9d9d9d;  /* violet, light — headings, hairlines    */
+  --primary-deep:  #f2f2f2;  /* violet, deep — the solid primary fill  */
+  --accent:        #c1c1c1;  /* cyan — small accents, glows            */
+  --accent-hi:     #d6d6d6;  /* cyan, light — text on a saturated fill */
+  --accent-soft:   #adadad;  /* cyan, muted — LARGE fills, long text   */
+  --emphasis:      #a9a9a9;  /* orange — RARE emphasis only            */
+  --emphasis-hi:   #bdbdbd;
+  --emphasis-soft: #9f9f9f;
+  --pink:          #9f9f9f;  /* rose — RARE emphasis only              */
+  --pink-soft:     #989898;
+  --success:       #a2c3a7;  /* green — status only                    */
+  --text:          #f4f4f4;  /* the near-white                         */
 
   /* ── Surface ramp (dark only) ───────────────────────────────────── */
-  --surface:        #070613;  /* THE page surface                      */
-  --surface-2:      #0a0819;  /* raised panel / alt band                */
-  --surface-3:      #0d0b1d;  /* card                                  */
-  --surface-4:      #141029;  /* elevated card (hover)                  */
-  --surface-deep:   #04030b;  /* floor: footer, code, page wipe         */
-  --surface-violet: #0d0a1f;  /* tinted band — violet                   */
-  --surface-mint:   #08131c;  /* tinted band — mint                     */
-  --surface-peach:  #150c17;  /* tinted band — peach                    */
+  --surface:        #070707;  /* THE page surface                      */
+  --surface-2:      #0a0a0a;  /* raised panel / alt band                */
+  --surface-3:      #0d0d0d;  /* card                                  */
+  --surface-4:      #141414;  /* elevated card (hover)                  */
+  --surface-deep:   #040404;  /* floor: footer, code, page wipe         */
+  --surface-violet: #0d0d0d;  /* tinted band — violet                   */
+  --surface-mint:   #121212;  /* tinted band — mint                     */
+  --surface-peach:  #0f0f0f;  /* tinted band — peach                    */
   --glass:          rgba(255, 255, 255, 0.045);
   --glass-2:        rgba(255, 255, 255, 0.072);
   --glass-3:        rgba(255, 255, 255, 0.10);
   --line:           rgba(255, 255, 255, 0.09);
   --line-2:         rgba(255, 255, 255, 0.18);
-  --line-glow:      rgba(167, 139, 250, 0.35);
+  --line-glow:      rgba(157, 157, 157, 0.35);
 
   /* ── Text ramp ──────────────────────────────────────────────────── */
-  --text-2:         #b4adcd;  /* secondary copy                         */
-  --text-muted:     #8a82a3;  /* meta, captions, table labels           */
-  --text-inverse:   #04030b;  /* text ON a light surface                */
+  --text-2:         #b1b1b1;  /* secondary copy                         */
+  --text-muted:     #868686;  /* meta, captions, table labels           */
+  --text-inverse:   #070707;  /* text ON a light surface                */
 
   /* ── Links ──────────────────────────────────────────────────────── */
-  --link:           #7dd3fc;  /* unmistakably a link, 11.9:1           */
-  --link-hover:     #bae6fd;
-  --link-visited:   #c4b5fd;  /* still reads as a link, 10.7:1          */
+  --link:           #ffffff;  /* unmistakably a link, 11.9:1           */
+  --link-hover:     #ffffff;
+  --link-visited:   #bfbfbf;  /* still reads as a link, 10.7:1          */
 
   /* ── Status (always with a second, non-colour cue) ─────────────── */
-  --success-bg:     rgba(52, 211, 153, 0.14);
-  --warning:        #f59e0b;
-  --warning-bg:     rgba(245, 158, 11, 0.14);
-  --danger:         #ef4444;
-  --danger-bg:      rgba(239, 68, 68, 0.14);
-  --info:           #3b82f6;
-  --info-bg:        rgba(59, 130, 246, 0.14);
+  --success-bg:     rgba(154, 190, 160, 0.14);
+  --warning:        #c7ae7d;
+  --warning-bg:     rgba(195, 168, 116, 0.14);
+  --danger:         #b07474;
+  --danger-bg:      rgba(169, 102, 102, 0.14);
+  --info:           #7386a4;
+  --info-bg:        rgba(114, 133, 163, 0.14);
 
   /* ── Gradients — the ONLY gradient literals in the site ─────────── */
   /* violet ramp: fills, marks, progress bars (white text stays ≥5.7:1) */
-  --grad-brand:    linear-gradient(120deg, #6d28d9 0%, #7c3aed 100%);
+  --grad-brand:    linear-gradient(120deg, #585858 0%, #676767 100%);
   /* the warm ramp: gradient TEXT and rare accent hairlines only       */
-  --grad-accent:   linear-gradient(115deg, #a78bfa 0%, #f472b6 52%, #ff8a3d 100%);
+  --grad-accent:   linear-gradient(115deg, #9d9d9d 0%, #9f9f9f 52%, #a9a9a9 100%);
   /* one tinted-surface ramp; --tint carries the per-card hue          */
   --grad-surface:  linear-gradient(160deg, var(--tint, rgba(255, 255, 255, 0.06)), rgba(255, 255, 255, 0.035) 70%);
   /* the hero aurora: one violet core fading out through the accent    */
-  --grad-aurora:   radial-gradient(circle at 26% 32%, rgba(139, 92, 246, 0.42), rgba(34, 211, 238, 0.10) 52%, transparent 72%);
+  --grad-aurora:   radial-gradient(circle at 26% 32%, rgba(123, 123, 123, 0.42), rgba(186, 186, 186, 0.10) 52%, transparent 72%);
   /* the technical lattice                                            */
-  --grad-grid:     linear-gradient(rgba(139, 92, 246, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.055) 1px, transparent 1px);
+  --grad-grid:     linear-gradient(rgba(123, 123, 123, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(123, 123, 123, 0.055) 1px, transparent 1px);
   /* the fade that lets the lattice dissolve (mask-image)             */
   --grad-mask:     radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
   /* the 1px gradient hairline mask (mask-composite: exclude)         */
   --grad-mask-line: linear-gradient(#000 0 0);
   /* the readability veil that sits over the WebGL stage              */
-  --grad-scrim:     linear-gradient(180deg, rgba(5, 4, 15, 0.46) 0%, rgba(5, 4, 15, 0.04) 30%, rgba(5, 4, 15, 0.16) 66%, rgba(5, 4, 15, 0.48) 100%);
+  --grad-scrim:     linear-gradient(180deg, rgba(5, 5, 5, 0.46) 0%, rgba(5, 5, 5, 0.04) 30%, rgba(5, 5, 5, 0.16) 66%, rgba(5, 5, 5, 0.48) 100%);
   /* one ambient orb; --orb-tint carries the hue                      */
-  --grad-orb:      radial-gradient(closest-side, var(--orb-tint, rgba(139, 92, 246, 0.30)), transparent 72%);
+  --grad-orb:      radial-gradient(closest-side, var(--orb-tint, rgba(123, 123, 123, 0.30)), transparent 72%);
   /* one pointer spotlight; --spot-size / --spot-alpha carry the rest  */
   --grad-spot:     radial-gradient(var(--spot-size, 300px) circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, var(--spot-alpha, 0.14)), transparent 68%);
   /* the button sheen                                                  */
@@ -162,10 +162,10 @@
   /* ── Elevation + glow ───────────────────────────────────────────── */
   --shadow-sm:   0 2px 8px -3px rgba(0, 0, 0, 0.6);
   --shadow-card: 0 24px 60px -28px rgba(0, 0, 0, 0.9), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
-  --shadow-lift: 0 40px 90px -40px rgba(139, 92, 246, 0.55), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
-  --glow-primary: 0 0 44px -8px rgba(139, 92, 246, 0.55);
-  --glow-accent:  0 0 44px -8px rgba(34, 211, 238, 0.45);
-  --glow-strong:  0 40px 90px -40px rgba(139, 92, 246, 0.55), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  --shadow-lift: 0 40px 90px -40px rgba(123, 123, 123, 0.55), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
+  --glow-primary: 0 0 44px -8px rgba(123, 123, 123, 0.55);
+  --glow-accent:  0 0 44px -8px rgba(191, 191, 191, 0.45);
+  --glow-strong:  0 40px 90px -40px rgba(123, 123, 123, 0.55), 0 10px 30px -18px rgba(0, 0, 0, 0.9);
   --inset-top:    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
   /* ── Type ───────────────────────────────────────────────────────── */
@@ -208,7 +208,7 @@ body {
 
 ::selection {
   background: var(--primary);
-  color: var(--text);
+  color: var(--text-inverse);
 }
 
 /* ── Links ───────────────────────────────────────────────────────────
@@ -281,18 +281,56 @@ img { max-width: 100%; display: block; }
 
 .bg-orbs::before {
   width: 600px; height: 600px;
-  --orb-tint: rgba(139, 92, 246, 0.24);
+  --orb-tint: rgba(123, 123, 123, 0.24);
   background: var(--grad-orb);
   top: -200px; right: -200px;
 }
 
 .bg-orbs::after {
   width: 500px; height: 500px;
-  --orb-tint: rgba(99, 102, 241, 0.16);
+  --orb-tint: rgba(119, 119, 119, 0.16);
   background: var(--grad-orb);
   bottom: -150px; left: -150px;
   animation-delay: -10s;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   THE HERO FILM
+   ────────────────────────────────────────────────────────────────────
+   A monochrome dashboard loop behind the lattice and the hero copy.
+
+   It REPLACES the WebGL stage on the home page — fx-webgl.js skips the
+   canvas when a [data-hero-film] is present — because two full-viewport
+   motion layers behind one hero is a bug, not a design.
+
+   It sits FIRST in the stacking order, so the lattice and the ambient
+   orbs still overlay it and the clip reads as a world behind the site
+   rather than as a video pasted on top of it.
+
+   saturate(0) is the belt-and-braces: the clip is already grey, and no
+   future replacement of the file may introduce a hue.
+   ══════════════════════════════════════════════════════════════════════ */
+.hero-film {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  filter: saturate(0);
+  opacity: 0;
+  transition: opacity 1.6s var(--ease-soft);
+}
+
+.hero-film.is-live { opacity: 0.34; }
+
+/* The film is motion, so it goes away when motion goes away. */
+html.fx-reduced .hero-film { display: none; }
+
+/* While the film is playing the ambient orbs step back, or they wash it
+   out.  They come straight back up if the clip never plays. */
+body.fx-film-live .bg-orbs::before,
+body.fx-film-live .bg-orbs::after { opacity: 0.3 !important; }
 
 @keyframes orbFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -310,16 +348,16 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(7, 4, 14, 0.75);
+  background: rgba(5, 5, 5, 0.75);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  border-bottom: 1px solid rgba(98, 98, 98, 0.1);
   transition: all var(--transition);
 }
 
 .navbar.scrolled {
-  background: rgba(7, 4, 14, 0.92);
-  border-bottom-color: rgba(124, 58, 237, 0.2);
+  background: rgba(5, 5, 5, 0.92);
+  border-bottom-color: rgba(100, 100, 100, 0.2);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
 }
 
@@ -375,7 +413,7 @@ img { max-width: 100%; display: block; }
 .nav-links a:hover,
 .nav-links a.active {
   color: var(--text);
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(98, 98, 98, 0.1);
 }
 
 .nav-links a.active::after {
@@ -392,18 +430,18 @@ img { max-width: 100%; display: block; }
 
 .nav-cta {
   padding: 10px 24px !important;
-  background: var(--grad-brand) !important;
-  color: white !important;
+  background: var(--primary-deep) !important;
+  color: var(--text-inverse) !important;
   border-radius: var(--radius) !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 15px rgba(100, 100, 100, 0.3);
   transition: all var(--transition) !important;
 }
 
 .nav-cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 25px rgba(124, 58, 237, 0.5) !important;
-  background: var(--grad-brand) !important;
+  box-shadow: 0 4px 25px rgba(101, 101, 101, 0.5) !important;
+  background: var(--primary-deep) !important;
   filter: brightness(1.16);
 }
 
@@ -457,8 +495,8 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 8px;
   padding: 6px 16px;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: rgba(98, 98, 98, 0.1);
+  border: 1px solid rgba(100, 100, 100, 0.2);
   border-radius: 100px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -529,8 +567,8 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: rgba(99, 99, 99, 0.12);
+  border: 1px solid rgba(100, 100, 100, 0.25);
   border-radius: 100px;
   font-size: 0.85rem;
   font-weight: 500;
@@ -548,8 +586,8 @@ img { max-width: 100%; display: block; }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(125, 171, 133, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(0, 0, 0, 0); }
 }
 
 .hero-title {
@@ -678,15 +716,15 @@ a:focus-visible,
 .btn-primary {
   background: var(--primary-deep);
   border-color: var(--primary-hi);
-  color: var(--text);
-  box-shadow: 0 12px 32px -12px rgba(124, 58, 237, 0.85), var(--inset-top);
+  color: var(--text-inverse);
+  box-shadow: 0 12px 32px -12px rgba(102, 102, 102, 0.85), var(--inset-top);
 }
 .btn-primary:hover {
   background: var(--primary-deep);
-  border-color: var(--primary-hi);
-  color: var(--text);
+  border-color: var(--text-inverse);
+  color: var(--text-inverse);
   transform: translateY(-3px);
-  box-shadow: 0 22px 48px -14px rgba(124, 58, 237, 0.95), var(--inset-top);
+  box-shadow: 0 22px 48px -14px rgba(102, 102, 102, 0.95), var(--inset-top);
 }
 .btn-primary:active { transform: translateY(0); }
 
@@ -734,14 +772,14 @@ a:focus-visible,
 .btn-on-dark {
   background: var(--primary-deep);
   border-color: var(--primary-hi);
-  color: var(--text);
-  box-shadow: 0 16px 44px -14px rgba(124, 58, 237, 0.8), var(--inset-top);
+  color: var(--text-inverse);
+  box-shadow: 0 16px 44px -14px rgba(102, 102, 102, 0.8), var(--inset-top);
 }
 .btn-on-dark:hover {
   background: var(--primary-deep);
-  border-color: var(--primary-hi);
-  color: var(--text);
-  box-shadow: 0 24px 56px -16px rgba(124, 58, 237, 0.95), var(--inset-top);
+  border-color: var(--text-inverse);
+  color: var(--text-inverse);
+  box-shadow: 0 24px 56px -16px rgba(102, 102, 102, 0.95), var(--inset-top);
 }
 
 .btn-lg {
@@ -791,32 +829,32 @@ a:focus-visible,
 }
 
 .card-icon.purple {
-  background: rgba(124, 58, 237, 0.12);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: rgba(99, 99, 99, 0.12);
+  border: 1px solid rgba(100, 100, 100, 0.2);
   color: var(--primary-hi);
 }
 
 .card-icon.blue {
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(113, 133, 163, 0.12);
+  border: 1px solid rgba(114, 133, 163, 0.2);
   color: var(--info);
 }
 
 .card-icon.green {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(118, 167, 126, 0.12);
+  border: 1px solid rgba(121, 169, 129, 0.2);
   color: var(--success);
 }
 
 .card-icon.pink {
-  background: rgba(232, 121, 249, 0.12);
-  border: 1px solid rgba(232, 121, 249, 0.2);
+  background: rgba(163, 163, 163, 0.12);
+  border: 1px solid rgba(164, 164, 164, 0.2);
   color: var(--pink);
 }
 
 .card-icon.amber {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(194, 167, 114, 0.12);
+  border: 1px solid rgba(196, 170, 118, 0.2);
   color: var(--warning);
 }
 
@@ -881,22 +919,22 @@ a:focus-visible,
 }
 
 .feature-tag.core {
-  background: rgba(124, 58, 237, 0.15);
+  background: rgba(99, 99, 99, 0.15);
   color: var(--primary-hi);
 }
 
 .feature-tag.ai {
-  background: rgba(232, 121, 249, 0.15);
+  background: rgba(163, 163, 163, 0.15);
   color: var(--pink);
 }
 
 .feature-tag.export {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(114, 133, 163, 0.15);
   color: var(--info);
 }
 
 .feature-tag.enterprise {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(119, 168, 127, 0.15);
   color: var(--success);
 }
 
@@ -939,7 +977,7 @@ a:focus-visible,
 
 .comparison-table th.highlight {
   color: var(--accent);
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(98, 98, 98, 0.08);
   border-top: 2px solid var(--primary);
   position: relative;
 }
@@ -956,7 +994,7 @@ a:focus-visible,
 .comparison-table td {
   padding: 16px;
   text-align: center;
-  border-bottom: 1px solid rgba(42, 30, 72, 0.5);
+  border-bottom: 1px solid rgba(38, 38, 38, 0.5);
   color: var(--text-2);
 }
 
@@ -968,15 +1006,15 @@ a:focus-visible,
 }
 
 .comparison-table td.highlight {
-  background: rgba(124, 58, 237, 0.04);
+  background: rgba(95, 95, 95, 0.04);
 }
 
 .comparison-table tbody tr:hover {
-  background: rgba(124, 58, 237, 0.03);
+  background: rgba(94, 94, 94, 0.03);
 }
 
 .comparison-table tbody tr:hover td.highlight {
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(98, 98, 98, 0.08);
 }
 
 /* Status is never signalled by colour alone: the glyph is in the
@@ -997,14 +1035,14 @@ a:focus-visible,
 .check.yes {
   background: var(--success-bg);
   color: var(--success);
-  border: 1px solid rgba(52, 211, 153, 0.45);
+  border: 1px solid rgba(160, 194, 166, 0.45);
   border-radius: 50%;
 }
 
 .check.no {
   background: var(--danger-bg);
   color: var(--danger);
-  border: 1px solid rgba(239, 68, 68, 0.45);
+  border: 1px solid rgba(174, 111, 111, 0.45);
   border-radius: 7px;
 }
 
@@ -1016,16 +1054,16 @@ a:focus-visible,
   padding: 3px 9px;
   background: var(--warning-bg);
   color: var(--warning);
-  border: 1px dashed rgba(245, 158, 11, 0.55);
+  border: 1px dashed rgba(198, 173, 124, 0.55);
   border-radius: 7px;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
 }
 
 .check.yes-strong {
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(121, 169, 129, 0.2);
   color: var(--success);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 12px rgba(121, 169, 129, 0.2);
 }
 
 .price-tag {
@@ -1077,7 +1115,7 @@ a:focus-visible,
   padding: 48px;
   text-align: center;
   background: var(--surface-3);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(100, 100, 100, 0.2);
   border-radius: var(--radius-lg);
   box-shadow: var(--glow-strong);
   position: relative;
@@ -1096,7 +1134,7 @@ a:focus-visible,
 .download-version {
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(124, 58, 237, 0.15);
+  background: rgba(99, 99, 99, 0.15);
   border-radius: 100px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1175,8 +1213,8 @@ a:focus-visible,
   height: 40px;
   min-width: 40px;
   border-radius: 12px;
-  background: rgba(124, 58, 237, 0.15);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  background: rgba(99, 99, 99, 0.15);
+  border: 1px solid rgba(100, 100, 100, 0.3);
   color: var(--accent);
   font-weight: 800;
   font-size: 0.9rem;
@@ -1225,8 +1263,8 @@ a:focus-visible,
 .code-inline {
   display: inline;
   padding: 2px 8px;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px solid rgba(124, 58, 237, 0.15);
+  background: rgba(98, 98, 98, 0.1);
+  border: 1px solid rgba(99, 99, 99, 0.15);
   border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 0.85em;
@@ -1274,7 +1312,7 @@ a:focus-visible,
 
 .docs-nav li a:hover,
 .docs-nav li a.active {
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(98, 98, 98, 0.1);
   color: var(--accent);
 }
 
@@ -1390,7 +1428,7 @@ a:focus-visible,
 .form-input:focus,
 .form-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 99, 99, 0.15);
 }
 
 .form-textarea {
@@ -1508,7 +1546,7 @@ a:focus-visible,
   height: 48px;
   border-radius: 14px;
   background: var(--primary-deep);
-  color: var(--text);
+  color: var(--text-inverse);
   border: 1px solid var(--primary-hi);
   cursor: pointer;
   display: flex;
@@ -1619,8 +1657,8 @@ a:focus-visible,
 
 .pill-tab.active {
   background: var(--primary);
-  color: white;
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+  color: var(--text-inverse);
+  box-shadow: 0 2px 10px rgba(100, 100, 100, 0.3);
 }
 
 /* ── Tech Stack Badges ─────────────────────────────────────── */
@@ -1655,8 +1693,8 @@ a:focus-visible,
 .highlight-box {
   padding: 32px;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(124, 58, 237, 0.2);
-  --tint: rgba(139, 92, 246, 0.10);
+  border: 1px solid rgba(100, 100, 100, 0.2);
+  --tint: rgba(123, 123, 123, 0.10);
   background: var(--grad-surface);
   margin: 32px 0;
 }
@@ -1691,7 +1729,7 @@ a:focus-visible,
     top: 72px;
     left: 0;
     right: 0;
-    background: rgba(7, 4, 14, 0.98);
+    background: rgba(5, 5, 5, 0.98);
     backdrop-filter: blur(20px);
     flex-direction: column;
     padding: 16px;
