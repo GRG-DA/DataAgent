@@ -233,6 +233,21 @@ item-by-item status is in **`docs/WEBSITE-CHECKLIST.md`**; the highlights:
 | **No sitemap, no robots.txt, no 404 page, no security headers** for three different hosts. | major |
 | **The asset cache-busters were not bumped** when the CSS changed, so a returning visitor kept the old stylesheet. | major |
 | **The site quoted the installer size four different ways** (175 MB, 182 MB, 400 MB, 499 MB) across three pages. | major | The size now lives in ONE constant (`scripts/site_installer_size.py`) and a test asserts every page quotes it. |
+| **A code review of the twelve remediation commits** found eight MAJOR and thirteen MINOR issues: the email sanitiser let a remote image and a `javascript:` URL through `srcset` and `xlink:href`; CSS escapes defeated its `style` filter; the opencode self-update installed the pinned binary under the latest version's filename; the Linux install was unverified and verified after extracting; the changelog's added/changed/fixed colour rules matched nothing; the cache-busters were not bumped; the installer size was quoted four ways; the placeholder domain was in 18 files and the notes said 2. | major | All closed, each with a test that fails without the fix. Three of the guards also had blind spots — a pure-white `background-color`, a single-line `:root`, a bare CSS `@import` — and each was proved closed by injecting the thing it missed. |
+
+### The design pass: the site is monochrome
+
+The site's own critique list called out "purple-blue gradient everywhere (the typical AI look)" and "too many colours with no fixed palette". The answer was not a smaller palette — it was **no palette**: every decorative colour in `website/` is now a true neutral (R = G = B), and the greys are separated by **lightness** rather than by hue. Each token is the original colour converted to the neutral of the same relative luminance, so every light/dark relationship the design was built on survives the conversion untouched.
+
+The **four status hues** keep a colour, muted to a low-chroma tint: a green tick and a red cross that are the same grey are worse than useless, and every status state already carries a glyph, a shape or a label. The primary CTA **inverts** — a near-white fill carrying a near-black label — and it is the only thing on the page that inverts.
+
+Three things followed from it:
+
+- **The hero now carries a monochrome dashboard film** instead of the WebGL stage — a local file, so the site still loads no subresource from a third party, and it is hidden under `?fx=off` and `prefers-reduced-motion`.
+- **The 92 pictographic emoji became a hand-drawn set of 24×24 SVG line glyphs** (`scripts/site_glyphs.py`), sized in `em` so each takes the font-size of whatever it sits in.
+- **The social card is generated, not drawn by hand** (`scripts/site_og_card.py`), from a source that uses the site's own fonts and palette, so it cannot drift from the site.
+
+`scripts/ci/check_site_pixels.py` checks the thing that actually ships: it screenshots all 16 pages in a real browser and measures the saturation of what is drawn. The status hues are allowed; violet, rose and cyan are not — nothing in the palette is those, so a pixel in those bands is a regression.
 
 ### Deliberately not done
 
