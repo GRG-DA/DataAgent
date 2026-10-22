@@ -24,7 +24,7 @@
      • DataAgent-Setup.exe  — the Inno Setup installer
      • DataAgent.exe        — the portable one-file build
    ══════════════════════════════════════════════════════════════════ */
-window.DATAAGENT_REPO_URL = 'https://github.com/DataAgent/DataAgent';
+window.DATAAGENT_REPO_URL = 'https://github.com/java22113344/data-agent';
 window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/latest/download';
 window.DATAAGENT_DOWNLOADS = {
   setup: 'DataAgent-Setup.exe',   // Inno Setup installer
