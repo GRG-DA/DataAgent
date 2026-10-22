@@ -80,7 +80,7 @@ if ($SkipTests) {
     # The glob must be expanded HERE: neither PowerShell nor pytest expands
 # `tests/test_launch_*.py` on its own, so the gate used to run ZERO tests
 # and report success.
-$launchTests = @(Get-ChildItem (Join-Path $RepoRoot 'tests	est_launch_*.py') | ForEach-Object { $_.FullName })
+$launchTests = @(Get-ChildItem (Join-Path $RepoRoot 'tests/test_launch_*.py') | ForEach-Object { $_.FullName })
 Invoke-Gate 'Launch hardening' { python -m pytest $launchTests -q --no-header -p no:cacheprovider } | Out-Null
     Invoke-Gate 'Billing consistency' { python -m pytest tests/test_billing_consistency.py -q --no-header -p no:cacheprovider } | Out-Null
 }
