@@ -45,22 +45,23 @@ this site, that is said plainly rather than quietly ignored.
 
 | Critique | Status | What was done |
 |---|---|---|
-| Purple-blue gradient everywhere | **fixed** | **113 distinct gradient values → 12** shared tokens. |
+| Purple-blue gradient everywhere | **fixed** | **113 distinct gradient values ? 12** shared tokens, and every stop in every one of them is now a TONE: the gradients run grey to grey. The site is monochrome end to end. |
 | Light grey text on white | **did not apply** | The site is **dark-only** (`prefers-color-scheme: light` appears 0 times). Measured contrast: body text 18.3:1, secondary 9.4:1, muted 5.6:1. A light theme was deliberately **not** added — it is out of scope and would not solve a problem this site has. |
 | Low-contrast dark mode | **did not apply** | Every text colour clears 4.5:1 on all 8 surface steps. The muted tone was *raised* from 4.30:1 to 5.01:1. |
-| Neon colours on dark background | **fixed** | Muted variants added for large fills (`--accent-soft`, `--emphasis-soft`, `--pink-soft`); the hero aurora went from 4 coloured blobs to one violet→cyan radial; the WebGL particles now read the palette from the CSS custom properties instead of hard-coding five saturated hues. |
-| Too many colours, no fixed palette | **fixed** | 5 accent hues + 11 near-blacks → 1 primary ramp, 1 accent, 1 rare emphasis, 1 rose, and an 8-step named surface ramp. The palette is documented at the top of the canonical `:root`. |
+| Neon colours on dark background | **fixed** | Muted variants added for large fills (`--accent-soft`, `--emphasis-soft`, `--pink-soft`); the hero aurora went from 4 coloured blobs to one radial; the WebGL particles read the palette from the CSS custom properties instead of hard-coding five saturated hues. **Then the whole site went monochrome**: every decorative colour became a neutral grey of the same relative luminance, and the only colours left are the four status hues. |
+| Too many colours, no fixed palette | **fixed** | 5 accent hues + 11 near-blacks ? 1 primary ramp, 1 accent, 1 rare emphasis, 1 rose, and an 8-step named surface ramp. **Then monochrome**: every decorative value is now a true neutral (R = G = B) separated by LIGHTNESS, and the four status hues are the only colours on the site. The palette is documented at the top of the canonical `:root`, and `scripts/ci/check_site_pixels.py` checks the RENDERED pixels of all 16 pages. |
 | Pure black on pure white | **fixed** | 23 pure-white fills in a near-black design → **0**. A light card on a dark page, not a hole in it. |
-| Rainbow / multi-gradient backgrounds | **fixed** | 12 shared gradient tokens, each with a stated purpose. |
+| Rainbow / multi-gradient backgrounds | **fixed** | 12 shared gradient tokens, each with a stated purpose, and every stop in every one of them is grey. |
 | Gradient text overuse | **fixed** | 20 `background-clip:text` rules → **4** (the site name and the one hero word). |
 | Text over images without an overlay | **fixed** | The hero film sits behind a readability scrim and the copy is never over the bright part of the frame. |
 | CTA blending into the background | **fixed** | The primary button is a solid fill with a visible border (5.20:1 for its own text, 3.53:1 against the surface); the secondary is an outline; the ghost is glass; the text button has no fill. |
 | Red/green only for status | **fixed** | Status now carries a **shape and a glyph**: a disc + ✓, a square + ✗, a dashed amber pill with its label, ↑/↓ arrows on deltas. |
 | Primary and secondary the same colour | **fixed** | There were **three** competing `.btn` base rules (radius 12/100/999px, with `!important` overrides). Now **one**. |
-| Link colour not visible | **fixed** | There was **no `--link` token at all**. Now `--link #7dd3fc` (12.06:1), with a hover and a visited variant that still reads as a link. |
+| Link colour not visible | **fixed** | There was **no `--link` token at all**. Now `--link #ffffff` with a hover and a visited variant that still reads as a link, and prose links are underlined ? in monochrome the underline, not the hue, is what says "this is a link". |
 | Inconsistent colours between pages | **fixed** | The palette was defined **three times** with different values; 51 token names were declared in more than one file. Now **one** canonical `:root`, and **0** duplicates. |
 | Glow and heavy shadow | **did not apply** | 72 box-shadows, **0** with a blur of 30px or more. |
 | Same card grid on every section | **fixed** | 8× `repeat(2,1fr)`, 4× `repeat(3,1fr)`, 3× `repeat(4,1fr)` → varied section rhythms. |
+| The whole site was one hue family | **done** | The site is **monochrome**: every decorative colour is a true neutral, and the greys are separated by LIGHTNESS rather than by hue. Each token is the ORIGINAL colour converted to the neutral of the same relative luminance, so the light/dark relationships the design was built on survive untouched. The primary CTA **inverts** (a near-white fill carrying a near-black label) ? the only thing on the page that inverts. The hero's WebGL stage is replaced by a monochrome dashboard film, and the 92 pictographic emoji became a hand-drawn set of 24?24 SVG line glyphs. |
 | Cards inside cards | **fixed** | 24 in `features.html`, 12 in `index.html` → flattened. |
 | Everything centre-aligned | **fixed** | 21 `text-align:center` → body copy is left-aligned; only display type stays centred. |
 | Too much / too little white space | **fixed** | A spacing scale replaced the ad-hoc padding. |
