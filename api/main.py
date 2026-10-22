@@ -5759,6 +5759,31 @@ def _untrusted_report_values(table_name: str, *blobs: Any) -> List[str]:
     return [v for v in values if v]
 
 
+#: A value shorter than this cannot open a tag on its own, so escaping it
+#: would only rewrite the document's OWN markup: a value of "<" matches
+#: EVERY tag in the report and turns it into text.
+_MIN_MARKUP_VALUE_LENGTH = 3
+
+
+def _value_pattern(value: str) -> "re.Pattern":
+    """The pattern that matches *value* where it appears in the document.
+
+    The value is matched wherever it appears - the net must never MISS an
+    occurrence, because the net is the last line of defence. The only
+    boundary is a right-hand one, and only for a value that ends with a
+    word character: such a value must not match inside a longer word, so
+    the report's own ``<emphasis>`` is not rewritten by a value of
+    ``<em``.
+
+    A value that ends with a non-word character (every HTML-ish payload:
+    ``<script>``, ``<b>``) gets no boundary at all - ``<script>alert(1)``
+    is followed by a word character, and a boundary there would miss the
+    payload and let a live tag through.
+    """
+    right = r"(?![\w])" if (value[-1].isalnum() or value[-1] == "_") else ""
+    return re.compile(re.escape(value) + right)
+
+
 def _escape_untrusted_values(document: str, values: List[str]) -> str:
     """Escape every *value* that still appears verbatim in *document*.
 
@@ -5768,24 +5793,32 @@ def _escape_untrusted_values(document: str, values: List[str]) -> str:
     escaped here, so the route owns the guarantee even if the builder
     regresses.
 
-    Two rules keep the net from corrupting the document:
+    Three rules keep the net from corrupting the document:
 
     * only a value that can CREATE MARKUP is escaped — a value with no
       ``<`` in it cannot open a tag, and escaping it would rewrite the
       document's own entities (``&times;`` -> ``&amp;times;``). A one
       character value like ``&`` would otherwise rewrite every entity in
       the page;
-    * the replacement targets the WHOLE raw value, so the document's own
-      already-escaped copy (``&lt;script&gt;``) is never touched and
-      nothing is escaped twice.
+    * a value shorter than three characters is skipped — it cannot carry
+      an attribute (and therefore cannot carry an event handler), and
+      escaping it would rewrite the document's own markup: a value of
+      ``<`` matches EVERY tag, and a value of ``<p`` matches every
+      paragraph tag, so the report would stop being HTML at all;
+    * the replacement targets the VALUE, wherever it appears, so the
+      document's own already-escaped copy (``&lt;script&gt;``) is never
+      touched and nothing is escaped twice.
     """
     out = document
     for value in sorted(set(values), key=len, reverse=True):
         if not value or "<" not in value:
             # No "<" means no markup can be created by this value.
             continue
-        if value in out:
-            out = out.replace(value, _html_escape(value))
+        if len(value) < _MIN_MARKUP_VALUE_LENGTH:
+            # Too short to be markup: escaping it would rewrite the
+            # document's own tags, not the value.
+            continue
+        out = _value_pattern(value).sub(lambda _m: _html_escape(value), out)
     return out
 
 

@@ -475,3 +475,58 @@ def test_pdf_detailed_export_has_no_warning_with_a_real_renderer(tmp_path, monke
 
     assert result["backend"] == "playwright"
     assert result["warning"] is None
+
+
+# ── module boundary: no private symbol crosses a package ────────────────
+#
+# ``export/dashboard_export.py`` used
+# ``from export.bi_export import _sanitize_spreadsheet_value``. A private
+# name crossing a package boundary is an accident waiting to happen: the
+# private name can be renamed or removed without any signal, and the two
+# modules end up coupled through a name that says "do not use me".
+
+
+def test_the_spreadsheet_sanitiser_is_public():
+    from export.bi_export import sanitize_spreadsheet_value
+
+    assert sanitize_spreadsheet_value("=cmd|'/C calc'!A1").startswith("'")
+
+
+def test_no_private_name_is_imported_across_export_modules():
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    offenders = []
+    for path in sorted((root / "export").glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if not node.module or not node.module.startswith("export."):
+                continue
+            for alias in node.names:
+                if alias.name.startswith("_"):
+                    offenders.append(
+                        f"{path.name}: from {node.module} import {alias.name}"
+                    )
+
+    assert not offenders, offenders
+
+
+def test_bi_export_calls_its_own_public_dataframe_sanitiser():
+    """The module must not route through a private alias of its own API."""
+    import ast
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    tree = ast.parse((root / "export" / "bi_export.py").read_text(encoding="utf-8"))
+    called = {
+        node.func.id
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
+    assert "sanitize_dataframe" in called
+    assert "_sanitize_dataframe" not in called
+

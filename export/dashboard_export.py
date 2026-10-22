@@ -54,7 +54,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.chart import BarChart, LineChart, AreaChart, PieChart, DoughnutChart, Reference
 
 from export.chart_renderer import render_chart, render_table, NATIVE_TYPES
-from export.bi_export import _sanitize_spreadsheet_value
+from export.bi_export import sanitize_spreadsheet_value
 
 logger = logging.getLogger(__name__)
 
@@ -626,7 +626,7 @@ def export_xlsx(dashboard: Dict[str, Any], run_query, load_table) -> bytes:
         cols = list(df.columns)
         for j, c in enumerate(cols, 1):
             cell = ws_v.cell(row=1, column=j,
-                            value=_sanitize_spreadsheet_value(str(c)))
+                            value=sanitize_spreadsheet_value(str(c)))
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal="center")
@@ -638,7 +638,7 @@ def export_xlsx(dashboard: Dict[str, Any], run_query, load_table) -> bytes:
                 if pd.isna(v) or v is None:
                     cell.value = None
                 else:
-                    cell.value = _sanitize_spreadsheet_value(v)
+                    cell.value = sanitize_spreadsheet_value(v)
                 if isinstance(v, (int,)):
                     cell.number_format = "#,##0"
                 elif isinstance(v, float):
@@ -1320,7 +1320,7 @@ def _write_data_sheet(ws_d, df: pd.DataFrame) -> None:
     cols = list(df.columns)
     for ci, c in enumerate(cols, 1):
         cell = ws_d.cell(row=1, column=ci,
-                          value=_sanitize_spreadsheet_value(str(c)))
+                          value=sanitize_spreadsheet_value(str(c)))
         cell.font = _XLSX_HEADER_FONT; cell.fill = _XLSX_HEADER_FILL
         cell.alignment = Alignment(horizontal="center")
 
@@ -1331,7 +1331,7 @@ def _write_data_sheet(ws_d, df: pd.DataFrame) -> None:
             if pd.isna(v) or v is None:
                 cell.value = None
             else:
-                cell.value = _sanitize_spreadsheet_value(v)
+                cell.value = sanitize_spreadsheet_value(v)
             if isinstance(v, int):
                 cell.number_format = "#,##0"
             elif isinstance(v, float):
@@ -1406,10 +1406,10 @@ def _xlsx_native_chart(ws_p, ws_data, x_px, y_px, w_px, h_px, chart_type, df, th
     ws_data.cell(row=start_row, column=1, value="Category")
     for j, c in enumerate(data_cols, 2):
         ws_data.cell(row=start_row, column=j,
-                     value=_sanitize_spreadsheet_value(str(c)))
+                     value=sanitize_spreadsheet_value(str(c)))
     for i, cat in enumerate(cats, 1):
         ws_data.cell(row=start_row + i, column=1,
-                     value=_sanitize_spreadsheet_value(cat))
+                     value=sanitize_spreadsheet_value(cat))
         for j, c in enumerate(data_cols, 2):
             v = df.iloc[i - 1][c]
             ws_data.cell(row=start_row + i, column=j,

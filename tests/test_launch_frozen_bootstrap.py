@@ -95,3 +95,70 @@ class TestOverrideWins:
             assert secret.parent.is_relative_to(override.resolve())
         finally:
             os.environ.pop("DATAAGENT_DATA_DIR", None)
+
+
+class TestBundleOverrideIsRefused:
+    """The runtime dir may NEVER live inside the PyInstaller bundle.
+
+    ``api/runtime_paths.py`` refuses an override that resolves inside
+    ``sys._MEIPASS`` — the bundle is inside ``C:\\Program Files`` and a
+    normal user cannot write there, so a key file written into it is
+    lost and silently re-minted on every launch.
+
+    ``run.py::_frozen_bootstrap`` re-derived the base directory on its
+    own and skipped that rule, so it chdir'd INTO the bundle and
+    exported it as the runtime dir: the warehouse, the config and the
+    logs lived in the bundle while the JWT secret and the grant key
+    lived in ``%LOCALAPPDATA%\\DataAgent`` — two halves of one install.
+
+    There must be exactly ONE rule about where the runtime dir may be,
+    and it is the one ``api.runtime_paths`` owns.
+    """
+
+    def test_an_override_pointing_into_the_bundle_is_refused(self, clean_env, monkeypatch):
+        bundle = clean_env / "_internal"
+        (bundle / "data").mkdir(parents=True)
+        monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+        monkeypatch.setenv("DATAAGENT_DATA_DIR", str(bundle / "data"))
+
+        cwd, exported = _run_bootstrap(clean_env)
+        try:
+            resolved = Path(exported).resolve()
+            assert not resolved.is_relative_to(bundle.resolve()), (
+                "the runtime dir was placed inside the PyInstaller bundle: "
+                f"{resolved}"
+            )
+            assert Path(cwd).resolve() == resolved
+        finally:
+            os.environ.pop("DATAAGENT_DATA_DIR", None)
+
+    def test_the_refused_override_falls_back_to_the_per_user_dir(self, clean_env, monkeypatch):
+        bundle = clean_env / "_internal"
+        (bundle / "data").mkdir(parents=True)
+        monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+        monkeypatch.setenv("DATAAGENT_DATA_DIR", str(bundle / "data"))
+
+        cwd, exported = _run_bootstrap(clean_env)
+        try:
+            expected = clean_env / "localappdata" / "DataAgent"
+            assert Path(exported).resolve() == expected.resolve()
+            assert Path(cwd).resolve() == expected.resolve()
+        finally:
+            os.environ.pop("DATAAGENT_DATA_DIR", None)
+
+    def test_the_bootstrap_agrees_with_the_runtime_path_resolver(self, clean_env, monkeypatch):
+        """One rule: the bootstrap and the resolver must not disagree."""
+        bundle = clean_env / "_internal"
+        (bundle / "data").mkdir(parents=True)
+        monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+        monkeypatch.setenv("DATAAGENT_DATA_DIR", str(bundle / "data"))
+
+        _run_bootstrap(clean_env)
+        try:
+            from api.runtime_paths import runtime_data_dir
+
+            assert runtime_data_dir().resolve() == Path(
+                os.environ["DATAAGENT_DATA_DIR"]
+            ).resolve()
+        finally:
+            os.environ.pop("DATAAGENT_DATA_DIR", None)

@@ -287,31 +287,26 @@ def _frozen_bootstrap() -> None:
     """
     import shutil
 
-    # An explicit override wins for BOTH the chdir and the runtime-dir
-    # resolution.  When only the resolution honoured it, the app chdir'd
-    # into %LOCALAPPDATA%\DataAgent (so the warehouse and config lived
-    # there) while the key files were written to the override - two halves
-    # of one install in two places, and a re-minted JWT secret on every
-    # launch.  The override is how a portable install or a test run points
-    # the whole app somewhere else.
-    override = (os.environ.get("DATAAGENT_DATA_DIR") or "").strip()
-    if override:
-        base = Path(override).expanduser()
-    elif sys.platform == "win32":
-        base = Path(
-            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
-        ) / "DataAgent"
-    else:
-        base = Path(
-            os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")
-        ) / "DataAgent"
+    # ONE rule decides where the runtime dir may live: api.runtime_paths.
+    # runtime_data_dir() honours an explicit $DATAAGENT_DATA_DIR override,
+    # EXCEPT when it points inside the PyInstaller bundle - the bundle is
+    # not writable by a normal user, so a key file written there is lost
+    # and silently re-minted on every launch.  This bootstrap used to
+    # re-derive the base on its own and skipped that rule, which split one
+    # install in two: the warehouse, the config and the logs lived in the
+    # bundle while the JWT secret and the grant key lived in the per-user
+    # dir.  Resolving through the shared rule keeps the two halves
+    # together (see api/runtime_paths.py).
+    from api.runtime_paths import runtime_data_dir
+
+    base = runtime_data_dir()
     base.mkdir(parents=True, exist_ok=True)
 
     # Export the runtime dir so every module in the process agrees on where
     # writable state lives (see api/runtime_paths.py). Without this the JWT
     # signing secret and the paid-plan grant key would resolve from
     # __file__, i.e. inside the (unwritable) bundle, and be re-minted on
-    # every launch.  Set (not setdefault): the override above already
+    # every launch.  Set (not setdefault): the resolution above already
     # decided the base, and every module must agree on it.
     os.environ["DATAAGENT_DATA_DIR"] = str(base)
     (base / "data").mkdir(parents=True, exist_ok=True)

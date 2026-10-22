@@ -39,7 +39,7 @@ _FORMULA_TRIGGER_CHARS = ("=", "+", "-", "@")
 _LEADING_WHITESPACE = " \t\r\n"
 
 
-def _sanitize_spreadsheet_value(value: Any) -> Any:
+def sanitize_spreadsheet_value(value: Any) -> Any:
     """Neutralise spreadsheet formula injection in a single cell value.
 
     A string whose first non-whitespace character (whitespace includes tab,
@@ -47,6 +47,9 @@ def _sanitize_spreadsheet_value(value: Any) -> Any:
     ``= + - @`` is prefixed with a single quote.  Non-string values are
     returned untouched, so a float stays a float and is still written as a
     number rather than as text.
+
+    This is part of the module's public API: ``export/dashboard_export.py``
+    sanitises its cells with it, so it must not be private.
     """
     if not isinstance(value, str):
         return value
@@ -60,7 +63,7 @@ def _sanitize_series(series: pd.Series) -> pd.Series:
     if isinstance(series.dtype, pd.CategoricalDtype):
         series = series.astype(object)
     if series.dtype == object or pd.api.types.is_string_dtype(series):
-        return series.map(_sanitize_spreadsheet_value)
+        return series.map(sanitize_spreadsheet_value)
     return series
 
 
@@ -75,12 +78,10 @@ def sanitize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     for idx in range(out.shape[1]):
         out.isetitem(idx, _sanitize_series(out.iloc[:, idx]))
-    out.columns = [_sanitize_spreadsheet_value(str(c)) for c in out.columns]
+    out.columns = [sanitize_spreadsheet_value(str(c)) for c in out.columns]
     return out
 
 
-#: Backwards-compatible alias for the private name.
-_sanitize_dataframe = sanitize_dataframe
 def _escape_markdown_cell(value: Any) -> str:
     """Escape a value for use inside a Markdown table cell.
 
@@ -132,7 +133,7 @@ def export_table_csv(
     Export a warehouse table as CSV string.
 
     Cell values and column names are sanitised so a spreadsheet cannot
-    evaluate them as formulas (see ``_sanitize_spreadsheet_value``).
+    evaluate them as formulas (see ``sanitize_spreadsheet_value``).
 
     Args:
         table: Table name
@@ -144,7 +145,7 @@ def export_table_csv(
         CSV content as string
     """
     df = load_table_frame(table, db_path, schema)
-    return _sanitize_dataframe(df).to_csv(index=False, encoding=encoding)
+    return sanitize_dataframe(df).to_csv(index=False, encoding=encoding)
 
 
 def export_table_csv_bytes(
@@ -234,7 +235,7 @@ def _write_xlsx_header(ws, columns) -> None:
         cell = ws.cell(
             row=1,
             column=col_idx,
-            value=_sanitize_spreadsheet_value(str(col_name)),
+            value=sanitize_spreadsheet_value(str(col_name)),
         )
         cell.font = header_font
         cell.fill = header_fill
@@ -251,7 +252,7 @@ def _write_xlsx_rows(ws, df) -> None:
             if val is None or (isinstance(val, float) and pd.isna(val)):
                 cell.value = None
             else:
-                cell.value = _sanitize_spreadsheet_value(val)
+                cell.value = sanitize_spreadsheet_value(val)
 
             # Number formatting for numeric types
             dtype = df[col_name].dtype
@@ -371,7 +372,7 @@ def export_all_tables(
                     df.to_parquet(filepath, index=False)
                 else:
                     filepath = output / f"{table_name}.csv"
-                    _sanitize_dataframe(df).to_csv(filepath, index=False)
+                    sanitize_dataframe(df).to_csv(filepath, index=False)
                 exported.append(str(filepath))
                 logger.info(f"Exported {table_name} ({df.shape[0]} rows) to {filepath}")
             except Exception as e:
@@ -426,7 +427,7 @@ def export_all_as_zip(
             for table_name in selected:
                 try:
                     df = conn.execute(f"SELECT * FROM {schema}.{table_name}").df()
-                    csv_data = _sanitize_dataframe(df).to_csv(index=False)
+                    csv_data = sanitize_dataframe(df).to_csv(index=False)
                     zf.writestr(f"{schema}_{table_name}.csv", csv_data)
                     logger.info(f"Packed {table_name} ({df.shape[0]} rows)")
                 except Exception as e:
@@ -620,7 +621,7 @@ def export_table_markdown(
                 elif isinstance(v, (int, float)):
                     vals.append(f"{v:,.2f}" if isinstance(v, float) else f"{v:,}")
                 else:
-                    vals.append(_sanitize_spreadsheet_value(_escape_markdown_cell(v)))
+                    vals.append(sanitize_spreadsheet_value(_escape_markdown_cell(v)))
             lines.append("| " + " | ".join(vals) + " |")
 
         return "\n".join(lines)
@@ -727,7 +728,7 @@ def _html_data_table(df, cols) -> str:
             if pd.isna(value):
                 cells.append("<td></td>")
             else:
-                safe = _sanitize_spreadsheet_value(value)
+                safe = sanitize_spreadsheet_value(value)
                 cells.append(f"<td>{_html_escape(safe)}</td>")
         out.append("<tr>" + "".join(cells) + "</tr>")
     out.append("</table>")

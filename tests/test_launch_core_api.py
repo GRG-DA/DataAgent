@@ -662,6 +662,137 @@ def test_report_route_escapes_even_when_the_builder_does_not(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# S4 — the escape net must not destroy the document it protects
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# The net escaped a value that contained a "<" by replacing every "<"
+# in the document. A value of "<" — a single character — therefore turned
+# "<h1>Report</h1>" into "&lt;h1>Report&lt;/h1>": the report stopped
+# being HTML at all. The net's own contract is "never escapes a value
+# twice / never corrupts the document", so a value must never be able
+# to rewrite the document's own markup.
+
+
+def test_a_single_lt_value_does_not_destroy_the_document():
+    """A value of "<" must not escape every tag in the report."""
+    from api.main import _escape_untrusted_values
+
+    document = "<!DOCTYPE html><html><body><h1>Report</h1></body></html>"
+
+    out = _escape_untrusted_values(document, ["<"])
+
+    assert out == document, out
+
+
+def test_a_value_with_a_lt_still_renders_as_html():
+    """The value is escaped; the document's own markup is not."""
+    from api.main import _escape_untrusted_values
+
+    document = "<html><body><h1>Report</h1><p>a < b</p></body></html>"
+
+    out = _escape_untrusted_values(document, ["a < b"])
+
+    assert "<h1>Report</h1>" in out, out
+    assert "a &lt; b" in out, out
+
+
+def test_a_bare_script_tag_value_is_still_escaped():
+    """The net must not lose coverage while it stops corrupting."""
+    from api.main import _escape_untrusted_values
+
+    document = "<html><body><li><script>alert(1)</script></li></body></html>"
+
+    out = _escape_untrusted_values(document, ["<script>"])
+
+    assert "<script>" not in out, out
+    assert "&lt;script&gt;" in out, out
+
+
+def test_a_payload_that_starts_with_a_word_character_is_still_escaped():
+    """The net matches the value wherever it appears."""
+    from api.main import _escape_untrusted_values
+
+    document = "<html><body><p>textx<script>alert(1)</script></p></body></html>"
+
+    out = _escape_untrusted_values(document, ["x<script>alert(1)</script>"])
+
+    assert "x<script>" not in out, out
+    assert "x&lt;script&gt;" in out, out
+
+
+def test_a_value_that_ends_inside_a_longer_word_is_left_alone():
+    """A value of ``<em`` must not rewrite the report's own ``<emphasis>``."""
+    from api.main import _escape_untrusted_values
+
+    document = "<html><body><emphasis>note</emphasis></body></html>"
+
+    out = _escape_untrusted_values(document, ["<em"])
+
+    assert out == document, out
+
+
+def test_a_value_is_never_escaped_twice():
+    """The builder's own escaped copy must survive the net untouched."""
+    from api.main import _escape_untrusted_values
+
+    document = "<html><body>&lt;script&gt;alert(1)&lt;/script&gt;</body></html>"
+
+    out = _escape_untrusted_values(document, ["<script>alert(1)</script>"])
+
+    assert "&amp;lt;" not in out, out
+    assert out == document, out
+
+
+def test_the_report_route_survives_a_lt_only_value(client, monkeypatch, tmp_path, billing_db):
+    """End to end: a finding of "<" must not flatten the report.
+
+    The net only fires when the builder regresses and drops the value
+    into the document raw — which is exactly the case the net exists
+    for. It must then escape that one value, not every tag.
+    """
+    import api.main as main
+    from api.tenancy import tenant_connection
+
+    monkeypatch.setattr(main, "loader", billing_db)
+    headers, _uid, _name = _premium_headers()
+    table = "launch_lt_probe"
+
+    with tenant_connection() as conn:
+        conn.execute(f'CREATE TABLE IF NOT EXISTS analytics."{table}" ("col" VARCHAR)')
+        conn.execute(f'INSERT INTO analytics."{table}" VALUES (?)', ["x"])
+
+    class RawReportGenerator(main.ReportGenerator):
+        """A builder that drops the findings into the document unescaped."""
+
+        def __init__(self):
+            super().__init__(output_dir=str(tmp_path))
+
+        def generate_executive_report(self, **kwargs):
+            report = super().generate_executive_report(**kwargs)
+            raw = "".join(
+                f"<li>{finding}</li>"
+                for finding in (kwargs.get("insights") or {}).get("key_findings", [])
+            )
+            report.html = report.html.replace("</body>", raw + "</body>")
+            return report
+
+    monkeypatch.setattr(main, "ReportGenerator", RawReportGenerator)
+    monkeypatch.setattr(
+        main,
+        "generate_auto_insights",
+        lambda df, table_name=None: {"key_findings": ["<"]},
+    )
+
+    resp = client.get(f"/report/{table}", headers=headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body.get("success") is True, body
+    html = body.get("report_html") or ""
+    assert "<html" in html, html[:2000]
+    assert "&lt;html" not in html, html[:2000]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # S5 — a share link is owned by the session user and scoped to a tenant
 # ═══════════════════════════════════════════════════════════════════════════
 

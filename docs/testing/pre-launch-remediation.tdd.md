@@ -109,6 +109,57 @@ The enforced coverage gate is `fail_under = 74` in `pyproject.toml`; the measure
 **~76.6 %** (the pre-remediation measurement). The new code is covered by the launch suites
 listed above.
 
+### 5a. The review round
+
+A code review of the twelve remediation commits raised eight MAJOR and thirteen MINOR
+findings. Every one of them is closed, and each close is backed by a test that fails without
+the fix.
+
+| # | Finding | The test that now holds it |
+|---|---------|------------------------------|
+| 1 | The email sanitiser let a remote image and a `javascript:` URL through `srcset`, `<source>` and `xlink:href` | `tests/test_launch_email_delivery.py::TestUrlAttributeBypasses` (6 cases) |
+| 2 | CSS escapes (`u\72l(`) defeated the `style` filter | `tests/test_launch_email_delivery.py::TestCssEscapeBypasses` (4 cases) |
+| 3 | The opencode self-update installed the pinned binary under the latest version's filename | `tests/test_launch_opencode_pinned_install.py` (6 cases) |
+| 4 | The Linux opencode install was unverified, and verified after extracting | `tests/test_launch_opencode_linux_verify.py` (16 cases, behavioural: it runs the installer under bash) |
+| 5 | The changelog's added/changed/fixed colour rules matched nothing | `tests/test_launch_site_release_claims.py` + the markup/CSS fix |
+| 6 | A stylesheet could change without its `?v=` changing | `tests/test_launch_site_cache_busters.py` (3 cases) |
+| 7 | The installer size was quoted four different ways | `tests/test_launch_site_release_claims.py::test_the_site_quotes_one_installer_size` |
+| 8 | The placeholder domain was in 18 files and the notes said 2 | `tests/test_launch_site_release_claims.py` (4 cases) |
+
+**Three guards had blind spots, and each was proved closed by injecting the thing it missed:**
+
+* "no pure white fills" matched `background` but not `background-color` — injecting
+  `.card { background-color: #ffffff; }` passed it. Now matched.
+* the `:root` finder needed a newline before the closing brace — a single-line
+  `:root { … }` was invisible to the two tests that claim to find stray palettes. Now matched.
+* the privacy scan caught CSS `url()` but not a bare `@import "https://…"` — injected, it
+  was invisible. Now caught.
+
+**The monochrome conversion.** Every decorative colour in `website/` is now a neutral grey,
+separated by lightness rather than by hue. Each token is the ORIGINAL colour converted to
+the neutral of the same relative luminance, so the light/dark relationships the design was
+built on survive the conversion untouched. The four status hues keep a colour, muted to a
+low-chroma tint; every status state also carries a glyph, a shape or a label.
+
+Three bugs were found and fixed on the way, all of them caught by a guard that now exists:
+
+* the nav CTA is given a near-white fill in `pro.css` and a near-white label in
+  `premium.css`, and the label won — the "Download" button in the header was invisible text
+  on a white pill. `tests/test_launch_site_palette.py::test_a_near_white_fill_never_takes_a_light_label`
+  resolves the CASCADE per selector across every stylesheet and asserts a near-white fill
+  never takes a light label.
+* the desaturation pass rewrote HTML entities: `&#128229;` (an emoji) and `&#8377;` (the
+  rupee sign) were treated as colour literals.
+* the desaturation pass mapped decorative indigo washes onto the status "info" slate and
+  lightened every low-alpha wash, which washed the page out.
+
+**The hero film.** The home page's WebGL stage is replaced by a monochrome dashboard loop,
+generated and then remediated: the tail is crossfaded into the head so the loop seam is
+0.25/255, the highlights are capped below the page ceiling so no frame is pure white, and
+the clip is defocused so the burned-in pseudo-text reads as texture. The file is local — the
+site loads no subresource from a third party — and it is hidden under `?fx=off` and
+`prefers-reduced-motion`, with the CSS aurora carrying the hero if it never plays.
+
 **Known gaps, stated plainly:**
 
 1. **No clean-VM test.** The installer was verified to build (182 MB) and to extract (the
@@ -130,6 +181,13 @@ listed above.
 6. **The release repository does not exist yet**, so the download links on the marketing site
    resolve to a placeholder. One constant to flip: `website/js/main.js` →
    `window.DATAAGENT_REPO_URL`.
+7. **The deployed domain does not exist yet.** The placeholder `dataagent.example` is in
+   eighteen files; `docs/WEBSITE-CHECKLIST.md` §4 gives the one command that replaces them,
+   and a test asserts the `og:url` hosts, the sitemap and `robots.txt` all name the same host.
+8. **The social card is generated, not hand-drawn.** `scripts/site_og_card.html` holds the
+   design and `scripts/site_og_card.py` renders it in a real browser with the site's own
+   fonts. It is monochrome like the site, and a test asserts that every colour in its source
+   is a true neutral — but it is still a render of a source file, not a design tool.
 
 ---
 

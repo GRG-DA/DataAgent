@@ -175,6 +175,83 @@ def test_runtime_file_is_inside_the_runtime_dir(monkeypatch, tmp_path):
     assert resolved.read_text(encoding="utf-8") == "probe"
 
 
+# ── the source-run split install must be visible ───────────────────────
+#
+# In a SOURCE run the warehouse, the accounts and the config are
+# resolved against the CURRENT WORKING DIRECTORY
+# (``config.settings.duckdb.database_path`` is the relative path
+# ``data/curated/warehouse.duckdb``), while ``runtime_data_dir()`` -
+# and with it the JWT secret and the grant key - follows
+# ``$DATAAGENT_DATA_DIR``.  An override therefore moves HALF of the
+# install: the keys land in the override while the data stays in the
+# working directory.  That is the "two halves of one install" failure
+# again, and it used to be SILENT because the warning was skipped as
+# soon as the override was set.
+
+
+def _source_checkout(monkeypatch, tmp_path):
+    """A source checkout with no frozen markers."""
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    monkeypatch.chdir(checkout)
+    return checkout
+
+
+def test_a_source_run_with_an_override_warns_about_the_split(monkeypatch, tmp_path):
+    """The override moves the key files only - say so."""
+    _clear_secret_env(monkeypatch)
+    _source_checkout(monkeypatch, tmp_path)
+    override = tmp_path / "portable"
+    monkeypatch.setenv("DATAAGENT_DATA_DIR", str(override))
+
+    warning = runtime_paths.runtime_dir_warning()
+
+    assert warning, (
+        "a source run with an override splits the install in two "
+        "(the warehouse stays in the working directory, the key files "
+        "move to the override) and said nothing"
+    )
+    assert "DATAAGENT_DATA_DIR" in warning
+    assert str(override) in warning
+
+
+def test_the_split_warning_names_the_working_directory(monkeypatch, tmp_path):
+    """The warning must point at both halves of the split."""
+    _clear_secret_env(monkeypatch)
+    checkout = _source_checkout(monkeypatch, tmp_path)
+    override = tmp_path / "portable"
+    monkeypatch.setenv("DATAAGENT_DATA_DIR", str(override))
+
+    warning = runtime_paths.runtime_dir_warning()
+
+    assert str(checkout) in warning
+    assert str(override) in warning
+
+
+def test_an_override_that_is_the_working_directory_does_not_warn(monkeypatch, tmp_path):
+    """No split, no warning."""
+    _clear_secret_env(monkeypatch)
+    checkout = _source_checkout(monkeypatch, tmp_path)
+    monkeypatch.setenv("DATAAGENT_DATA_DIR", str(checkout))
+
+    assert runtime_paths.runtime_dir_warning() == ""
+
+
+def test_a_frozen_run_never_warns(monkeypatch, tmp_path):
+    """A frozen build chdirs into the runtime dir - nothing is split."""
+    _clear_secret_env(monkeypatch)
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+    monkeypatch.setenv("DATAAGENT_DATA_DIR", str(tmp_path / "runtime"))
+    monkeypatch.chdir(tmp_path)
+
+    assert runtime_paths.runtime_dir_warning() == ""
+
+
 # ── D2: the JWT secret must persist across launches ────────────────────
 
 

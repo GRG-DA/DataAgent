@@ -103,6 +103,44 @@ def project_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def _same_dir(left: Path, right: Path) -> bool:
+    """True when both paths point at the same directory."""
+    try:
+        return os.path.normcase(str(left.resolve())) == os.path.normcase(
+            str(right.resolve())
+        )
+    except OSError:  # pragma: no cover — the cwd was deleted underneath us
+        return False
+
+
+def _split_install_warning(override: str) -> str:
+    """The warning for a source run whose override splits the install.
+
+    In a source checkout the warehouse, the accounts and the config are
+    resolved against the CURRENT WORKING DIRECTORY
+    (``config.settings.duckdb.database_path`` is the relative path
+    ``data/curated/warehouse.duckdb``), while the key files follow
+    ``runtime_data_dir()`` - and with it ``$DATAAGENT_DATA_DIR``.  An
+    override therefore moves HALF of the install: the JWT secret and the
+    grant key land in the override while the data stays where it is, so
+    the two halves drift apart.
+    """
+    target = Path(override).expanduser()
+    cwd = _cwd()
+    if _same_dir(target, cwd):
+        # The override IS the working directory - nothing is split.
+        return ""
+    return (
+        f"{DATA_DIR_ENV} is set to {target}, but a source run keeps the "
+        f"warehouse, the accounts and the config in the working directory "
+        f"({cwd}). Only the key files (the JWT secret and the grant key) "
+        "follow the override, so one install is split in two: the keys "
+        "are re-minted in the override while the data stays where it is. "
+        "Run from the project root without the override, or point the "
+        "override at the project root."
+    )
+
+
 def runtime_dir_warning() -> str:
     """A warning when a source run's working directory is not the project root.
 
@@ -115,9 +153,17 @@ def runtime_dir_warning() -> str:
     The shipped ``.exe`` is not affected - a frozen build always uses the
     per-user directory.  This only matters for a developer, but a silent
     second install is confusing, so it is reported.
+
+    An override (``$DATAAGENT_DATA_DIR``) in a SOURCE run is reported too:
+    it moves only the key files, because the warehouse and the accounts
+    stay cwd-relative - so the install is split in two even when the
+    working directory is the project root.
     """
-    if is_frozen() or (os.environ.get(DATA_DIR_ENV) or "").strip():
+    if is_frozen():
         return ""
+    override = (os.environ.get(DATA_DIR_ENV) or "").strip()
+    if override:
+        return _split_install_warning(override)
     try:
         cwd = _cwd().resolve()
         root = project_root().resolve()
