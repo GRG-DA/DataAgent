@@ -157,3 +157,37 @@ def test_the_deployment_notes_cover_the_shared_links() -> None:
     for name in ("robots.txt", "sitemap.xml"):
         text = (SITE / name).read_text(encoding="utf-8")
         assert PLACEHOLDER in text, f"{name} does not mention the placeholder domain"
+
+
+def test_the_social_card_is_monochrome() -> None:
+    """The card is what every shared link carries, so it must match the site.
+
+    The card is generated from ``scripts/site_og_card.html`` in a real
+    browser, with the site's own vendored fonts and palette, so the SOURCE
+    is what decides what the card looks like.  Every colour in it must be a
+    true neutral - R = G = B - exactly like the palette it comes from.
+    """
+    source = (REPO_ROOT / "scripts" / "site_og_card.html").read_text(encoding="utf-8")
+    offenders = []
+    for match in re.finditer(r"#([0-9a-fA-F]{6})\b", source):
+        body = match.group(1)
+        red, green, blue = (int(body[i : i + 2], 16) for i in (0, 2, 4))
+        if not (red == green == blue):
+            line = source[: match.start()].count("\n") + 1
+            offenders.append(f"line {line}: #{body}")
+    assert not offenders, (
+        "the social card must be monochrome:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_the_social_card_is_the_right_size() -> None:
+    """1200x630 is what every social platform expects."""
+    card = SITE / "og-image.png"
+    assert card.is_file(), "website/og-image.png is missing"
+    raw = card.read_bytes()
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n", "og-image.png is not a PNG"
+    width = int.from_bytes(raw[16:20], "big")
+    height = int.from_bytes(raw[20:24], "big")
+    assert (width, height) == (1200, 630), (
+        f"the social card is {width}x{height}; it must be 1200x630"
+    )
