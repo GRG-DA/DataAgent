@@ -295,9 +295,24 @@ img { max-width: 100%; display: block; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-/* ??????????????????????????????????????????????????????????????????????
+   THE HERO FILM
+   ──────────────────────────────────────────────────────────────────────
+   A monochrome dashboard loop behind the lattice and the hero copy.
+
+   It REPLACES the WebGL stage on the home page - fx-webgl.js skips the
+   canvas when a [data-hero-film] is present - because two full-viewport
+   motion layers behind one hero is a bug, not a design.
+
+   It sits FIRST in the stacking order, so the lattice and the ambient
+   orbs still overlay it and the clip reads as a world behind the site
+   rather than as a video pasted on top of it.
+
+   saturate(0) is the belt-and-braces: the clip is already grey, and no
+   future replacement of the file may introduce a hue.
+   ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
    THE GLYPHS
-   ????????????????????????????????????????????????????????????????????
+   ──────────────────────────────────────────────────────────────────────
    The site's icon language is SVG, not emoji: a colour emoji is a hue on
    a black-and-white page, and a hue that is not part of the palette reads
    as an oversight rather than as an accent.
@@ -306,7 +321,7 @@ img { max-width: 100%; display: block; }
    font-size of whatever it sits in - a card tile, a table cell, a heading
    - exactly as the emoji it replaced did.  The stroke, the fill and the
    weight all live here, so the whole set can be restyled in one place.
-   ?????????????????????????????????????????????????????????????????????? */
+   ══════════════════════════════════════════════════════════════════════ */
 .glyph {
   width: 1em;
   height: 1em;
@@ -320,21 +335,6 @@ img { max-width: 100%; display: block; }
   stroke-linejoin: round;
 }
 
-   THE HERO FILM
-   ────────────────────────────────────────────────────────────────────
-   A monochrome dashboard loop behind the lattice and the hero copy.
-
-   It REPLACES the WebGL stage on the home page — fx-webgl.js skips the
-   canvas when a [data-hero-film] is present — because two full-viewport
-   motion layers behind one hero is a bug, not a design.
-
-   It sits FIRST in the stacking order, so the lattice and the ambient
-   orbs still overlay it and the clip reads as a world behind the site
-   rather than as a video pasted on top of it.
-
-   saturate(0) is the belt-and-braces: the clip is already grey, and no
-   future replacement of the file may introduce a hue.
-   ══════════════════════════════════════════════════════════════════════ */
 .hero-film {
   position: fixed;
   top: 0; left: 0;

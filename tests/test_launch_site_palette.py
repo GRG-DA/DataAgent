@@ -913,3 +913,72 @@ def test_the_glyphs_are_real_svg() -> None:
                 f"{path.name}: a glyph must be hidden from assistive technology"
             )
     assert total > 50, f"expected the icon set to be in use, found {total} glyphs"
+
+
+def test_every_stylesheet_is_structurally_sound() -> None:
+    """A broken comment silently kills every rule that follows it.
+
+    This is not hypothetical: a block inserted inside another comment left
+    the ``.hero-film`` rule inside a broken comment, so the video fell into
+    the normal flow and pushed the hero 800px down the page.  The page
+    still rendered, every other test still passed, and the bug was found
+    by LOOKING at it.
+
+    So: the comments and the braces must balance, in every stylesheet.
+    """
+    for name in STYLESHEETS:
+        css = _read(name)
+        index = 0
+        in_comment = False
+        depth = 0
+        stray: list[str] = []
+        line = 1
+        while index < len(css):
+            char = css[index]
+            if char == "\n":
+                line += 1
+            if in_comment:
+                if css.startswith("*/", index):
+                    in_comment = False
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if css.startswith("/*", index):
+                in_comment = True
+                index += 2
+                continue
+            if css.startswith("*/", index):
+                stray.append(f"a stray '*/' on line {line}")
+                index += 2
+                continue
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth < 0:
+                    stray.append(f"an unbalanced '}}' on line {line}")
+                    depth = 0
+            index += 1
+        assert not in_comment, f"{name}: a comment is never closed"
+        assert depth == 0, f"{name}: {depth} unclosed block(s)"
+        assert not stray, f"{name}: " + "; ".join(stray)
+
+
+def test_the_layout_critical_rules_are_really_rules() -> None:
+    """The rules the layout depends on must be RULES, not comment text.
+
+    A rule that has drifted inside a comment is not a rule: the browser
+    ignores it, and the page still renders - just wrongly.
+    """
+    combined = "\n".join(_strip_comments(_read(name)) for name in STYLESHEETS)
+    film = re.search(r"\.hero-film\s*\{([^}]*)\}", combined)
+    assert film, "the .hero-film rule is missing - the video is not styled"
+    assert "position: fixed" in film.group(1), (
+        "the hero film must be fixed, or it pushes the hero down the page"
+    )
+    glyph = re.search(r"\.glyph\s*\{([^}]*)\}", combined)
+    assert glyph, "the .glyph rule is missing - the icons are not sized"
+    assert "currentColor" in glyph.group(1), (
+        "the glyphs must be drawn in currentColor, or they cannot follow the text"
+    )
