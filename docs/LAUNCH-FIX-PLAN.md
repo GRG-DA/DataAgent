@@ -232,7 +232,7 @@ item-by-item status is in **`docs/WEBSITE-CHECKLIST.md`**; the highlights:
 | **17 accessibility findings** (skipped heading levels; two pages with no `<h1>`). | major |
 | **No sitemap, no robots.txt, no 404 page, no security headers** for three different hosts. | major |
 | **The asset cache-busters were not bumped** when the CSS changed, so a returning visitor kept the old stylesheet. | major |
-| **The site claimed the installer was 175 MB**; it is 499 MB. | minor |
+| **The site quoted the installer size four different ways** (175 MB, 182 MB, 400 MB, 499 MB) across three pages. | major | The size now lives in ONE constant (`scripts/site_installer_size.py`) and a test asserts every page quotes it. |
 
 ### Deliberately not done
 

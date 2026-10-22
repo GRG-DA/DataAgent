@@ -70,6 +70,11 @@
   status = 200
 
 [[redirects]]
+  from = "/billing"
+  to = "/billing.html"
+  status = 200
+
+[[redirects]]
   from = "/faq"
   to = "/faq.html"
   status = 200

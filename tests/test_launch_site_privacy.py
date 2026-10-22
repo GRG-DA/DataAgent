@@ -74,6 +74,12 @@ def _scan() -> tuple:
         if kind == "css":
             for m in re.finditer(r"url\(\s*[\"']?(https?://[^\s\"')]+)", text):
                 subresources.append((m.group(1), rel))
+            # An @import may name its target as a bare string rather than
+            # inside url(), and that form fetches just the same.
+            for m in re.finditer(
+                r"@import\s+(?:url\(\s*)?[\"'](https?://[^\"']+)[\"']", text, re.I,
+            ):
+                subresources.append((m.group(1), rel))
             continue
 
         for m in re.finditer(

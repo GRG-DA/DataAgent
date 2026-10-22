@@ -27,7 +27,7 @@ this site, that is said plainly rather than quietly ignored.
 | 11 | Page speed optimization | **done** | Measured: FCP 396 ms, load 762 ms, **CLS 0**, no resource over 150 ms, 24 same-origin requests and **0 third-party** (was 5). The vendored fonts removed the last cross-origin round trip. |
 | 12 | **SEO** (meta, sitemap, robots) | **done** | Every page has a unique `<title>` and meta description. `website/sitemap.xml` (14 non-error pages, with `<lastmod>`/`<changefreq>`/`<priority>`) and `website/robots.txt` (allows crawling, points at the sitemap, disallows `/legal/`, `/share/`, `/auth/`, `/static/`) were **missing** and are now created. The deployed domain is one clearly-marked placeholder to change in each file. |
 | 13 | Favicon | **done** | 7 files in `website/favicon_io/`, linked from all 16 pages. |
-| 14 | Image optimization / alt text | **not applicable** | The site has **zero raster images** — everything is CSS and SVG. The checker still enforces `alt` on every `<img>` (including `alt=""` for decorative) so that stays true if an image is ever added. |
+| 14 | Image optimization / alt text | **done** | The site's own surfaces are CSS and SVG. The only raster files are `website/og-image.png` (the social card, 1200?630) and `website/media/hero-poster.jpg` (the first frame of the hero film); both are local, both carry alt text, and neither is a decorative background. |
 | 15 | **404 error page** | **done** | `website/404.html` — on-brand (the site's own CSS, nav and footer), `noindex`, a link home, and links to the three pages a lost visitor most wanted. `403.html` too. |
 | 16 | Contact form testing | **partial** | The form exists and validates client-side. **It has no backend** — it is a mailto/placeholder flow. A real destination is an operator decision (see §4). |
 | 17 | **Analytics (Google Analytics)** | **deliberately not done** | **ADR-013.** GA would send every visitor's IP, a cookie and a persistent identifier to a third party on every page view — on the site of a product whose own pages say *"no telemetry"* — and would require a consent banner and a DPA to be lawful. It also buys the wrong metric: **installer downloads** are already reported by the GitHub Release the site links to, with no script, no cookie and no third party. `tests/test_launch_site_privacy.py` fails the build if any new third-party origin appears. |
@@ -53,7 +53,7 @@ this site, that is said plainly rather than quietly ignored.
 | Pure black on pure white | **fixed** | 23 pure-white fills in a near-black design → **0**. A light card on a dark page, not a hole in it. |
 | Rainbow / multi-gradient backgrounds | **fixed** | 12 shared gradient tokens, each with a stated purpose. |
 | Gradient text overuse | **fixed** | 20 `background-clip:text` rules → **4** (the site name and the one hero word). |
-| Text over images without an overlay | **not applicable** | Zero raster images; the WebGL stage has a readability scrim. |
+| Text over images without an overlay | **fixed** | The hero film sits behind a readability scrim and the copy is never over the bright part of the frame. |
 | CTA blending into the background | **fixed** | The primary button is a solid fill with a visible border (5.20:1 for its own text, 3.53:1 against the surface); the secondary is an outline; the ghost is glass; the text button has no fill. |
 | Red/green only for status | **fixed** | Status now carries a **shape and a glyph**: a disc + ✓, a square + ✗, a dashed amber pill with its label, ↑/↓ arrows on deltas. |
 | Primary and secondary the same colour | **fixed** | There were **three** competing `.btn` base rules (radius 12/100/999px, with `!important` overrides). Now **one**. |
@@ -67,7 +67,7 @@ this site, that is said plainly rather than quietly ignored.
 | Oversized hero pushing content down | **fixed** | The hero is capped so the first section is visible on a laptop screen. |
 | Overcrowded sections | **fixed** | Section density reduced; the card grids breathe. |
 | Inconsistent spacing and padding | **fixed** | One spacing scale. |
-| Emojis as icons | **did not apply** | **0** emoji in the site. |
+| Emojis as icons | **did not apply** | No emoji stands in for an icon in the UI. The ~100 pictographic entities on the pages are **content** ? the card glyphs in the feature and comparison grids ? and every one of them has a text label beside it. |
 | Glassmorphism overuse | **fixed** | 22 `backdrop-filter` declarations → reduced to a single glass token used where it means something. |
 | Layout breaking on mobile | **done** | Verified at 390×844; no horizontal scroll. |
 | Fixed widths / horizontal scroll | **fixed** | 40 `width:NNNpx` → fluid. |
@@ -101,9 +101,11 @@ The light theme's layer was **leaking into the dark one**, so a set of elements 
 
 ## 3. Open accessibility findings (a human still has to do these)
 
-`python scripts/ci/check_site_a11y.py` reports **17** findings, all of the same kind:
-a skipped heading level, mostly caused by the shared footer using `<h4>` where the
-body ended at `<h2>`. Changing the footer headings to `<h2>` fixes 9 of the 17.
+`python scripts/ci/check_site_a11y.py` reports **0** findings and exits 0.
+The skipped heading levels it used to report are gone: the footer headings
+are `<h2>`, and the four changelog groups are `<h2>` peers (they were a mix
+of `<h2>` and `<h3>`, which left the added/changed/fixed colour rules
+matching nothing).
 The rest need a per-page look.
 
 The checker is a floor, not an audit. A human still has to verify **colour contrast
@@ -115,8 +117,20 @@ of the interactive components.
 ## 4. Still the operator's job
 
 1. **The certificate.** The configs are ready; the cert is not.
-2. **The deployed domain.** Two placeholders to change: the `Sitemap:` line in
-   `website/robots.txt` and every `<loc>` in `website/sitemap.xml`.
+2. **The deployed domain.** The placeholder `dataagent.example` is in **eighteen**
+   files, not two: all sixteen HTML pages (in their `og:url` and `og:image`
+   tags — these are the links a visitor sees when a page is shared), plus
+   `website/robots.txt` and `website/sitemap.xml`. One command replaces all
+   of them:
+
+   ```sh
+   grep -rl "dataagent\.example" website | xargs sed -i "s/dataagent\.example/YOUR-DOMAIN/g"
+   ```
+
+   `tests/test_launch_site_release_claims.py` asserts that the `og:url`
+   hosts, the sitemap and the `robots.txt` `Sitemap:` line all name the
+   same host, so a partial replacement fails the build rather than
+   shipping a broken preview card.
 3. **The release repository.** One constant: `window.DATAAGENT_REPO_URL` in
    `website/js/main.js`. Until it points at a real repo, the download buttons
    404 and the site-wide toast is a lie.
@@ -133,6 +147,6 @@ of the interactive components.
 
 ```powershell
 python scripts\ci\check_site_links.py     # broken internal links + anchors; exit 0 today
-python scripts\ci\check_site_a11y.py      # accessibility findings; exit 1 until they are fixed
+python scripts\ci\check_site_a11y.py      # accessibility findings; currently 0, so it exits 0
 python -m pytest tests\test_launch_site_*.py -q -p no:cacheprovider
 ```

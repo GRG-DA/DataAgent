@@ -5,9 +5,17 @@
   ONE VALUE TO CHANGE WHEN THE SITE IS DEPLOYED
   ===============================================
   The domain below (dataagent.example) is a PLACEHOLDER. The .example TLD is
-  reserved by RFC 2606, so it can never resolve to a real host. When the site
-  is deployed, replace it in this file AND in website/robots.txt (the
-  "Sitemap:" line).
+  reserved by RFC 2606, so it can never resolve to a real host.
+
+  It is in EIGHTEEN files, not two: this file, website/robots.txt, and all
+  sixteen HTML pages - each of which carries it in its og:url and og:image
+  tags. The og:url is the link a visitor sees when the page is shared, so
+  a deployment that misses it produces a broken preview card on every
+  shared link.
+
+  One command does all of it:
+
+      grep -rl "dataagent\.example" website | xargs sed -i "s/dataagent\.example/YOUR-DOMAIN/g"
 
   The site URL is NOT derived from window.DATAAGENT_REPO_URL in
   website/js/main.js: that constant is the GitHub repository that publishes

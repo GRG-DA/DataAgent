@@ -187,7 +187,11 @@ def _strip_comments(css: str) -> str:
 
 
 def _root_blocks(css: str) -> list[str]:
-    return re.findall(r":root\s*\{(.*?)\n\}", css, flags=re.S)
+    # A single-line ":root { ... }" is a :root block too, so the pattern
+    # must not depend on a newline before the closing brace.  The token
+    # block contains no nested braces, so a non-greedy match to the first
+    # "}" is the whole block.
+    return re.findall(r":root\s*\{([^}]*)\}", css, flags=re.S)
 
 
 def _declarations(css: str) -> dict[str, list[str]]:
@@ -432,7 +436,9 @@ def test_no_pure_white_backgrounds(sheets: dict[str, str]) -> None:
     offenders = []
     for name in STYLESHEETS:
         printable = _print_rules(sheets[name])
-        for match in re.finditer(r"background(?:-image)?\s*:\s*([^;}]+)", printable):
+        # background-color is the most obvious way to write a fill, so it
+        # has to be matched as well as the background shorthand.
+        for match in re.finditer(r"background(?:-color|-image)?\s*:\s*([^;}]+)", printable):
             value = match.group(1)
             for white in ("#fff", "#FFF", "#ffffff", "#FFFFFF", "white"):
                 if re.search(rf"(?<![#\w-]){re.escape(white)}(?![#\w-])", value):
@@ -446,7 +452,10 @@ def test_white_is_only_ever_a_text_colour(sheets: dict[str, str]) -> None:
     offenders = []
     for name in STYLESHEETS:
         printable = _print_rules(sheets[name])
-        for match in re.finditer(r"(?<!-)\bcolor\s*:\s*([^;}]+)", printable):
+        # `background-color` ends in "color" and would otherwise be read
+        # as a text colour, so the property name must be anchored: the
+        # character before "color" may not be a word character or a dash.
+        for match in re.finditer(r"(?<![\w-])color\s*:\s*([^;}]+)", printable):
             value = match.group(1)
             if re.search(r"(?<![#\w-])(#fff|#FFF|#ffffff|#FFFFFF)(?![#\w-])", value):
                 line = printable[: match.start()].count("\n") + 1

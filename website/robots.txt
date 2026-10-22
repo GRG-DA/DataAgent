@@ -7,9 +7,19 @@
 #  reserved by RFC 2606, so it can never resolve to a real host - it is here
 #  so nobody publishes a sitemap that points at a domain they do not own.
 #
-#  When the site is deployed, replace the placeholder domain in BOTH files:
-#      website/robots.txt    -> the "Sitemap:" line below
-#      website/sitemap.xml   -> every <loc> (and the xmlns:schema in the header)
+#  When the site is deployed, replace the placeholder domain in EVERY file
+#  that carries it - that is EIGHTEEN files, not two:
+#
+#      the 16 HTML pages   -> every <meta property="og:url" content="...">
+#                             and every <meta property="og:image" content="...">
+#                             (these are the links a visitor sees when the
+#                             page is shared, so they matter most)
+#      website/robots.txt  -> the "Sitemap:" line below
+#      website/sitemap.xml -> every <loc> (and the xmlns:schema in the header)
+#
+#  One command does all of it:
+#
+#      grep -rl "dataagent\.example" website | xargs sed -i "s/dataagent\.example/YOUR-DOMAIN/g"
 #
 #  The site URL is NOT derived from window.DATAAGENT_REPO_URL in
 #  website/js/main.js: that constant is the GitHub repository that publishes

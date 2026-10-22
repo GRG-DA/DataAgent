@@ -400,6 +400,34 @@ def test_the_host_configs_map_clean_urls_to_the_html_files():
     )
 
 
+def test_the_two_hosts_declare_the_same_clean_urls():
+    """Netlify and Vercel must map the SAME clean URLs.
+
+    They drifted once: Netlify mapped ``/pricing`` to ``/billing.html``
+    and Vercel mapped ``/billing``, so the same URL worked on one host and
+    404'd on the other.  Nothing links to a clean URL today, which is
+    exactly why the divergence was invisible.
+    """
+    netlify = tomllib.loads(_read(NETLIFY_TOML))
+    netlify_map = {
+        block.get("from", ""): block.get("to", "")
+        for block in netlify.get("redirects", [])
+    }
+    vercel = json.loads(_read(VERCEL_JSON))
+    vercel_map = {
+        block.get("source", ""): block.get("destination", "")
+        for block in list(vercel.get("redirects", [])) + list(vercel.get("rewrites", []))
+    }
+    assert netlify_map, "netlify.toml declares no redirects"
+    assert vercel_map, "vercel.json declares no rewrites"
+    assert netlify_map == vercel_map, (
+        "the two hosts map different clean URLs:\n"
+        f"  only in netlify.toml: {sorted(set(netlify_map) - set(vercel_map))}\n"
+        f"  only in vercel.json:   {sorted(set(vercel_map) - set(netlify_map))}\n"
+        "  they must declare the SAME set"
+    )
+
+
 # --------------------------------------------------------------------------
 # 6. the app's reverse proxy
 # --------------------------------------------------------------------------

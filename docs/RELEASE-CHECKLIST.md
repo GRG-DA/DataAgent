@@ -48,7 +48,7 @@ be automated and must be performed by a human on a clean machine.
 | 2.8 | The hand-maintained spec was restored | `git diff --stat DataAgent.spec` | **empty** |
 | 2.9 | No credential state bundled | `python scripts\build_secure_zip.py --check-only` (or the equivalent) | no `users.json`, no `.env`, no `.jwt_secret`, no `.grant_key` in the bundle |
 | 2.10 | No private key material in `dist/` | `Get-ChildItem dist -Recurse -Filter *.pem` | only `cacert.pem` |
-| 2.11 | Installed size is honest | compare the number stated in `website/download.html` with the real installer size | they match |
+| 2.11 | Installed size is honest | measure the installer, then run `python scripts/site_installer_size.py --set <MB>` - it rewrites every page that quotes the size | `python scripts/site_installer_size.py` exits 0 |
 | 2.12 | The bundle carries no dead weight | `Get-ChildItem dist\DataAgentShell\_internal -Directory \| %% { [math]::Round((Get-ChildItem $_.FullName -Recurse -File | Measure-Object Length -Sum).Sum/1MB) }` | no multi-MB directory that no shipped feature uses |
 > **Size note.** The installer is built from `dist\DataAgent.exe` (the onefile web build), `dist\DataAgentShell\` (the onedir desktop shell) and the bundled opencode CLI. **Always read the size off the finished installer** ? a file that is still being written reads several times smaller than its final size, and quoting a mid-write number is how the site ended up claiming 175 MB for a 499 MB download.
 

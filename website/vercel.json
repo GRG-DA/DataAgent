@@ -40,19 +40,65 @@
     }
   ],
   "rewrites": [
-    { "source": "/features", "destination": "/features.html" },
-    { "source": "/download", "destination": "/download.html" },
-    { "source": "/docs", "destination": "/docs.html" },
-    { "source": "/faq", "destination": "/faq.html" },
-    { "source": "/comparison", "destination": "/comparison.html" },
-    { "source": "/usecases", "destination": "/usecases.html" },
-    { "source": "/security", "destination": "/security.html" },
-    { "source": "/about", "destination": "/about.html" },
-    { "source": "/contact", "destination": "/contact.html" },
-    { "source": "/blog", "destination": "/blog.html" },
-    { "source": "/blog-post", "destination": "/blog-post.html" },
-    { "source": "/changelog", "destination": "/changelog.html" },
-    { "source": "/billing", "destination": "/billing.html" },
-    { "source": "/404", "destination": "/404.html" }
+    {
+      "source": "/features",
+      "destination": "/features.html"
+    },
+    {
+      "source": "/download",
+      "destination": "/download.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/faq",
+      "destination": "/faq.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/billing.html"
+    },
+    {
+      "source": "/comparison",
+      "destination": "/comparison.html"
+    },
+    {
+      "source": "/usecases",
+      "destination": "/usecases.html"
+    },
+    {
+      "source": "/security",
+      "destination": "/security.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/blog",
+      "destination": "/blog.html"
+    },
+    {
+      "source": "/blog-post",
+      "destination": "/blog-post.html"
+    },
+    {
+      "source": "/changelog",
+      "destination": "/changelog.html"
+    },
+    {
+      "source": "/billing",
+      "destination": "/billing.html"
+    },
+    {
+      "source": "/404",
+      "destination": "/404.html"
+    }
   ]
 }

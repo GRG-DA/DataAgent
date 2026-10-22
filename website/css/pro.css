@@ -1710,10 +1710,10 @@ body::after {
 .timeline-date { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
 .timeline-summary { color: var(--text-2); font-size: 0.96rem; line-height: 1.65; margin-bottom: 14px; }
 .change-group { margin-bottom: 10px; }
-.change-group h3 { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
-.change-group.added h4 { color: var(--success); }
-.change-group.changed h4 { color: var(--emphasis); }
-.change-group.fixed h4 { color: var(--primary-hi); }
+.change-group h2 { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.change-group.added h2 { color: var(--success); }
+.change-group.changed h2 { color: var(--emphasis); }
+.change-group.fixed h2 { color: var(--primary-hi); }
 .change-group ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .change-group li {
   position: relative;
