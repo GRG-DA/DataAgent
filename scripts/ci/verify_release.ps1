@@ -114,6 +114,15 @@ Invoke-Gate 'Site: broken links' {
 Invoke-Gate 'Site: accessibility' {
     python scripts/ci/check_site_a11y.py
 } | Out-Null
+Invoke-Gate 'Site: palette (rendered pixels)' {
+    python scripts/ci/check_site_pixels.py
+} | Out-Null
+Invoke-Gate 'Site: cache-busters' {
+    python scripts/site_asset_versions.py
+} | Out-Null
+Invoke-Gate 'Site: one installer size' {
+    python scripts/site_installer_size.py
+} | Out-Null
 Invoke-Gate 'Site: launch artefacts + privacy' {
     python -m pytest tests/test_launch_site_launch_readiness.py tests/test_launch_site_privacy.py -q --no-header -p no:cacheprovider
 } | Out-Null

@@ -25,7 +25,7 @@ SITE = REPO_ROOT / "website"
 
 #: The size of the Windows installer, in megabytes.  Measure it after the
 #: final build and set it here; every page quotes this one number.
-INSTALLER_SIZE_MB = 500
+INSTALLER_SIZE_MB = 439
 
 #: How a page says it.  The number is the only variable part.
 _SIZE_RE = re.compile(r"roughly\s*\d+\s*(?:&nbsp;|&#160;|\s)*MB")
@@ -51,6 +51,19 @@ def main() -> int:
         global INSTALLER_SIZE_MB, SIZE_PHRASE
         INSTALLER_SIZE_MB = args.set
         SIZE_PHRASE = f"roughly {INSTALLER_SIZE_MB}&nbsp;MB"
+        # The constant in THIS file is the source of truth, so it is
+        # rewritten too - otherwise the pages and the constant disagree and
+        # the next check fails.
+        source = pathlib.Path(__file__).read_text(encoding="utf-8")
+        pinned = re.sub(
+            r"^INSTALLER_SIZE_MB = \d+$",
+            f"INSTALLER_SIZE_MB = {INSTALLER_SIZE_MB}",
+            source,
+            count=1,
+            flags=re.M,
+        )
+        if pinned != source:
+            pathlib.Path(__file__).write_text(pinned, encoding="utf-8")
         changed = []
         for page in pages():
             text = page.read_text(encoding="utf-8")
@@ -58,7 +71,10 @@ def main() -> int:
             if updated != text:
                 page.write_text(updated, encoding="utf-8")
                 changed.append(page.name)
-        print(f"set the installer size to {INSTALLER_SIZE_MB} MB on {len(changed)} page(s): {', '.join(changed)}")
+        print(
+            f"set the installer size to {INSTALLER_SIZE_MB} MB "
+            f"(the constant and {len(changed)} page(s): {', '.join(changed)})"
+        )
         return 0
 
     quoted: dict[str, list[str]] = {}
