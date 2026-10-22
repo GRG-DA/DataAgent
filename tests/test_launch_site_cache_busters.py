@@ -25,7 +25,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SITE = REPO_ROOT / "website"
 
 #: The asset kinds whose bytes the browser caches hard.
-BUMPED_SUFFIXES = (".css", ".js")
+BUMPED_SUFFIXES = (".css", ".js", ".webm", ".mp4", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 
 _ASSET_RE = re.compile(
     r"\b(?:href|src|poster)\s*=\s*[\"']([^\"'>]+)[\"']"
@@ -49,7 +49,7 @@ def pages() -> list[pathlib.Path]:
 
 
 def test_every_local_asset_reference_carries_a_cache_buster(pages) -> None:
-    """No stylesheet or script may be referenced without a ?v=.
+    """No stylesheet, script or media file may be referenced without a ?v=.
 
     A reference with no cache-buster can never pick up a fix.
     """

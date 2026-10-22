@@ -30,7 +30,7 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SITE = REPO_ROOT / "website"
 
 #: The asset kinds whose bytes are cached hard by the browser.
-BUMPED_SUFFIXES = (".css", ".js")
+BUMPED_SUFFIXES = (".css", ".js", ".webm", ".mp4", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 
 #: A local asset reference in an href/src/poster attribute.
 _ASSET_RE = re.compile(

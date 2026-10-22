@@ -153,6 +153,19 @@ Three bugs were found and fixed on the way, all of them caught by a guard that n
 * the desaturation pass mapped decorative indigo washes onto the status "info" slate and
   lightened every low-alpha wash, which washed the page out.
 
+**The icon language is SVG, not emoji.** Ninety-two pictographic entities were the last
+colour on the site: the card tiles, the comparison table's feature column, the section
+titles and the button icons. They are now a hand-drawn set of 24×24 SVG line glyphs,
+sized in `em` so each one takes the font-size of whatever it sits in, drawn in the same
+1.6px stroke as the rest of the design and coloured by `currentColor`.
+`scripts/site_glyphs.py` holds the set and does the replacement, so the icons can be
+re-drawn without touching the pages by hand.
+
+Two tests hold it: one asserts the site carries no codepoint with a colour-emoji
+presentation, and one asserts every glyph is a real inline SVG that is hidden from
+assistive technology. The plain glyphs stay — the ✓ and ✗ that mark a comparison cell are
+status badges, and each is paired with a colour **and** a shape as well as a tick.
+
 **The hero film.** The home page's WebGL stage is replaced by a monochrome dashboard loop,
 generated and then remediated: the tail is crossfaded into the head so the loop seam is
 0.25/255, the highlights are capped below the page ceiling so no frame is pure white, and
