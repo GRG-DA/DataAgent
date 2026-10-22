@@ -2,20 +2,12 @@
 <!--
   DataAgent marketing site - sitemap.xml
 
-  ONE VALUE TO CHANGE WHEN THE SITE IS DEPLOYED
-  ===============================================
-  The domain below (dataagent.example) is a PLACEHOLDER. The .example TLD is
-  reserved by RFC 2606, so it can never resolve to a real host.
-
-  It is in EIGHTEEN files, not two: this file, website/robots.txt, and all
-  sixteen HTML pages - each of which carries it in its og:url and og:image
-  tags. The og:url is the link a visitor sees when the page is shared, so
-  a deployment that misses it produces a broken preview card on every
-  shared link.
-
-  One command does all of it:
-
-      grep -rl "dataagent\.example" website | xargs sed -i "s/dataagent\.example/YOUR-DOMAIN/g"
+  DEPLOYED DOMAIN: data-agent.me
+  ==============================
+  The domain is carried in EIGHTEEN files: this file, website/robots.txt,
+  and all sixteen HTML pages - each of which carries it in its og:url and
+  og:image tags. The og:url is the link a visitor sees when the page is
+  shared, so update all of them together if the domain ever changes.
 
   The site URL is NOT derived from window.DATAAGENT_REPO_URL in
   website/js/main.js: that constant is the GitHub repository that publishes
@@ -27,85 +19,85 @@
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://dataagent.example/</loc>
+    <loc>https://data-agent.me/</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/download.html</loc>
+    <loc>https://data-agent.me/download.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/features.html</loc>
+    <loc>https://data-agent.me/features.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/billing.html</loc>
+    <loc>https://data-agent.me/billing.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/docs.html</loc>
+    <loc>https://data-agent.me/docs.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/faq.html</loc>
+    <loc>https://data-agent.me/faq.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/comparison.html</loc>
+    <loc>https://data-agent.me/comparison.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/security.html</loc>
+    <loc>https://data-agent.me/security.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/usecases.html</loc>
+    <loc>https://data-agent.me/usecases.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/blog.html</loc>
+    <loc>https://data-agent.me/blog.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/about.html</loc>
+    <loc>https://data-agent.me/about.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/contact.html</loc>
+    <loc>https://data-agent.me/contact.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/blog-post.html</loc>
+    <loc>https://data-agent.me/blog-post.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://dataagent.example/changelog.html</loc>
+    <loc>https://data-agent.me/changelog.html</loc>
     <lastmod>2026-10-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.4</priority>
