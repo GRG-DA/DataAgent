@@ -28,7 +28,9 @@ const SubscriptionPage = {
             (window.APP_CONFIG && window.APP_CONFIG.billing && window.APP_CONFIG.billing.external_url) ||
             '';
 
-        // Renewal state for subscription grants (ADR-004 keyless monthly plans).
+        // Renewal state for subscription grants (ADR-004 keyless monthly plans),
+        // or a one-time window (ADR-016: FamGateway 31-day Pro — no renewal
+        // record exists; the window simply ends unless the buyer pays again).
         let renewalHtml = '';
         if (renewal && renewal.renews_at && planCode !== 'free') {
             const renewsOn = String(renewal.renews_at).slice(0, 10);
@@ -44,6 +46,20 @@ const SubscriptionPage = {
                     ${lastChecked ? `<p class="text-xs text-muted">Last checked ${App.escapeHtml(lastChecked)}.</p>` : ''}
                     ${externalUrl ? `<a id="manage-subscription" class="btn btn-primary btn-sm" href="${App.escapeHtml(externalUrl)}" target="_blank" rel="noopener noreferrer">
                         <i class="fas fa-external-link-alt mr-1"></i>Manage on the billing site
+                    </a>` : ''}
+                </div>`;
+        } else if (renewal && renewal.expires_at && !renewal.renews_at && planCode !== 'free') {
+            const expiresOn = String(renewal.expires_at).slice(0, 10);
+            const lastChecked = renewal.synced_at ? String(renewal.synced_at).slice(0, 10) : '';
+            renewalHtml = `
+                <div id="renewal-block" class="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-2">
+                    <p class="text-sm text-secondary" id="renewal-status-line">
+                        Paid window expires on ${App.escapeHtml(expiresOn)} — access continues until then.
+                        Renew by paying again on the billing site (a new payment adds a fresh window).
+                    </p>
+                    ${lastChecked ? `<p class="text-xs text-muted">Last checked ${App.escapeHtml(lastChecked)}.</p>` : ''}
+                    ${externalUrl ? `<a id="manage-subscription" class="btn btn-primary btn-sm" href="${App.escapeHtml(externalUrl)}" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-external-link-alt mr-1"></i>Renew on the billing site
                     </a>` : ''}
                 </div>`;
         }

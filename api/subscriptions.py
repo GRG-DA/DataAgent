@@ -315,7 +315,22 @@ async def my_subscription(user: User = Depends(get_current_user)):
         snap = None
     sub = ensure_subscription(user.user_id)
     sub["plan_details"] = PLANS.get(sub["plan"], PLANS["free"])
-    sub["renewal"] = snap if (snap and snap.get("is_subscription")) else None
+    if snap and snap.get("is_subscription"):
+        sub["renewal"] = snap
+    elif snap and snap.get("expires_at"):
+        # One-time grant window (ADR-016: FamGateway 31-day Pro). Not a
+        # subscription — expose the expiry and a non-renewing flag so the
+        # UI says "expires …, renew by paying again" instead of nothing.
+        sub["renewal"] = {
+            "is_subscription": False,
+            "renews_at": None,
+            "auto_renew": False,
+            "cancel_at_period_end": False,
+            "expires_at": snap.get("expires_at"),
+            "synced_at": snap.get("synced_at"),
+        }
+    else:
+        sub["renewal"] = None
     return sub
 
 

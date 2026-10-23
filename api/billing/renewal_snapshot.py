@@ -60,6 +60,10 @@ def store_snapshot(email: str, remote: Optional[Dict[str, Any]]) -> None:
         "auto_renew": remote.get("auto_renew") if is_sub else None,
         "cancel_at_period_end": remote.get("cancel_at_period_end") if is_sub else None,
         "renews_at": remote.get("expires_at") if is_sub else None,
+        # One-time windows (ADR-016: FamGateway 31-day Pro) are not
+        # subscriptions, but the buyer still needs the expiry to plan a
+        # renewal — keep the raw expiry for those.
+        "expires_at": remote.get("expires_at") if not is_sub else None,
         "synced_at": _now().isoformat(),
     }
     try:

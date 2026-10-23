@@ -272,3 +272,27 @@ def test_get_entitlements_renewal_none_without_snapshot(snap_env, billing_db):
         "renew_ent_free", "Str0ng!Passw0rd", role="viewer", email="entfree@example.com")
     ent = get_entitlements(user_id)
     assert ent.get("renewal") is None
+
+
+# ── one-time windows (FamGateway 31-day Pro, ADR-016) ────────────────
+
+
+def test_store_snapshot_records_expires_at_for_one_time_window(snap_env, billing_db):
+    """Not a subscription: no renews_at, but the expiry itself is kept."""
+    snap_env.store_snapshot("window@example.com", {
+        "plan": "pro", "status": "active",
+        "expires_at": _iso(_now() + timedelta(days=31)),
+        "auto_renew": None, "cancel_at_period_end": None,
+    })
+    snap = snap_env.read_snapshot("window@example.com")
+    assert snap is not None
+    assert snap["is_subscription"] is False
+    assert snap["expires_at"] is not None
+    assert snap["renews_at"] is None
+
+
+def test_store_snapshot_no_expires_at_without_purchase(snap_env, billing_db):
+    snap_env.store_snapshot("freewindow@example.com", {"plan": "free", "status": "none"})
+    snap = snap_env.read_snapshot("freewindow@example.com")
+    assert snap["expires_at"] is None
+    assert snap["is_subscription"] is False

@@ -120,6 +120,27 @@ def test_me_renewal_none_for_non_subscriber(unconfigured_sync, billing_db):
     assert body["renewal"] is None
 
 
+def test_me_exposes_window_renewal_for_one_time_grant(snap_env, billing_db):
+    """FamGateway 31-day windows (ADR-016): not a subscription, but the
+    buyer still sees when the window ends and that renewal is a new payment."""
+    from api.auth import user_manager
+    from api.middleware.auth_middleware import User
+
+    user_id = user_manager.add_user(
+        "renew_me_window", "Str0ng!Passw0rd", role="viewer", email="window@example.com")
+    expires = _iso(_now() + timedelta(days=31))
+    snap_env.store_snapshot("window@example.com", {
+        "plan": "pro", "status": "active", "expires_at": expires,
+        "auto_renew": None, "cancel_at_period_end": None,
+    })
+    user = User(user_id=user_id, username="renew_me_window", role="viewer")
+    body = _client(user).get("/subscriptions/me").json()
+    assert body["renewal"] is not None
+    assert body["renewal"]["expires_at"] == expires
+    assert body["renewal"]["renews_at"] is None
+    assert body["renewal"]["auto_renew"] is False
+
+
 def test_me_phones_home_for_stale_snapshot(snap_env, billing_db, monkeypatch):
     from api.auth import user_manager
     from api.middleware.auth_middleware import User

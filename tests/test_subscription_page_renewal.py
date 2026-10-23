@@ -37,3 +37,15 @@ def test_page_keeps_trial_and_key_activation():
     src = _src()
     assert "product-key-input" in src
     assert "trial-start-btn" in src
+
+
+# ── one-time windows (ADR-016: FamGateway 31-day Pro) ────────────────
+
+
+def test_page_renders_expiry_for_one_time_window():
+    """renews_at is None for one-time windows; the expiry line must say
+    what happens instead of hiding the block entirely."""
+    src = _src()
+    assert "expires_at" in src
+    assert "renews_at" in src
+    assert "Renew by paying again" in src
