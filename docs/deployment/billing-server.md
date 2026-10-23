@@ -69,6 +69,36 @@ Domain List → Manage → **Advanced DNS** → delete parking records, add:
      pending, halted, cancelled, completed, paused, resumed, expired).
      These are exactly the events `billing_server/main.py` handles.
 
+> The Razorpay rail above is **dormant** on data-agent.me (ADR-016) — it stays
+> here because it is the kill-switch fallback when the live rail is down.
+
+## 2b. FamGateway (the live rail, ADR-016)
+
+UPI-only, one-time payments, no KYC, 5-minute atomic checkout sessions.
+Because FamGateway cannot auto-renew, **Pro = a 31-day window per payment**
+(renew by paying again; `grants.py` folds the longest live window).
+
+1. Merchant account on famgateway.in → copy the **API key**.
+2. Environment (`/etc/dataagent/billing.env`):
+   - `PAYMENTS_PROVIDER=famgateway`
+   - `FAMGATEWAY_API_KEY=<api key>`
+   - `BILLING_PUBLIC_URL=https://yourdomain.com`
+3. After the server is up (step 8), register the webhook in the FamGateway
+   dashboard:
+   - webhook_url: `https://yourdomain.com/famgateway/webhook`
+   - Signature: HMAC-SHA256 over the raw body, keyed with the API key
+     (no separate secret — `X-FamGateway-Signature`, constant-time compare).
+4. Sanity check: `curl -s https://yourdomain.com/v1/payments-info` must show
+   `"provider":"famgateway"` — the storefront reads this and switches its
+   copy ("Pay ₹499 for 31 days of Pro (UPI)").
+
+Handling notes (mirrors the Razorpay webhook posture, `billing_server/main.py`):
+signature → event/status allowlist → seen_event idempotency → order lookup +
+provider check → underpay guard → UTR uniqueness across orders
+(`store.resolve_utr_owner`) → defense-in-depth `GET /api/verify-order.php`
+→ `mark_paid(order_id, utr|transaction_id)`. Unknown orders are ACKed with
+`{"ok": true, "ignored": …}` so FamGateway stops retrying them.
+
 ## 3. VPS base setup
 
 ```bash
@@ -136,7 +166,10 @@ Fill in (see comments inside the file):
 
 | Variable | Value |
 |---|---|
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | test keys now, live after KYC |
+| `PAYMENTS_PROVIDER` | `famgateway` (live rail) / `razorpay` (dormant fallback) / `off` (kill-switch) |
+| `FAMGATEWAY_API_KEY` | famgateway.in merchant API key (mode famgateway) |
+| `BILLING_PUBLIC_URL` | `https://yourdomain.com` — builds the hosted-checkout redirect |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | test keys now, live after KYC (mode razorpay) |
 | `RAZORPAY_PLAN_ID_PRO` | from step 2 |
 | `RAZORPAY_WEBHOOK_SECRET` | the secret you set on the webhook |
 | `ENTITLEMENTS_SYNC_SECRET` | `openssl rand -hex 32` — same value goes in the desktop app |
@@ -212,10 +245,19 @@ The app calls `{BILLING_SYNC_URL}/v1/entitlements` with an HMAC signature.
 
 ## 11. Go-live checklist
 
+**FamGateway rail (live rail on data-agent.me):**
+- [ ] `PAYMENTS_PROVIDER=famgateway` + `FAMGATEWAY_API_KEY` set; Razorpay vars left empty (dormant).
+- [ ] FamGateway webhook registered → a test payment grants the order; `/healthz` shows the `famgateway` component green.
+- [ ] `GET /v1/payments-info` returns `"provider":"famgateway"` (storefront copy follows it).
+- [ ] Test ₹10 payment: webhook logs a 200, order `status=paid`, UTR recorded, entitlement visible via the app's "Sync now".
+
+**Razorpay fallback (only if you ever flip back):**
 - [ ] Razorpay KYC complete + **Subscriptions** capability enabled.
 - [ ] Live keys (`rzp_live_…`) in the env file → `systemctl restart dataagent-billing`.
 - [ ] Live plan created (`scripts/razorpay_create_plan.py` with live keys) → `RAZORPAY_PLAN_ID_PRO` updated.
 - [ ] Live-mode webhook created (test and live webhooks are separate) → `RAZORPAY_WEBHOOK_SECRET` updated.
+
+**Common:**
 - [ ] Resend domain verified (SPF/DKIM DNS records) → `RESEND_API_KEY` + `BILLING_EMAIL_FROM` set.
 - [ ] Rotate any credentials that were ever shared/pasted: Turso tokens, `ENTITLEMENTS_SYNC_SECRET`, `BILLING_ADMIN_TOKEN`.
 - [ ] `scripts/migrate_keys_to_email_access.py --apply` run against the production Turso DB (from a dev machine with prod `TURSO_*` env).
