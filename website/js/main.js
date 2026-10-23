@@ -19,16 +19,17 @@
    has not been published yet, set it to the real one before going live,
    otherwise the download buttons will 404.
 
-   To publish a release, upload these two assets to the "latest" release
-   of that repository:
-     • DataAgent-Setup.exe  — the Inno Setup installer
-     • DataAgent.exe        — the portable one-file build
+   The release base is pinned to a release tag instead of
+   "releases/latest/download" so every link is exact. To ship a new
+   release, add DataAgent-Setup.exe as an asset of that tag in the
+   repository configured above and update the base URL
+   below — this release publishes only the installer.
    ══════════════════════════════════════════════════════════════════ */
-window.DATAAGENT_REPO_URL = 'https://github.com/java22113344/data-agent';
-window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/latest/download';
+window.DATAAGENT_REPO_URL = 'https://github.com/java22113344/grg-dataagent';
+window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/download/v1.0.1';
 window.DATAAGENT_DOWNLOADS = {
-  setup: 'DataAgent-Setup.exe',   // Inno Setup installer
-  portable: 'DataAgent.exe'      // portable one-file build
+  setup: 'DataAgent-Setup.exe',        // Inno Setup installer
+  portable: 'DataAgent-Portable.zip'   // zip: unzip and run DataAgent.exe
 };
 
 /* Build every repository / download URL from the constants above. */

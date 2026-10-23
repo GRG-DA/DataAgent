@@ -277,3 +277,21 @@ def test_fam_webhook_unknown_order_ignored(client):
     r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
     assert r.status_code == 200
     assert r.json().get("ignored")
+
+
+# ── payments-info: the storefront needs honest copy per rail ─────────
+
+
+def test_payments_info_reports_famgateway_in_fam_mode(client):
+    r = client.get("/v1/payments-info")
+    assert r.status_code == 200
+    assert r.json()["provider"] == "famgateway"
+
+
+def test_payments_info_defaults_to_razorpay(billing_env):
+    import billing_server.main as main_mod
+    from fastapi.testclient import TestClient
+    plain = TestClient(main_mod.app, raise_server_exceptions=False)
+    r = plain.get("/v1/payments-info")
+    assert r.status_code == 200
+    assert r.json()["provider"] == "razorpay"

@@ -60,9 +60,9 @@
     <!-- Download Hero -->
     <div class="download-hero animate-on-scroll">
       <div class="download-card">
-        <div class="download-version">Version 1.0.0 &bull; Windows 64-bit</div>
+        <div class="download-version">Version 1.0.1 &bull; Windows 64-bit</div>
         <h1 class="download-title">DataAgent for Windows</h1>
-        <p class="download-size">One installer &mdash; the whole platform inside, and no prerequisites to set up</p>
+        <p class="download-size">Installer or portable &mdash; the whole platform inside, and no prerequisites to set up</p>
         <a data-download="setup" href="#"
            class="btn btn-primary btn-lg"
            style="width:100%;justify-content:center;margin-bottom:16px;"
@@ -70,8 +70,16 @@
           <span class="btn-icon">&#11015;</span>
           Download DataAgent-Setup.exe
         </a>
+        <a data-download="portable" href="#"
+           class="btn btn-secondary btn-lg"
+           style="width:100%;justify-content:center;margin-bottom:16px;">
+          <span class="btn-icon">&#128230;</span>
+          Download portable zip
+        </a>
         <p style="font-size:0.82rem;color:var(--text-muted);">
-          The free tier covers the core workflow &mdash; upload, ask questions, chat, SQL and
+          The portable zip carries the same app as the installer &mdash; unzip it and run
+          DataAgent.exe directly, no setup step. The free tier covers the core workflow
+          &mdash; upload, ask questions, chat, SQL and
           dashboards &mdash; with a daily AI-request cap of 25. Power BI export, the export page,
           automation, live database connections, the data catalog, scheduled reports and the
           enterprise controls are paid features, and they are listed on the
@@ -80,13 +88,11 @@
           daily AI cap and which tools are unlocked, though, and only an admin on your own
           instance can change it.
         </p>
-        <p style="font-size:0.82rem;margin-top:6px;">
-          <a data-download="portable" href="#">Prefer no install? Get the portable build &#8594;</a>
-        </p>
         <noscript>
           <p style="font-size:0.82rem;margin-top:6px;color:var(--text-muted);">
-            The direct download links are built in JavaScript. Enable JavaScript, or use the
-            <a href="contact.html">contact page</a> to ask for a download link.
+            The download links on this page are built in JavaScript from one
+            configurable URL constant &mdash; enable JavaScript to download, or
+            use the <a href="contact.html">contact page</a>.
           </p>
         </noscript>
         <p style="font-size:0.82rem;margin-top:6px;font-weight:600;">
@@ -172,11 +178,6 @@ Then       Settings — Account</code>
       </div>
 
       <div class="highlight-box" style="margin-top:24px;">
-        <h3>Prefer not to install?</h3>
-        <p>The <strong>portable build</strong> is a single self-contained application you can keep in any folder, including a USB drive. It leaves no trace in Program Files and needs no uninstallation &mdash; simply remove the file and its data folder when you are finished.</p>
-      </div>
-
-      <div class="highlight-box" style="margin-top:24px;">
         <h3>Uninstalling</h3>
         <p>Open Settings &gt; Apps &gt; Installed apps &gt; <strong>DataAgent</strong> &gt; Uninstall, or use the <strong>Uninstall DataAgent</strong> shortcut in the Start Menu. Your warehouse files stay in the data folder until you delete them, so back it up before you remove the app.</p>
       </div>
@@ -219,7 +220,6 @@ xAI         Grok-2</code>
       <p>Every dataset, dashboard and configuration file stays on your machine, inside one per-user data folder. The installer itself lives in Program Files; your data does not.</p>
       <div class="code-block">
         <code>Installed version   %LOCALAPPDATA%\DataAgent
-Portable version    a data folder next to the application
 
 In there            data\   the DuckDB warehouse and your uploads
                     logs\   app.log, audit.log, runtime-stdout.log
@@ -296,7 +296,7 @@ No hosted service      There is no cloud DataAgent to sign up for. This release 
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 DataAgent. Open source under AGPL-3.0 — free tier, paid licences optional.</span>
+      <span>&copy; 2026 GOWRI RAJASEKAR GANESH (DataAgent). Open source under AGPL-3.0 — free tier, paid licences optional.</span>
       <span>Built with FastAPI + DuckDB + LLMs</span>
     </div>
   </div>
@@ -306,7 +306,7 @@ No hosted service      There is no cloud DataAgent to sign up for. This release 
 
 <div class="toast" role="status">
   <span class="toast-tag">NEW</span>
-  <span class="toast-text">DataAgent v1.0.0 is out — download free</span>
+  <span class="toast-text">DataAgent v1.0.1 is out — download free</span>
   <button class="toast-close" aria-label="Dismiss">&times;</button>
 </div>
 
@@ -315,7 +315,7 @@ No hosted service      There is no cloud DataAgent to sign up for. This release 
 <script src="vendor/gsap/SplitText.min.js?v=5e519ea2"></script>
 <!-- Lenis 1.3.4 (MIT) — vendored locally, no third-party request -->
 <script src="vendor/lenis.min.js?v=d8caa3fb"></script>
-<script src="js/main.js?v=96355550"></script>
+<script src="js/main.js?v=c74ad902"></script>
 <script src="js/fx-core.js?v=dc48dd15"></script>
 <!-- Three.js 0.186.1 (MIT, core + postprocessing addons) — vendored locally.
      The import-map values MUST stay URL-like ("./vendor/..."): a bare relative

@@ -191,6 +191,15 @@ async def create_order(req: CreateOrderRequest) -> dict:
     }
 
 
+# ── 1b) public provider info (storefront copy + honest checkout flow) ─
+
+
+@app.get("/v1/payments-info")
+async def payments_info() -> dict:
+    """Which rail is live ('famgateway' | 'razorpay' | 'off'). Not a secret."""
+    return {"ok": True, "provider": cfg.PAYMENTS_PROVIDER}
+
+
 # ── 2) verify checkout result (keyless — entitlement follows the email) ─
 
 
