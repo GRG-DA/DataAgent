@@ -56,6 +56,18 @@ import billing_server.config as cfg  # noqa: E402
 import billing_server.main as billing_main  # noqa: E402
 from billing_server.main import CreateOrderRequest, create_order  # noqa: E402
 
+# The setdefaults above only change the environment. If billing_server.config
+# was ALREADY imported before this file (test-suite import order), its module
+# constants never saw the dev defaults — a verifier keyed with an empty
+# secret fails closed and the whole dev walkthrough dead-ends. Refresh the
+# constants from the environment; non-empty values are never clobbered.
+for _attr in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET",
+              "RAZORPAY_PLAN_ID_PRO", "ENTITLEMENTS_SYNC_SECRET",
+              "BILLING_EMAIL_FROM", "BILLING_ADMIN_TOKEN"):
+    _val = (os.environ.get(_attr) or "").strip()
+    if _val and not (getattr(cfg, _attr, "") or "").strip():
+        setattr(cfg, _attr, _val)
+
 
 # DEV: stub the Razorpay Orders API (the only thing real test keys replace).
 # Everything downstream — /create-order, /verify HMAC, minting, store — stays
@@ -132,8 +144,16 @@ async def dev_sub_pay(req: dict):
 
 # Replace the real /create-order route (FastAPI matches the FIRST registered
 # route, so decorating again would be dead code). The wrapper keeps the real
-# behavior and adds checkout_url for the mock popup.
+# behavior and adds checkout_url for the mock popup. The URL is absolute to
+# BILLING_PUBLIC_URL when configured, so the storefront (a different dev
+# origin) still lands on the mock page; relative stays dev-server-local.
 _real_create_order = create_order
+
+
+def _dev_base() -> str:
+    # Read at CALL time: tests monkeypatch cfg per-test; a module-level
+    # constant bakes whatever the first import in the process saw.
+    return (cfg.BILLING_PUBLIC_URL or "").rstrip("/")
 
 
 async def _create_order_dev(req: dict):
@@ -141,7 +161,7 @@ async def _create_order_dev(req: dict):
     out = await _real_create_order(parsed)
     qs = urlencode({"order_id": out["order_id"], "amount": out["amount"],
                     "email": parsed.email, "plan": parsed.plan})
-    out["checkout_url"] = f"/dev/checkout?{qs}"
+    out["checkout_url"] = f"{_dev_base()}/dev/checkout?{qs}"
     return out
 
 
@@ -161,7 +181,7 @@ async def _create_subscription_dev(req: dict):
     out = await _real_create_subscription(parsed)
     qs = urlencode({"subscription_id": out["subscription_id"], "amount": out["amount"],
                     "email": parsed.email})
-    out["checkout_url"] = f"/dev/sub-checkout?{qs}"
+    out["checkout_url"] = f"{_dev_base()}/dev/sub-checkout?{qs}"
     return out
 
 

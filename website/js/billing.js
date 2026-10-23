@@ -173,9 +173,13 @@
   }
 
   function checkoutRedirect(target) {
-    /* Only navigate on REAL https URLs — never javascript:/relative soup.
-       The checkout_url is the hosted payment page (FamGateway) or a dev mock. */
-    return typeof target === 'string' && /^https:\/\//i.test(target);
+    /* Only navigate on real https URLs — never javascript:/relative soup.
+       The checkout_url is the hosted payment page (FamGateway) or a dev mock.
+       Non-https is allowed ONLY for explicit localhost: that is the billing
+       dev server (no TLS locally); it can never be a real payment host. */
+    if (typeof target !== 'string') return false;
+    if (/^https:\/\//i.test(target)) return true;
+    return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?([/?#]|$)/i.test(target);
   }
 
   /* ONE entry point for both plans. FamGateway returns a hosted

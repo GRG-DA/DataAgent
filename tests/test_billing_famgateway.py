@@ -63,10 +63,19 @@ def client(fam_env, monkeypatch):
     import functools
     monkeypatch.setattr(famgw, "create_order",
                         functools.partial(fam_create, captured=captured))
-    monkeypatch.setattr(famgw, "verify_order", lambda order_id: {
-        "order_id": order_id, "status": "success", "utr": "",
-        "transaction_id": "famt_1", "amount": 499.0, "customer_email": "x@y.z",
-    })
+
+    def fam_verify(order_id):
+        """Verify verdict mirrors the recorded price, like the real API."""
+        from billing_server import store as _store
+        row = _store.get_order(order_id) or {}
+        return {
+            "order_id": order_id, "status": "success", "utr": "",
+            "transaction_id": "famt_1",
+            "amount": (int(row.get("amount") or 0)) / 100,  # paise -> rupees
+            "customer_email": (row.get("email") or "x@y.z"),
+        }
+
+    monkeypatch.setattr(famgw, "verify_order", fam_verify)
     tc = TestClient(main_mod.app, raise_server_exceptions=False)
     tc.captured = captured
     return tc
@@ -471,3 +480,40 @@ def test_verify_endpoint_confirms_the_order_id(client, monkeypatch):
     assert r.status_code == 200, r.text
     assert r.json().get("ignored") == "verify mismatch", r.text
     assert store.get_order(order_id)["status"] != "paid"
+
+
+def test_fam_webhook_verdict_amount_below_price_ignored(client):
+    """The verify verdict is authoritative on AMOUNT too: if it says the
+    buyer paid less than the order's price, never grant the plan."""
+    import billing_server.famgateway_client as famgw
+    from billing_server import store
+
+    order_id = _order_client("lifetime", client)  # recorded at ₹10,000
+    monkey_patch = pytest.MonkeyPatch()
+    monkey_patch.setattr(famgw, "verify_order", lambda oid: {
+        "order_id": oid, "status": "success", "utr": "12121",
+        "transaction_id": "famt_x", "amount": 1000.0,  # ₹1,000 verdict
+        "customer_email": "buyer@example.com",
+    })
+    try:
+        body = _famevent(order_id, utr="12121", amount_rupees=10000.0)
+        r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+        assert r.status_code == 200, r.text
+        assert r.json().get("ignored") == "underpaid", r.text
+    finally:
+        monkey_patch.undo()
+    assert store.get_order(order_id)["status"] != "paid"
+
+
+def test_fam_webhook_missing_event_amount_grants_via_verdict_price(client):
+    """A success event without an amount is compared by the verify verdict:
+    when the provider's authoritative record matches the order price, the
+    grant stands (the HMAC was usable, and the price came from the API)."""
+    from billing_server import store
+
+    order_id = _order_client("lifetime", client)
+    body = _famevent(order_id, utr="31313", amount_rupees=0)
+    r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+    assert r.status_code == 200, r.text
+    assert r.json().get("plan") == "lifetime", r.text
+    assert store.get_order(order_id)["status"] == "paid"

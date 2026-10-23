@@ -101,21 +101,24 @@ Constraints that carry over unchanged:
 
 ## Hardening follow-ups (from the 65aa63a code review; live-rail gate)
 
-None of these are exploitable while the trust boundary is the provider's
-HMAC, but they should be closed before the rail takes real traffic:
+Status after the follow-up pass: 1 and 3 are CLOSED, 2 stays as
+documented leniency. None of these were exploitable while the trust
+boundary is the provider's HMAC.
 
-1. **Missing `amount` skips the underpay check** (`main.py` fam webhook:
-   `if recorded and paid_paise and …`). A success event that omits `amount`
-   (or the verify-verdict amount, which is never compared at all) grants
-   without an amount comparison. Decide: either treat a missing amount on a
-   success event as "cannot compare → ignore, let verify_order() re-derive
-   it", or cross-check `confirmed.get("amount")` (rupees→paise) against the
-   recorded order.
+1. **CLOSED — verify-verdict amount is now authoritative.** The fam
+   webhook cross-checks `confirmed.get("amount")` (rupees→paise) against
+   the recorded order and ignores the event with a rollback when the
+   verdict underpaid. A signed event that omits `amount` still grants
+   when `verify_order()` answers with a matching amount (HMAC +
+   provider API are the trust anchors); unreachable-verify fallback
+   granting is unchanged (rejected in review).
 2. **`order_id`-absent verify verdicts pass leniently** (documented inline;
    seen → not). If FamGateway's live responses always carry `order_id`,
    tighten to require it.
-3. **Dev-server mock emits a relative `/dev/checkout` URL**, which the
-   https-only `checkoutRedirect()` gate refuses (`billing.js`). Dev still
-   works (falls back to the mock popup), but the redirect leg of the dev
-   walkthrough is dead. Options: absolute https dev URL behind an env flag,
-   or a localhost-allowlisted `http://` branch that never ships to prod.
+3. **CLOSED — dev checkout redirect works.** `checkoutRedirect()` in
+   `billing.js` accepts plain `http://` only for explicit
+   `localhost`/`127.0.0.1` hosts (prod https gate unchanged), and the dev
+   mock emits absolute URLs under `BILLING_PUBLIC_URL` (`dev_server.py`):
+   `_dev_base()` is read at call time so tests that import config before
+   the dev server still see the dev defaults (rendered dead by the
+   fail-closed verifiers from 65aa63a; now fixed at the source).

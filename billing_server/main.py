@@ -581,6 +581,20 @@ async def famgateway_webhook(request: Request) -> JSONResponse:
                 logger.warning("famgateway verify contradicts webhook for %s "
                                "(%s != payment.success)", order_id, confirmed_status)
                 return _ignore_and_rollback("verify mismatch")
+            # The verdict is authoritative on AMOUNT too: it carries rupees,
+            # our rows store paise. A verdict below the order's price is a
+            # partial payment, whatever the signed event claimed.
+            confirmed_amount = confirmed.get("amount")
+            if confirmed_amount is not None:
+                try:
+                    verdict_paise = round(float(confirmed_amount) * 100)
+                except (TypeError, ValueError, OverflowError):
+                    verdict_paise = 0
+                recorded = int(order.get("amount") or 0)
+                if verdict_paise and verdict_paise < recorded:
+                    logger.warning("famgateway verify underpaid %s: %s < %s",
+                                   order_id, verdict_paise, recorded)
+                    return _ignore_and_rollback("underpaid")
             if confirmed_utr and confirmed_utr != utr and utr:
                 return _ignore_and_rollback("verify mismatch")
             if confirmed_utr and not utr:
