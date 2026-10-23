@@ -61,6 +61,8 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
         license_key   TEXT,
         key_hash      TEXT,
         notes         TEXT,
+        provider      TEXT NOT NULL DEFAULT 'razorpay',
+        grant_days    INTEGER,
         created_at    TEXT NOT NULL,
         updated_at    TEXT NOT NULL
     )""",
@@ -155,6 +157,26 @@ def _ensure_schema(con) -> None:
         con.execute("ALTER TABLE orders ADD COLUMN grant_days INTEGER")
     except Exception:  # noqa: BLE001 — already exists
         pass
+    # Payment rail that issued the order (ADR-016): legacy rows are Razorpay.
+    try:
+        con.execute("ALTER TABLE orders ADD COLUMN provider TEXT DEFAULT 'razorpay'")
+    except Exception:  # noqa: BLE001 — already exists
+        pass
+    try:
+        con.execute(
+            "UPDATE orders SET provider = 'razorpay' WHERE provider IS NULL")
+    except Exception:  # noqa: BLE001 — classification is best-effort
+        pass
+    # A FamGateway UTR pays exactly one order, ever: a second webhook claiming
+    # the same UTR against a different order can never double-grant (the
+    # handler resolves owners softly first; this index is the backstop).
+    try:
+        con.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_utr_unique "
+            "ON orders(payment_id) "
+            "WHERE provider = 'famgateway' AND payment_id IS NOT NULL")
+    except Exception:  # noqa: BLE001 — already exists / legacy schema mid-upgrade
+        pass
     _initialized_targets.add(target)
 
 
@@ -163,15 +185,24 @@ def _now() -> str:
 
 
 def record_order(order_id: str, email: str, plan: str, amount: int,
-                 currency: str, notes: Optional[dict] = None) -> None:
+                 currency: str, notes: Optional[dict] = None,
+                 provider: Optional[str] = None,
+                 grant_days: Optional[int] = None) -> None:
+    """Create (or no-op on duplicate) an order row for one payment attempt.
+
+    ``provider`` classifies the rail (ADR-016); ``grant_days`` pre-records the
+    paid window (31 days for famgateway Pro; NULL = perpetual/unknown).
+    """
     with _lock, _connect() as con:
         _ensure_schema(con)
         con.execute(
-            """INSERT INTO orders (order_id, email, plan, amount, currency, status, notes, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, 'created', ?, ?, ?)
+            """INSERT INTO orders (order_id, email, plan, amount, currency, status, notes,
+                                   provider, grant_days, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, 'created', ?, COALESCE(?, 'razorpay'), ?, ?, ?)
                ON CONFLICT(order_id) DO NOTHING""",
             [order_id, email.lower(), plan, amount, currency,
-             json.dumps(notes) if notes else None, _now(), _now()],
+             json.dumps(notes) if notes else None,
+             provider or "razorpay", grant_days, _now(), _now()],
         )
 
 
@@ -343,6 +374,25 @@ def registry_counts() -> dict:
             "refunded": one("SELECT COUNT(*) FROM orders WHERE status = 'refunded'"),
             "redeemed": one("SELECT COUNT(*) FROM redemptions"),
         }
+
+
+def resolve_utr_owner(utr: str) -> Optional[str]:
+    """Order id that already paid a FamGateway UTR (UTR-replay guard).
+
+    None when unknown/unpaid; the assumption is that a UTR (bank reference)
+    identifies exactly one real-world payment.
+    """
+    if not utr:
+        return None
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute(
+            """SELECT order_id FROM orders
+               WHERE payment_id = ? AND status = 'paid'
+               ORDER BY updated_at DESC LIMIT 1""",
+            [utr],
+        ).fetchone()
+        return dict(row)["order_id"] if row else None
 
 
 def seen_event(kind: str, ref_id: str) -> bool:

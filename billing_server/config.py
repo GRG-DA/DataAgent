@@ -9,6 +9,25 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+# ── Payment rail (ADR-016): famgateway | razorpay | off ──────────────
+# Exactly one rail is live; razorpay code stays dormant, not deleted.
+# Default 'razorpay' keeps existing deployments and tests green until the
+# billing host flips the env — fail-closed either way.
+PAYMENTS_PROVIDER = os.environ.get("PAYMENTS_PROVIDER", "razorpay").strip().lower()
+
+# ── FamGateway (famgateway.in; UPI automation, one-time payments) ─────
+FAMGATEWAY_API_KEY = os.environ.get("FAMGATEWAY_API_KEY", "")
+FAMGATEWAY_API_BASE = os.environ.get("FAMGATEWAY_API_BASE",
+                                     "https://famgateway.in").strip()
+# Registered in the FamGateway dashboard as the webhook URL for this server.
+FAMGATEWAY_WEBHOOK_URL = os.environ.get("FAMGATEWAY_WEBHOOK_URL", "").strip()
+# Optional post-payment redirect. May contain the {order_id} placeholder.
+FAMGATEWAY_REDIRECT_URL = os.environ.get("FAMGATEWAY_REDIRECT_URL", "").strip()
+
+# Public origin of the billing site ('https://data-agent.me') — used to build
+# de-facto redirect targets when FAMGATEWAY_REDIRECT_URL is not set.
+BILLING_PUBLIC_URL = os.environ.get("BILLING_PUBLIC_URL", "").strip()
+
 # ── Razorpay (test: rzp_test_…, live: rzp_live_…) ────────────────────
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
@@ -87,10 +106,21 @@ class ConfigError(RuntimeError):
 
 
 def require_ready(*, order: bool = False, webhook: bool = False, sign: bool = False, sync: bool = False) -> None:
-    """Fail-closed guards: raise a clear error if required secrets are missing."""
+    """Fail-closed guards: raise a clear error if required secrets are missing.
+
+    Provider-gated (ADR-016): the razorpay checks apply in razorpay mode,
+    FAMGATEWAY_API_KEY in famgateway mode; 'off' disables orders entirely.
+    """
     missing = []
-    if order and (not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET):
-        missing.append("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
+    if order:
+        if PAYMENTS_PROVIDER == "off":
+            raise ConfigError("Payments are disabled (PAYMENTS_PROVIDER=off)")
+        if PAYMENTS_PROVIDER == "famgateway":
+            if not FAMGATEWAY_API_KEY:
+                missing.append("FAMGATEWAY_API_KEY")
+        # 'off' is rejected above; any other value defaults to razorpay.
+        elif not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+            missing.append("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
     if webhook and not RAZORPAY_WEBHOOK_SECRET:
         missing.append("RAZORPAY_WEBHOOK_SECRET")
     if sign:

@@ -1,12 +1,13 @@
 """DataAgent billing server — FastAPI app.
 
-Owns the Razorpay keys and the license signing key:
-  POST /create-order          → Razorpay order for lifetime checkout
-  POST /verify                → verify checkout HMAC (keyless; entitlement by email)
+Owns the Razorpay and FamGateway keys plus the license signing key:
+  POST /create-order          → FamGateway (UPI) or Razorpay order, one-time
+  POST /verify                → verify Razorpay checkout HMAC (keyless)
   POST /create-subscription   → Razorpay subscription for Pro (auto-renewing)
   POST /verify-subscription   → verify subscription checkout HMAC, activate
   POST /v1/subscriptions/cancel → cancel-at-period-end for the session email
-  POST /razorpay/webhook      → signature-verified payment + subscription events
+  POST /razorpay/webhook      → signature-verified Razorpay events
+  POST /famgateway/webhook    → HMAC-verified FamGateway UPI payments (ADR-016)
   GET  /success               → success page (?order_id= / ?subscription_id=, keyless)
   GET  /v1/entitlements       → HMAC-signed plan lookup by email (for the app)
   POST /v1/keys/redeem        → one-time key redemption registry (legacy keys)
@@ -31,7 +32,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 import billing_server.config as cfg
-from billing_server import emailer, grants, keymint, razorpay_client, store
+from billing_server import emailer, famgateway_client, grants, keymint, razorpay_client, store
 
 logger = logging.getLogger("billing.main")
 
@@ -97,9 +98,64 @@ def _plan_from_order(order_id: str) -> Optional[str]:
 # ── 1) create order ───────────────────────────────────────────────────
 
 
+def _fam_redirect_url() -> Optional[str]:
+    """Post-payment redirect for the FamGateway hosted checkout."""
+    template = (cfg.FAMGATEWAY_REDIRECT_URL
+                or (cfg.BILLING_PUBLIC_URL.rstrip("/") + "/billing-success"
+                    if cfg.BILLING_PUBLIC_URL else "")).strip()
+    return template or None
+
+
+def _fam_create_order(req: CreateOrderRequest, plan: dict) -> dict:
+    """FamGateway rail (ADR-016): hosted UPI checkout for BOTH plans.
+
+    Pro is a pre-paid 31-day window (FamGateway cannot auto-renew); renewal
+    is a NEW order row per payment — grants.py folds the longest live one.
+    """
+    cfg.require_ready(order=True)
+    amount_rupees = int(plan["amount"]) // 100  # config stores paise
+    try:
+        fg = famgateway_client.create_order(
+            amount_rupees,
+            req.email.lower(),
+            webhook_url=cfg.FAMGATEWAY_WEBHOOK_URL or None,
+            redirect_url=_fam_redirect_url(),
+        )
+    except famgateway_client.FamGatewayError as exc:
+        logger.warning("famgateway create_order failed: %s", exc)
+        raise HTTPException(status_code=502,
+                            detail="Payment provider unavailable") from exc
+    order_id = str(fg.get("order_id") or "").strip()
+    if not order_id:
+        raise HTTPException(status_code=502, detail="Payment provider unavailable")
+    notes = {"plan": req.plan, "email": req.email.lower(), "provider": "famgateway"}
+    store.record_order(
+        order_id=order_id,
+        email=req.email,
+        plan=req.plan,
+        amount=int(plan["amount"]),
+        currency=plan["currency"],
+        notes=notes,
+        provider="famgateway",
+        grant_days=31 if req.plan == "pro" else None,  # LEGACY_PRO_GRANT_DAYS window
+    )
+    return {
+        "order_id": order_id,
+        "checkout_url": fg.get("checkout_url") or "",
+        "qr_url": fg.get("qr_url") or "",
+        "upi_intent": fg.get("upi_intent") or "",
+        "amount": plan["amount"],
+        "currency": plan["currency"],
+        "name": "DataAgent",
+        "description": plan["label"],
+    }
+
+
 @app.post("/create-order")
 async def create_order(req: CreateOrderRequest) -> dict:
     plan = cfg.PLANS[req.plan]
+    if cfg.PAYMENTS_PROVIDER == "famgateway":
+        return _fam_create_order(req, plan)
     if plan.get("subscription"):
         # Pro bills through Razorpay Subscriptions (auto-renewing) — a
         # one-time order would grant 31 days and silently expire.
@@ -370,6 +426,116 @@ def _handle_subscription_event(event: dict, kind: str) -> JSONResponse:
         # Roll the idempotency marker back so Razorpay's retry reprocesses.
         store.record_event_failure(kind, ref, str(exc))
         logger.exception("subscription webhook failed for %s", ref)
+        raise HTTPException(status_code=500, detail="Processing failed") from exc
+
+
+# ── 3b) FamGateway UPI webhooks (ADR-016: fail-closed HMAC rail) ──────
+
+_FAM_EVENTS = frozenset({"payment.success", "payment.verified"})
+_FAM_SUCCESS_STATUSES = frozenset({"success", "completed"})
+_KNOWN_FAM_FALLBACK_IDS = frozenset({"fam", "webhook", "plink"})
+
+
+@app.post("/famgateway/webhook")
+async def famgateway_webhook(request: Request) -> JSONResponse:
+    """One UTR = one paid order, one grant. Signature is the trust boundary.
+
+    - HMAC-SHA256 over the RAW body, keyed with FAMGATEWAY_API_KEY — a body
+      that cannot be authenticated is refused before anything is read.
+    - Event/status allowlists; anything unrecognised is acknowledged (200)
+      but ignored, so FamGateway never retries forever.
+    - Idempotency: (order_id, utr) marker + the UTR owner check + a DB
+      partial unique index as the race backstop.
+    """
+    raw = await request.body()
+    signature = request.headers.get("X-FamGateway-Signature", "")
+    if not signature or not famgateway_client.verify_webhook_signature(raw, signature):
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+
+    try:
+        event = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        return JSONResponse({"ok": True, "ignored": "malformed body"}, status_code=200)
+
+    event_kind = str(event.get("event")
+                     or request.headers.get("X-FamGateway-Event", "")).lower()
+    status = str(event.get("status") or "").lower()
+    if event_kind not in _FAM_EVENTS:
+        return JSONResponse({"ok": True, "ignored": event_kind or "unknown"},
+                            status_code=200)
+    if status not in _FAM_SUCCESS_STATUSES:
+        return JSONResponse({"ok": True, "ignored": f"status:{status or 'missing'}"},
+                            status_code=200)
+
+    order_id = str(event.get("order_id") or "").strip()
+    if not order_id:
+        return JSONResponse({"ok": True, "ignored": "no order id"}, status_code=200)
+
+    utr = str(event.get("utr") or "").strip()
+    transaction_id = str(event.get("transaction_id") or "").strip()
+    payment_id = utr or transaction_id or "fam"
+    ref = f"{order_id}:{payment_id}"
+    if store.seen_event("fam.payment.success", ref):
+        return JSONResponse({"ok": True, "duplicate": True})
+
+    try:
+        order = store.get_order(order_id)
+        if not order or str(order.get("provider") or "") != "famgateway":
+            return JSONResponse({"ok": True, "ignored": "unmatched order"},
+                                status_code=200)
+
+        # Underpaid: FamGateway amounts arrive in RUPEES; our rows store paise.
+        try:
+            paid_paise = round(float(event.get("amount") or 0) * 100)
+        except (TypeError, ValueError):
+            paid_paise = 0
+        try:
+            recorded = int(order.get("amount") or 0)
+        except (TypeError, ValueError):
+            recorded = 0
+        if recorded and paid_paise and paid_paise < recorded:
+            logger.warning("underpaid famgateway order ignored: %s < %s (%s)",
+                           paid_paise, recorded, order_id)
+            return JSONResponse({"ok": True, "ignored": "underpaid"}, status_code=200)
+
+        # UTR replay: another order already paid this exact bank reference.
+        owner = store.resolve_utr_owner(payment_id)
+        if owner and owner != order_id and payment_id not in _KNOWN_FAM_FALLBACK_IDS:
+            logger.warning("UTR replay blocked: %s already paid %s", payment_id, owner)
+            return JSONResponse({"ok": True, "duplicate": True}, status_code=200)
+
+        # Defense-in-depth confirm (never the trust boundary — the HMAC is):
+        # a mismatching verdict aborts; an unreachable verify endpoint falls
+        # back to the signed body so an outage cannot swallow real payments.
+        try:
+            confirmed = famgateway_client.verify_order(order_id)
+        except famgateway_client.FamGatewayError as exc:
+            logger.warning("famgateway verify endpoint unreachable for %s: %s",
+                           order_id, exc)
+            confirmed = None
+        if confirmed is not None:
+            confirmed_status = str(confirmed.get("status") or "").lower()
+            confirmed_utr = str(confirmed.get("utr") or "").strip()
+            if confirmed_status and confirmed_status not in _FAM_SUCCESS_STATUSES:
+                logger.warning("famgateway verify contradicts webhook for %s "
+                               "(%s != payment.success)", order_id, confirmed_status)
+                return JSONResponse({"ok": True, "ignored": "verify mismatch"},
+                                    status_code=200)
+            if confirmed_utr and confirmed_utr != utr and utr:
+                return JSONResponse({"ok": True, "ignored": "verify mismatch"},
+                                    status_code=200)
+            if confirmed_utr and not utr:
+                utr = confirmed_utr
+                payment_id = utr
+
+        if order["status"] != "paid":
+            store.mark_paid(order_id, payment_id,
+                            grant_days=None)  # pre-recorded at create-order
+        return JSONResponse({"ok": True, "plan": order["plan"]})
+    except Exception as exc:  # noqa: BLE001
+        # Roll the idempotency marker back so FamGateway's retry reprocesses.
+        store.record_event_failure("fam.payment.success", ref, str(exc))
+        logger.exception("famgateway webhook processing failed for %s", ref)
         raise HTTPException(status_code=500, detail="Processing failed") from exc
 
 
@@ -1074,8 +1240,11 @@ async def admin_abuse_unblock(token: str = "", kind: str = "email",
 
 @app.get("/healthz")
 async def healthz() -> dict:
-    ready = {"razorpay": bool(cfg.RAZORPAY_KEY_ID and cfg.RAZORPAY_KEY_SECRET),
-             "webhook": bool(cfg.RAZORPAY_WEBHOOK_SECRET),
+    fam_ready = bool(cfg.FAMGATEWAY_API_KEY)
+    ready = {"payments_provider": cfg.PAYMENTS_PROVIDER,
+             "razorpay": bool(cfg.RAZORPAY_KEY_ID and cfg.RAZORPAY_KEY_SECRET),
+             "razorpay_webhook": bool(cfg.RAZORPAY_WEBHOOK_SECRET),
+             "famgateway": fam_ready,
              "license_key": True, "sync": bool(cfg.ENTITLEMENTS_SYNC_SECRET),
              "email": bool(cfg.RESEND_API_KEY),
              "subscription_plan": bool(cfg.RAZORPAY_PLAN_ID_PRO)}
@@ -1083,5 +1252,9 @@ async def healthz() -> dict:
         keymint.load_private_key()
     except Exception:  # noqa: BLE001
         ready["license_key"] = False
-    return {"ok": all([ready["razorpay"], ready["webhook"], ready["license_key"]]),
+    if cfg.PAYMENTS_PROVIDER == "famgateway":
+        payments_ok = ready["famgateway"]
+    else:
+        payments_ok = ready["razorpay"] and ready["razorpay_webhook"]
+    return {"ok": all([payments_ok, ready["license_key"]]),
             "components": ready}

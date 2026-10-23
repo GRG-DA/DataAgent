@@ -49,7 +49,7 @@ def client(fam_env, monkeypatch):
 
     def fam_create(amount_rupees, customer_email, webhook_url=None,
                    redirect_url=None):
-        order_ref = f"famo_{customer_email.split('@', 1)[0]}_{len(amount_rupees)}"
+        order_ref = f"famo_{customer_email.split('@', 1)[0]}_{amount_rupees}"
         return {
             "order_id": order_ref,
             "checkout_url": f"https://fam.test/checkout/{order_ref}",
@@ -59,7 +59,7 @@ def client(fam_env, monkeypatch):
 
     monkeypatch.setattr(famgw, "create_order", fam_create)
     monkeypatch.setattr(famgw, "verify_order", lambda order_id: {
-        "order_id": order_id, "status": "success", "utr": "111122223333",
+        "order_id": order_id, "status": "success", "utr": "",
         "transaction_id": "famt_1", "amount": 499.0, "customer_email": "x@y.z",
     })
     return TestClient(main_mod.app, raise_server_exceptions=False)
@@ -69,9 +69,8 @@ def _famsig(body: bytes, key: str = FAM_KEY) -> str:
     return hmac.new(key.encode(), body, hashlib.sha256).hexdigest()
 
 
-def _order_client(plan: str, client) -> str:
-    r = client.post("/create-order", json={"plan": plan,
-                                           "email": "buyer@example.com"})
+def _order_client(plan: str, client, email: str = "buyer@example.com") -> str:
+    r = client.post("/create-order", json={"plan": plan, "email": email})
     assert r.status_code == 200, r.text
     return r.json()["order_id"]
 
@@ -230,11 +229,11 @@ def test_fam_webhook_utr_replay_across_orders_no_double_grant(client):
 
 def test_fam_webhook_pro_renewal_extends_window(client):
     """Two 31-day pro windows: the later expiry wins (folded grant)."""
-    o1 = _order_client("pro", client)
+    o1 = _order_client("pro", client, email="renew@example.com")
     b1 = _famevent(o1, email="renew@example.com", utr="810001")
     key = {"X-FamGateway-Signature": _famsig(b1)}
     assert _deliver(client, b1, key).status_code == 200
-    o2 = _order_client("pro", client)
+    o2 = _order_client("pro", client, email="renew@example.com")
     b2 = _famevent(o2, email="renew@example.com", utr="810002")
     key["X-FamGateway-Signature"] = _famsig(b2)
     assert _deliver(client, b2, key).status_code == 200
