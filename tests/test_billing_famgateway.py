@@ -412,19 +412,35 @@ def test_fam_webhook_without_payment_reference_ignored(client):
     assert store.get_order(order_id)["status"] != "paid"
 
 
-def test_ignored_events_roll_the_idempotency_marker_back(client, monkeypatch):
+def test_ignored_events_roll_the_idempotency_marker_back(client):
     """A later redelivery must reprocess: no swallows, no lost payments."""
     from billing_server import store
 
-    calls = []
-    monkeypatch.setattr(store, "record_event_failure",
-                        lambda kind, ref, reason: calls.append((kind, ref)))
     # underpaid event (order recorded at 49900 paise for pro)
     order_id = _order_client("pro", client)
     body = _famevent(order_id, utr="5050", amount_rupees=100.0)
     r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
     assert r.json().get("ignored"), r.text
-    assert calls and calls[0][0] == "fam.payment.success", calls
+
+    # The rollback left a failures row (audit) and removed the marker:
+    # the SAME bank reference delivered at full amount reprocesses — only
+    # possible if the marker was actually rolled back.
+    import billing_server.config as cfg
+    import sqlite3
+    con = sqlite3.connect(cfg.DB_PATH)
+    with con:
+        failures = con.execute(
+            "SELECT COUNT(*) FROM failures "
+            "WHERE kind = 'fam.payment.success' AND ref_id = ?",
+            [f"{order_id}:5050"]).fetchone()[0]
+    con.close()
+    assert failures == 1, "expected a failure-row audit of the rollback"
+
+    corrected = _famevent(order_id, utr="5050", amount_rupees=499.0)
+    r = _deliver(client, corrected, {"X-FamGateway-Signature": _famsig(corrected)})
+    assert r.status_code == 200, r.text
+    assert r.json().get("plan") == "pro", r.text
+    assert store.get_order(order_id)["status"] == "paid"
 
 
 def test_fam_webhook_ignores_header_only_event_name(client):

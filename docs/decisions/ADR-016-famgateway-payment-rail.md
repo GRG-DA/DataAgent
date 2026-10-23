@@ -98,3 +98,24 @@ Constraints that carry over unchanged:
 - Plan: `docs/plans/fampay-payment-gateway-and-free-hosting.md`
 - ADR-002 (central accounts), ADR-003 (Turso), ADR-004 (keyless), ADR-010 (local-first)
 - `docs/deployment/billing-server.md` (Oracle x86_64 + Caddy runbook)
+
+## Hardening follow-ups (from the 65aa63a code review; live-rail gate)
+
+None of these are exploitable while the trust boundary is the provider's
+HMAC, but they should be closed before the rail takes real traffic:
+
+1. **Missing `amount` skips the underpay check** (`main.py` fam webhook:
+   `if recorded and paid_paise and …`). A success event that omits `amount`
+   (or the verify-verdict amount, which is never compared at all) grants
+   without an amount comparison. Decide: either treat a missing amount on a
+   success event as "cannot compare → ignore, let verify_order() re-derive
+   it", or cross-check `confirmed.get("amount")` (rupees→paise) against the
+   recorded order.
+2. **`order_id`-absent verify verdicts pass leniently** (documented inline;
+   seen → not). If FamGateway's live responses always carry `order_id`,
+   tighten to require it.
+3. **Dev-server mock emits a relative `/dev/checkout` URL**, which the
+   https-only `checkoutRedirect()` gate refuses (`billing.js`). Dev still
+   works (falls back to the mock popup), but the redirect leg of the dev
+   walkthrough is dead. Options: absolute https dev URL behind an env flag,
+   or a localhost-allowlisted `http://` branch that never ships to prod.

@@ -142,6 +142,13 @@
   }
 
   var busy = false;
+  var LAST_BTN = null;
+
+  function settle() {
+    /* Release the buy lock: the button re-arms for a retry. */
+    busy = false;
+    if (LAST_BTN) LAST_BTN.disabled = false;
+  }
 
   function buy(planCode, btn) {
     if (!BILLING_READY) {
@@ -156,8 +163,8 @@
       return;
     }
     busy = true;
+    LAST_BTN = btn;
     if (btn) btn.disabled = true;
-    var settle = function () { busy = false; if (btn) btn.disabled = false; };
     toast('Starting checkout…', true);
     startOneTime(planCode, email).catch(function (err) {
       settle();
@@ -211,15 +218,17 @@
                   window.location.href = API + '/success?order_id=' +
                     encodeURIComponent(resp.razorpay_order_id);
                 } else {
+                  settle();
                   toast((v && v.detail) || 'Payment verification failed — contact support.', false);
                 }
-              }).catch(function () { toast('Verification failed — contact support.', false); });
+              }).catch(function () { settle(); toast('Verification failed — contact support.', false); });
             },
             modal: {
-              ondismiss: function () { toast('Checkout closed before payment.', false); },
+              ondismiss: function () { settle(); toast('Checkout closed before payment.', false); },
             },
           });
           rzp.on('payment.failed', function () {
+            settle();
             toast('Payment failed — no money was taken. Try again.', false);
           });
           rzp.open();
@@ -229,6 +238,7 @@
         // Razorpay-dormant hostgate: monthly Pro is subscription-only there.
         if (planCode === 'pro' && /create-subscription/i.test(String((err && err.message) || ''))) {
           return startSubscription(email).catch(function (e2) {
+            settle();
             toast(e2.message || 'Checkout could not start.', false);
           });
         }
@@ -269,15 +279,17 @@
                   window.location.href = API + '/success?subscription_id=' +
                     encodeURIComponent(resp.razorpay_subscription_id);
                 } else {
+                  settle();
                   toast((v && v.detail) || 'Payment verification failed — contact support.', false);
                 }
-              }).catch(function () { toast('Verification failed — contact support.', false); });
+              }).catch(function () { settle(); toast('Verification failed — contact support.', false); });
             },
             modal: {
-              ondismiss: function () { toast('Checkout closed before payment.', false); },
+              ondismiss: function () { settle(); toast('Checkout closed before payment.', false); },
             },
           });
           rzp.on('payment.failed', function () {
+            settle();
             toast('Payment failed — no money was taken. Try again.', false);
           });
           rzp.open();

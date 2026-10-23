@@ -537,7 +537,9 @@ async def famgateway_webhook(request: Request) -> JSONResponse:
         # Underpaid: FamGateway amounts arrive in RUPEES; our rows store paise.
         try:
             paid_paise = round(float(event.get("amount") or 0) * 100)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
+            # 1e400 amounts parse to inf and explode round() — never let a
+            # weird body 500 the endpoint; it just compares to nothing.
             paid_paise = 0
         try:
             recorded = int(order.get("amount") or 0)
@@ -567,7 +569,9 @@ async def famgateway_webhook(request: Request) -> JSONResponse:
         if confirmed is not None:
             confirmed_status = str(confirmed.get("status") or "").lower()
             confirmed_utr = str(confirmed.get("utr") or "").strip()
-            # The verdict must be for THIS order, not a neighbouring one.
+            # The verdict must be for THIS order, not a neighbouring one. A
+            # verdict with no order_id field at all passes — legacy FamGateway
+            # schemas omit it and verify_order() was already keyed to order_id.
             confirmed_order = str(confirmed.get("order_id") or "").strip()
             if confirmed_order and confirmed_order != order_id:
                 logger.warning("famgateway verify returned order %s for %s",
