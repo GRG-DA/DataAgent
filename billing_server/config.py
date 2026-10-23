@@ -112,17 +112,25 @@ def require_ready(*, order: bool = False, webhook: bool = False, sign: bool = Fa
     FAMGATEWAY_API_KEY in famgateway mode; 'off' disables orders entirely.
     """
     missing = []
+    if PAYMENTS_PROVIDER not in ("famgateway", "razorpay", "off"):
+        raise ConfigError(
+            "PAYMENTS_PROVIDER must be famgateway, razorpay, or off, "
+            "got %r" % PAYMENTS_PROVIDER)
     if order:
         if PAYMENTS_PROVIDER == "off":
             raise ConfigError("Payments are disabled (PAYMENTS_PROVIDER=off)")
         if PAYMENTS_PROVIDER == "famgateway":
             if not FAMGATEWAY_API_KEY:
                 missing.append("FAMGATEWAY_API_KEY")
-        # 'off' is rejected above; any other value defaults to razorpay.
-        elif not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
-            missing.append("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
-    if webhook and not RAZORPAY_WEBHOOK_SECRET:
-        missing.append("RAZORPAY_WEBHOOK_SECRET")
+        else:  # 'off' is rejected above; razorpay is the remaining rail.
+            if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+                missing.append("RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET")
+    if webhook:
+        if PAYMENTS_PROVIDER == "famgateway":
+            if not FAMGATEWAY_API_KEY:
+                missing.append("FAMGATEWAY_API_KEY")
+        elif not RAZORPAY_WEBHOOK_SECRET:
+            missing.append("RAZORPAY_WEBHOOK_SECRET")
     if sign:
         from billing_server.keymint import load_private_key
         try:

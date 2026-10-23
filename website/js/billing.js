@@ -53,6 +53,7 @@
       .catch(function () { PROVIDER.loaded = true; return PROVIDER; });
   }
   function isFam() { return PROVIDER.mode === 'famgateway'; }
+  function isOff() { return PROVIDER.mode === 'off'; }
 
   /* The plan table mirrors api/subscriptions.py -> PLANS. The site and the
      app must never quote different numbers: Free ₹0 (25 AI requests a day),
@@ -83,7 +84,10 @@
     if (p.code === 'pro') return '31-day pass · renew by paying again';
     return p.hint || '';
   }
-  function planHint(p) { return isFam() ? famHint(p) : p.hint; }
+  function planHint(p) {
+    if (isOff()) return ''; // no rail: no renewal promise to print
+    return isFam() ? famHint(p) : p.hint;
+  }
 
   /* The button says what happens next and what it costs. */
   function payLabel(p) {
@@ -137,21 +141,34 @@
     });
   }
 
-  function buy(planCode) {
+  var busy = false;
+
+  function buy(planCode, btn) {
     if (!BILLING_READY) {
       toast('Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. The free tier needs no card: download the app and create your account in it.', false);
       return;
     }
+    if (busy) return;
     var email = (document.getElementById('email-' + planCode) || {}).value || '';
     email = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast('Enter the email for your account.', false);
       return;
     }
+    busy = true;
+    if (btn) btn.disabled = true;
+    var settle = function () { busy = false; if (btn) btn.disabled = false; };
     toast('Starting checkout…', true);
     startOneTime(planCode, email).catch(function (err) {
+      settle();
       toast(err.message || 'Checkout could not start.', false);
     });
+  }
+
+  function checkoutRedirect(target) {
+    /* Only navigate on REAL https URLs — never javascript:/relative soup.
+       The checkout_url is the hosted payment page (FamGateway) or a dev mock. */
+    return typeof target === 'string' && /^https:\/\//i.test(target);
   }
 
   /* ONE entry point for both plans. FamGateway returns a hosted
@@ -162,7 +179,7 @@
     return fetchJson(API + '/create-order', { plan: planCode, email: email },
                      'Order failed')
       .then(function (order) {
-        if (order && order.plan === planCode && order.checkout_url) {
+        if (order && order.plan === planCode && checkoutRedirect(order.checkout_url)) {
           window.location.href = order.checkout_url;
           return;
         }
@@ -226,7 +243,7 @@
       .then(function (sub) {
         // Dev/server-driven checkout: the server can hand back a hosted
         // checkout URL (mock in dev; real gateways may do the same).
-        if (sub && sub.checkout_url) {
+        if (sub && checkoutRedirect(sub.checkout_url)) {
           window.location.href = sub.checkout_url;
           return;
         }
@@ -274,6 +291,10 @@
          The free tier needs no card and no checkout. */
       return '<a class="btn btn-secondary" href="download.html">Download the free app</a>';
     }
+    if (isOff()) {
+      return '<p class="desc">Checkout is disabled on this deployment. ' +
+        'The free tier needs no card.</p>';
+    }
     // No-code fallback: Razorpay Payment Links (Lifetime only — links cannot
     // create auto-renewing subscriptions).
     var link = p.code === 'lifetime' ? LINKS.lifetime : '';
@@ -294,6 +315,12 @@
   }
 
   function providerNotice() {
+    if (isOff()) {
+      return 'Checkout is disabled on this deployment — no payment can be ' +
+        'taken here. The app itself is fully usable: the free tier needs ' +
+        'no card. Self-hosting with Docker lets an admin on your own ' +
+        'instance grant any plan.';
+    }
     if (isFam()) {
       return 'Secure UPI checkout by FamGateway — a third-party payment ' +
         'automation service, not affiliated with (and distinct from) ' +
@@ -308,13 +335,15 @@
 
   function paint() {
     var root = document.getElementById('billing-root') || document.body;
-    var notice = (!BILLING_READY && !hasPayLinks())
+    var notice = isOff()
+      ? '<div class="billing-notice">' + providerNotice() + '</div>'
+      : (!BILLING_READY && !hasPayLinks()
       ? '<div class="billing-notice">Checkout is not enabled on this deployment — no billing server is configured, so no payment can be taken here. The app itself is fully usable: download it, create your own account, and the free tier needs no card. Self-hosting with Docker removes the checkout entirely; an admin on your own instance can grant any plan.</div>'
       : (hasPayLinks() && !isFam()
         ? '<div class="billing-notice">Secure checkout by Razorpay — pay with UPI, cards, or netbanking. Sign in with the same email after checkout and your plan is attached to that account. Pro renews monthly; cancel anytime.</div>'
         : (EXTERNAL && !isFam()
           ? '<div class="billing-notice">Purchases are completed on our secure billing website.</div>'
-          : '<div class="billing-notice">' + providerNotice() + '</div>'));
+          : '<div class="billing-notice">' + providerNotice() + '</div>')));
     root.innerHTML =
       '<h1>Pricing</h1>' + notice +
       '<div class="plans">' +
@@ -329,7 +358,9 @@
       }).join('') +
       '</div>';
     root.querySelectorAll('[data-buy]').forEach(function (btn) {
-      btn.addEventListener('click', function () { buy(btn.getAttribute('data-buy')); });
+      btn.addEventListener('click', function () {
+        buy(btn.getAttribute('data-buy'), btn);
+      });
     });
   }
 

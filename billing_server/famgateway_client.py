@@ -92,6 +92,12 @@ def verify_order(order_id: str) -> dict:
 
 
 def verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
-    """HMAC-SHA256(raw_body, FAMGATEWAY_API_KEY) == X-FamGateway-Signature."""
+    """HMAC-SHA256(raw_body, FAMGATEWAY_API_KEY) == X-FamGateway-Signature.
+
+    Fails closed when the API key is unset — an HMAC keyed with an empty
+    string is computable by anyone, so nothing may verify without a key.
+    """
+    if not (cfg.FAMGATEWAY_API_KEY or "").strip():
+        return False
     expected = hmac.new(cfg.FAMGATEWAY_API_KEY.encode(), raw_body, sha256).hexdigest()
     return hmac.compare_digest(expected, (signature or "").strip())

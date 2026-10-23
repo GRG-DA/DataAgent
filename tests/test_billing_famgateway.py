@@ -48,8 +48,10 @@ def client(fam_env, monkeypatch):
     monkeypatch.setattr(main_mod.razorpay_client, "create_order", fake_create_order)
 
     def fam_create(amount_rupees, customer_email, webhook_url=None,
-                   redirect_url=None):
+                   redirect_url=None, captured=None):
         order_ref = f"famo_{customer_email.split('@', 1)[0]}_{amount_rupees}"
+        if captured is not None:
+            captured["redirect_url"] = redirect_url
         return {
             "order_id": order_ref,
             "checkout_url": f"https://fam.test/checkout/{order_ref}",
@@ -57,12 +59,17 @@ def client(fam_env, monkeypatch):
             "upi_intent": f"upi://pay?fam={order_ref}",
         }
 
-    monkeypatch.setattr(famgw, "create_order", fam_create)
+    captured = {}
+    import functools
+    monkeypatch.setattr(famgw, "create_order",
+                        functools.partial(fam_create, captured=captured))
     monkeypatch.setattr(famgw, "verify_order", lambda order_id: {
         "order_id": order_id, "status": "success", "utr": "",
         "transaction_id": "famt_1", "amount": 499.0, "customer_email": "x@y.z",
     })
-    return TestClient(main_mod.app, raise_server_exceptions=False)
+    tc = TestClient(main_mod.app, raise_server_exceptions=False)
+    tc.captured = captured
+    return tc
 
 
 def _famsig(body: bytes, key: str = FAM_KEY) -> str:
@@ -295,3 +302,156 @@ def test_payments_info_defaults_to_razorpay(billing_env):
     r = plain.get("/v1/payments-info")
     assert r.status_code == 200
     assert r.json()["provider"] == "razorpay"
+
+
+# ── hardening from the FamGateway code review (payment surface) ───────
+
+
+def test_razorpay_verify_dormant_in_famgateway_mode(client):
+    """The dormant Razorpay rails must not run with an empty-key HMAC."""
+    sig = "f" * 64
+    r = client.post("/verify", json={
+        "order_id": "order_1", "payment_id": "pay_forged", "signature": sig})
+    assert r.status_code == 403, r.text
+
+
+def test_razorpay_verify_cannot_pay_a_famgateway_order(client, monkeypatch):
+    """A Razorpay-signed verify must never settle a FamGateway order."""
+    import billing_server.config as cfg
+    from billing_server import store
+
+    order_id = _order_client("lifetime", client)  # created on the fam rail
+    with pytest.MonkeyPatch.context() as monkey:
+        monkey.setattr(cfg, "PAYMENTS_PROVIDER", "razorpay")
+        monkey.setattr(cfg, "RAZORPAY_KEY_SECRET", "testsecret")
+        sig = _famsig(f"{order_id}|pay_valid".encode(), "testsecret")
+        r = client.post("/verify", json={
+            "order_id": order_id, "payment_id": "pay_valid", "signature": sig})
+        assert r.status_code == 403, r.text
+    assert store.get_order(order_id)["status"] != "paid"
+
+
+def test_razorpay_checkout_signature_fails_closed_on_empty_secret(monkeypatch):
+    import billing_server.razorpay_client as rz
+
+    monkeypatch.setattr(rz.cfg, "RAZORPAY_KEY_SECRET", "")
+    assert rz.verify_checkout_signature("o", "p", "") is False
+
+
+def test_fam_webhook_fails_closed_without_api_key(client, monkeypatch):
+    """An empty API key makes HMAC forgeable: no signature may ever pass."""
+    import billing_server.famgateway_client as famgw
+
+    monkeypatch.setattr(famgw.cfg, "FAMGATEWAY_API_KEY", "")
+    body = _famevent("famo_nok", utr="93939")
+    sig = hmac.new(b"", body, hashlib.sha256).hexdigest()  # forgeable empty-key HMAC
+    r = _deliver(client, body, {"X-FamGateway-Signature": sig})
+    assert r.status_code == 400, r.text
+    # and a correctly-signed body is equally refused — no trust root at all
+    r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+    assert r.status_code == 400, r.text
+
+
+def test_require_ready_fam_mode_webhook_requires_fam_key():
+    from billing_server import config as cfg
+
+    with pytest.MonkeyPatch.context() as monkey:
+        monkey.setattr(cfg, "PAYMENTS_PROVIDER", "famgateway")
+        monkey.setattr(cfg, "FAMGATEWAY_API_KEY", "")
+        with pytest.raises(cfg.ConfigError):
+            cfg.require_ready(webhook=True)
+
+
+def test_require_ready_rejects_unknown_provider():
+    from billing_server import config as cfg
+
+    with pytest.MonkeyPatch.context() as monkey:
+        monkey.setattr(cfg, "PAYMENTS_PROVIDER", "famgatewya")  # typo
+        with pytest.raises(cfg.ConfigError):
+            cfg.require_ready(order=True)
+
+
+def test_create_order_rejects_unknown_provider_with_503(billing_env, monkeypatch):
+    import billing_server.config as cfg
+    import billing_server.main as main_mod
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(cfg, "PAYMENTS_PROVIDER", "not-a-provider")
+    plain = TestClient(main_mod.app, raise_server_exceptions=False)
+    r = plain.post("/create-order", json={"plan": "lifetime",
+                                          "email": "buyer@example.com"})
+    assert r.status_code == 503, r.text
+
+
+def test_fam_create_order_returns_plan(client):
+    r = client.post("/create-order", json={"plan": "pro",
+                                           "email": "buyer@example.com"})
+    assert r.status_code == 200, r.text
+    assert r.json().get("plan") == "pro"
+
+
+def test_fam_redirect_default_is_the_success_page(client, monkeypatch):
+    import billing_server.config as cfg
+
+    monkeypatch.setattr(cfg, "FAMGATEWAY_REDIRECT_URL", "")
+    monkeypatch.setattr(cfg, "BILLING_PUBLIC_URL", "https://billing.test")
+    client.post("/create-order", json={"plan": "lifetime",
+                                       "email": "buyer@example.com"})
+    redirect = client.captured.get("redirect_url") or ""
+    assert redirect.endswith("/success"), redirect
+
+
+def test_fam_webhook_without_payment_reference_ignored(client):
+    """No bank reference means no verifiable identity: refuse to grant."""
+    from billing_server import store
+    order_id = _order_client("lifetime", client)
+    body = _famevent(order_id, utr="", transaction_id="")
+    r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+    assert r.status_code == 200, r.text
+    assert r.json().get("ignored"), r.text
+    assert store.get_order(order_id)["status"] != "paid"
+
+
+def test_ignored_events_roll_the_idempotency_marker_back(client, monkeypatch):
+    """A later redelivery must reprocess: no swallows, no lost payments."""
+    from billing_server import store
+
+    calls = []
+    monkeypatch.setattr(store, "record_event_failure",
+                        lambda kind, ref, reason: calls.append((kind, ref)))
+    # underpaid event (order recorded at 49900 paise for pro)
+    order_id = _order_client("pro", client)
+    body = _famevent(order_id, utr="5050", amount_rupees=100.0)
+    r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+    assert r.json().get("ignored"), r.text
+    assert calls and calls[0][0] == "fam.payment.success", calls
+
+
+def test_fam_webhook_ignores_header_only_event_name(client):
+    """The event decision must come from the signed body only."""
+    order_id = _order_client("lifetime", client)
+    r = _deliver(client, b"{}",
+                 {"X-FamGateway-Signature": _famsig(b"{}"),
+                  "X-FamGateway-Event": "payment.success"})
+    assert r.status_code == 200, r.text
+    obj = r.json()
+    assert obj.get("duplicate") != True or obj.get("ignored"), obj
+    assert obj.get("plan") is None, obj  # nothing granted via headers alone
+
+
+def test_verify_endpoint_confirms_the_order_id(client, monkeypatch):
+    """Defense-in-depth: a verify verdict for ANOTHER order must not count."""
+    import billing_server.famgateway_client as famgw
+    from billing_server import store
+
+    monkeypatch.setattr(famgw, "verify_order", lambda order_id: {
+        "order_id": "famo_someone_else", "status": "success", "utr": "12121",
+        "transaction_id": "famt_x", "amount": 10000.0,
+        "customer_email": "x@y.z",
+    })
+    order_id = _order_client("lifetime", client)
+    body = _famevent(order_id, utr="12121", amount_rupees=10000.0)
+    r = _deliver(client, body, {"X-FamGateway-Signature": _famsig(body)})
+    assert r.status_code == 200, r.text
+    assert r.json().get("ignored") == "verify mismatch", r.text
+    assert store.get_order(order_id)["status"] != "paid"

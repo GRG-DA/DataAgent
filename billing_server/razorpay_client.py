@@ -71,7 +71,13 @@ def fetch_payment(payment_id: str) -> Optional[dict]:
 
 
 def verify_checkout_signature(order_id: str, payment_id: str, signature: str) -> bool:
-    """HMAC-SHA256(order_id|payment_id, KEY_SECRET) == signature (constant-time)."""
+    """HMAC-SHA256(order_id|payment_id, KEY_SECRET) == signature (constant-time).
+
+    Fails closed when the key secret is unset — an HMAC keyed with an empty
+    string is computable by anyone.
+    """
+    if not (cfg.RAZORPAY_KEY_SECRET or "").strip():
+        return False
     expected = hmac.new(
         cfg.RAZORPAY_KEY_SECRET.encode(), f"{order_id}|{payment_id}".encode(), sha256
     ).hexdigest()
@@ -166,7 +172,13 @@ def cancel_subscription(subscription_id: str, at_cycle_end: bool = True) -> Opti
 
 def verify_subscription_checkout_signature(subscription_id: str, payment_id: str,
                                            signature: str) -> bool:
-    """HMAC-SHA256(payment_id|subscription_id, KEY_SECRET) == signature."""
+    """HMAC-SHA256(payment_id|subscription_id, KEY_SECRET) == signature.
+
+    Fails closed when the key secret is unset — an HMAC keyed with an empty
+    string is computable by anyone.
+    """
+    if not (cfg.RAZORPAY_KEY_SECRET or "").strip():
+        return False
     expected = hmac.new(
         cfg.RAZORPAY_KEY_SECRET.encode(),
         f"{payment_id}|{subscription_id}".encode(),
@@ -176,6 +188,12 @@ def verify_subscription_checkout_signature(subscription_id: str, payment_id: str
 
 
 def verify_webhook_signature(raw_body: bytes, signature: str) -> bool:
-    """HMAC-SHA256(raw_body, WEBHOOK_SECRET) == X-Razorpay-Signature (constant-time)."""
+    """HMAC-SHA256(raw_body, WEBHOOK_SECRET) == X-Razorpay-Signature (constant-time).
+
+    Fails closed when the webhook secret is unset — an HMAC keyed with an
+    empty string is computable by anyone.
+    """
+    if not (cfg.RAZORPAY_WEBHOOK_SECRET or "").strip():
+        return False
     expected = hmac.new(cfg.RAZORPAY_WEBHOOK_SECRET.encode(), raw_body, sha256).hexdigest()
     return hmac.compare_digest(expected, signature or "")

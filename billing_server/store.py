@@ -10,6 +10,7 @@ surface this module relies on.
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 import time
@@ -19,6 +20,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import billing_server.config as cfg
+
+logger = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 #: Targets (local DB path or remote URL) whose schema is already ensured in
@@ -175,8 +178,10 @@ def _ensure_schema(con) -> None:
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_utr_unique "
             "ON orders(payment_id) "
             "WHERE provider = 'famgateway' AND payment_id IS NOT NULL")
-    except Exception:  # noqa: BLE001 — already exists / legacy schema mid-upgrade
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # A silently-missing backstop means double-grant protection relies
+        # ONLY on the soft check — never hide that from the operator.
+        logger.warning("famgateway UTR uniqueness index not created: %s", exc)
     _initialized_targets.add(target)
 
 
