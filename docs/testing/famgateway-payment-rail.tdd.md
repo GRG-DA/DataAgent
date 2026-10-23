@@ -30,21 +30,32 @@ read as untrusted input and sanitized against execution).
 - `python -m pytest` (18-suite sweep, 2026-10-23): **282 passed**, 14 warnings
   (pre-existing CSS-only). Notable suites: test_billing_famgateway.py (29),
   test_billing_server.py, test_security_regressions.py, test_launch_site_*.
-- agentshield scan `--path .`: 98 findings, all pre-existing MCP-config
-  hygiene; none on billing_server/, website/, or famgateway files.
-- code-reviewer verdict on `db77902..65aa63a`: **APPROVE** (0 critical/high);
-  6 LOW → 3 fixed in `4a60e80`, 3 documented as ADR-016 follow-ups.
+ - agentshield scan `--path .`: 98 findings, all pre-existing MCP-config
+   hygiene; none on billing_server/, website/, or famgateway files.
+ - code-reviewer verdict on `db77902..65aa63a`: **APPROVE** (0 critical/high);
+   6 LOW → 3 fixed in `4a60e80`, 3 documented as ADR-016 follow-ups.
+ - Follow-up pass (`be74d68`, post-APPROVE): RED `1 failed, 30 passed`
+   (famgateway file, verdict-amount tests); GREEN `31 passed`. Node check
+   `node --check website\js\billing.js` ok; targeted 6-suite sweep
+   `196 passed` (recovered an import-order defect the fail-closed
+   verifiers exposed in the dev server); full sweep `3259 passed, 2
+   failed, 3 skipped` — the 2 failures
+   (`test_cov_agent2.py::test_matplotlib_all`,
+   `test_cov_etl_warehouse.py::test_basic_clean_empty_strings_and_dates`)
+   are pre-existing env drift (pandas 2.3.3 / matplotlib), untouched by
+   this work and failing identically in isolation.
 
 ## Coverage and known gaps
 - Not covered by automated tests: real-money flows end-to-end (no live
-  FamGateway sandbox in CI); dev_server mock redirect leg (https-only gate
-  refuses its relative URL — documented in ADR-016 follow-ups).
+  FamGateway sandbox in CI); dev mock checkout page visual rendering
+  (redirect leg now covered by the URL-producing handlers, not the page).
 - Intentional leniencies (documented inline + ADR): verify verdicts without
-  `order_id` pass (legacy schema), missing `amount` skips the underpay
-  comparison (verify_orders re-derivation still gates) — both flagged for
-  tightening before the rail takes real traffic.
-- `graphify update .` timed out at 180s this session; graph is stale until
-  re-run with a larger timeout.
+  `order_id` pass (legacy schema) — flagged for tightening before the rail
+  takes real traffic. Resolved rounding leniencies from the review: verdict
+  amount cross-check added in `be74d68` (missing amount on the signed event
+  still grants via verify_orders re-derivation — trust anchors unchanged).
+- `graphify update .` re-run at 600s timeout earlier this session
+  (37233 nodes); rerun after later payment-file edits if the graph matters.
 
 ## Merge evidence
 All commits landed directly on `master` in order
