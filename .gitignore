@@ -124,3 +124,28 @@ Thumbs.db
 .ecc/
 .hermes/
 agentshield-reports/
+# AI feature probe state (holds a throwaway test account)
+scripts/.ai_probe_user.json
+
+# ── The marketing website ships separately ───────────────────────────
+# The source repository publishes the agent, API, warehouse, exports and
+# the app UI (`web/`). The static marketing/checkout site (`website/`) is
+# deployed on its own (Vercel/Netlify, see docs/FRONTENDS.md) and is NOT
+# part of this repository (ADR-023).
+website/
+
+# ── Live deployment progress ─────────────────────────────────────────
+# The Azure VM progress log tracks a live billing server (domains, tokens
+# handling, rebuild notes). Operational detail - keep it out of the repo.
+docs/deployment/azure-vm-progress.md
+
+# ── Local working scratch (one-off session artefacts, never source) ──
+/app-*.png
+/captures/
+/brag-output*/
+installers/*.log
+/New Text Document.txt
+/_red_check.py
+/sum_numbers.py
+/es_e87cff756ffec4zMib0HbajGqO'
+
