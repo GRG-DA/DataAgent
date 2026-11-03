@@ -1,10 +1,14 @@
 """Port selection for the desktop shell.
 
-The SPA hardcodes the API origin to port 8002 (web/js/api.js reads
-window.API_PORT, default "8002"), so the shell pins the configured port
-instead of drifting to a free one. If the port is already serving a
-DataAgent backend (e.g. a headless `python run.py web`), we reuse it;
-anything else is a foreign process and we refuse to start.
+The shell pins the configured port (settings.app.port, default 8002). If
+that port is already serving a DataAgent backend (e.g. a headless
+`python run.py web`), we reuse it; a foreign process owning the port no
+longer aborts startup — the shell drifts upward to the first free port
+instead. The API page it serves reports its own origin to the SPA
+(window.__DATAAGENT_API_SAME_ORIGIN__, injected by `api/main.py`
+serve_index and honoured by web/js/api.js), so a drifted port still serves
+a fully working app. Startup only fails when the whole fallback range is
+busy.
 """
 
 import json
@@ -16,6 +20,11 @@ from config import settings
 
 class PortOccupiedError(RuntimeError):
     pass
+
+
+# Number of consecutive ports tried after the pinned one when a foreign
+# process holds it (8002 busy -> try 8003..8012).
+FALLBACK_PORTS = 10
 
 
 def _port_in_use(host: str, port: int) -> bool:
@@ -44,14 +53,22 @@ def resolve_port() -> tuple[int, bool]:
     """Return (port, owned).
 
     owned=False means an existing DataAgent backend is already serving the
-    port and the shell should reuse it instead of starting its own.
+    port and the shell should reuse it instead of starting its own. When a
+    foreign process owns the configured port, the first free port after it
+    is returned with owned=True (the backend binds there and the served
+    SPA resolves its API origin from the page). Raises PortOccupiedError
+    when no port in the fallback range is free.
     """
-    port = int(settings.app.port)
-    if not _port_in_use(settings.app.host, port):
-        return port, True
-    if _is_our_app(port):
-        return port, False
+    preferred = int(settings.app.port)
+    if not _port_in_use(settings.app.host, preferred):
+        return preferred, True
+    if _is_our_app(preferred):
+        return preferred, False
+    last = preferred + FALLBACK_PORTS
+    for candidate in range(preferred + 1, last + 1):
+        if not _port_in_use(settings.app.host, candidate):
+            return candidate, True
     raise PortOccupiedError(
-        f"Port {port} is already in use by another application.\n"
-        f"Close the other program or set APP_PORT to a free port, then retry."
+        f"Ports {preferred}-{last} are all already in use by other applications.\n"
+        "Close the other programs or set APP_PORT to a free port, then retry."
     )

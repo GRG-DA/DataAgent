@@ -580,8 +580,33 @@
       };
     },
 
+    // ── Read-only account gate ──
+    // The AI build calls a dashboard:create endpoint on the backend. A
+    // viewer (read-only) account would only ever collect a 403 toast, so
+    // the entry points stop here with a clear message instead. The server
+    // still enforces the real decision — this is UX guidance, not a
+    // security boundary — and an unknown client state falls through.
+    _canCreateDashboards() {
+      try {
+        var u = (window.RBAC && window.RBAC.getUser && window.RBAC.getUser()) || {};
+        return String(u.role || "user") !== "viewer";
+      } catch (e) {
+        return true;
+      }
+    },
+
+    _warnReadOnly() {
+      if (App.warning) {
+        App.warning("Your account is read-only. Ask an administrator for dashboard access to use the AI builder.");
+      }
+    },
+
     _promptBuildFrom(text) {
       var self = this;
+      if (!this._canCreateDashboards()) {
+        this._warnReadOnly();
+        return;
+      }
       this._askCanvasSize("AI dashboard from insight", function (size) {
         self._buildAIDashboard(size, text || "");
       });
@@ -839,6 +864,10 @@
     _aiBuild() {
       if (!this._selectedTable) {
         App.warning("Please select a data source first");
+        return;
+      }
+      if (!this._canCreateDashboards()) {
+        this._warnReadOnly();
         return;
       }
       var self = this;
@@ -1446,6 +1475,10 @@
     // positions them in the professional Power BI band layout. The answers
     // from the design questionnaire drive the KPI focus, sections and theme.
     async _buildAIDashboard(size, prompt, answers) {
+      if (!this._canCreateDashboards()) {
+        this._warnReadOnly();
+        return;
+      }
       var tableName = this._selectedTable.table_name || this._selectedTable.name;
       answers = answers || this._defaultAnswers();
 
@@ -1481,7 +1514,19 @@
           return;
         }
       } catch (e) {
-        if (App.error) App.error("AI dashboard build failed. Is the server running? " + (e && e.message ? e.message : ""));
+        if (App.error) {
+          var status = e && e.status;
+          if (status === 401) {
+            App.error("Your session has expired. Sign in again, then retry the AI build.");
+          } else if (status === 403) {
+            // The server's RBAC detail already explains which role is missing
+            // and how to get access; prefixing "Is the server running?" would
+            // only mislead — the server is up and answered.
+            App.error("AI dashboard build failed. " + (e && e.message ? e.message : "Permission denied."));
+          } else {
+            App.error("AI dashboard build failed. Is the server running? " + (e && e.message ? e.message : ""));
+          }
+        }
         return;
       }
 

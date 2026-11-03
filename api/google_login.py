@@ -58,7 +58,10 @@ class GoogleLoginConfig:
     client_secret: str = ""
     redirect_uri: str = "http://127.0.0.1:8002/auth/google/login/callback"
     auto_provision: bool = True
-    default_role: str = "viewer"
+    # Self-serve standard, matching settings.rbac.default_role. "viewer" used
+    # to auto-provision Google sign-ups as read-only, which locked them out
+    # of dashboard creation (the AI builder) with confusing 403 toasts.
+    default_role: str = "user"
 
 
 def _load_google_login_config() -> GoogleLoginConfig:

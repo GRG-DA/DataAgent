@@ -26,9 +26,19 @@ def test_shell_port_owned_and_foreign(monkeypatch):
     monkeypatch.setattr(p, "_is_our_app", lambda pt: True)
     port2, owned2 = p.resolve_port()
     assert owned2 is False
-    # in use + foreign -> raise
+    # in use + foreign -> drift up to the next free port
     monkeypatch.setattr(p, "_is_our_app", lambda pt: False)
     import pytest
+
+    monkeypatch.setattr(
+        p, "_port_in_use", lambda h, pt: pt == int(settings.app.port)
+    )
+    p3, owned3 = p.resolve_port()
+    assert owned3 is True and p3 == int(settings.app.port) + 1
+
+    # whole fallback range leased -> explicit error again
+    monkeypatch.setattr(p, "_port_in_use", lambda h, pt: True)
+    monkeypatch.setattr(p, "_is_our_app", lambda pt: False)
     with pytest.raises(p.PortOccupiedError):
         p.resolve_port()
 

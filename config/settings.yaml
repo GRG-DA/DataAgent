@@ -213,7 +213,7 @@ google_login:
   client_secret: ""             # defaults to google.client_secret
   redirect_uri: "http://127.0.0.1:8002/auth/google/login/callback"
   auto_provision: true          # create a user account on first login
-  default_role: "viewer"        # role for auto-provisioned users
+  default_role: "user"          # self-serve standard (matches rbac.default_role)
 
 # Feature Flags
 features:

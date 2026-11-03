@@ -69,7 +69,7 @@ from etl.watcher import DataWatcher
 # "name 'readonly_transaction' is not defined" and returned HTTP 200 with
 # {"success": false, ...}.
 from etl.readonly import readonly_transaction
-from api.auth import user_manager, create_jwt_token, verify_jwt_token
+from api.auth import user_manager, create_jwt_token, verify_jwt_token, self_serve_default_role
 from api.bootstrap_gate import bootstrap_gate_required as _bootstrap_gate_required
 from api.rbac import role_manager, get_role_manager, Permission
 from api.audit import audit_logger, get_audit_logger
@@ -7761,7 +7761,10 @@ async def login(request: LoginRequest, request_ctx: Request):
                         "email": info.get("email", ""),
                     },
                 })
-            token = create_jwt_token(request.username, role=info.get("role", "viewer"))
+            token = create_jwt_token(
+                request.username,
+                role=info.get("role") or self_serve_default_role(),
+            )
             # HttpOnly session cookie as a localStorage-free alternative:
             # browsers send it automatically, JS (and any XSS) cannot read
             # it. The JSON token stays for API clients.
@@ -9913,7 +9916,9 @@ async def google_login_callback(code: str = "", state: str = "", error: str = ""
     except Exception as e:  # noqa: BLE001
         logger.warning("cloud entitlement sync failed: %s", e)
 
-    token = create_jwt_token(user["username"], role=user.get("role", "viewer"))
+    token = create_jwt_token(
+        user["username"], role=user.get("role") or self_serve_default_role()
+    )
     try:
         session_manager.create_session(user_id=user["user_id"], tenant_id=user.get("tenant_id") or None)
     except Exception as e:  # noqa: BLE001
@@ -11400,11 +11405,32 @@ async def serve_favicon():
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    """Serve the main SPA page  never cached so JS changes take effect."""
+    """Serve the main SPA page  never cached so JS changes take effect.
+
+    The page is tagged with a small inline marker script
+    (``window.__DATAAGENT_API_SAME_ORIGIN__``) so web/js/api.js knows the
+    SPA was served by the API backend itself, whatever port it bound.
+    That keeps API calls same-origin when the desktop shell's port
+    fallback starts the backend on a different port because 8002 was
+    busy (shell/port.py). A page served by a static dev server (e.g.
+    serve_web.py) never carries the marker and keeps its cross-origin
+    API origin behaviour.
+    """
     index_path = WEB_DIR / "index.html"
     if index_path.exists():
         from fastapi.responses import Response
         content = index_path.read_bytes()
+        if b"__DATAAGENT_API_SAME_ORIGIN__" not in content:
+            marker = b"<script>window.__DATAAGENT_API_SAME_ORIGIN__=true;</script>"
+            head = content.find(b"<head>")
+            if head == -1:
+                head = content.find(b"<head")
+            if head != -1:
+                end_of_head_tag = content.find(b">", head) + 1
+                if end_of_head_tag > head:
+                    content = (
+                        content[:end_of_head_tag] + marker + content[end_of_head_tag:]
+                    )
         return Response(
             content=content,
             media_type="text/html",

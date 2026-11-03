@@ -1836,7 +1836,7 @@ def test_shell_port(monkeypatch):
     monkeypatch.setattr(config.settings.app, "host", "127.0.0.1")
     p, owned = port.resolve_port()
     assert p == free and owned is True
-    # occupied by foreign -> error
+    # occupied by a foreign process -> drift up to the next free port
     s2 = socket.socket()
     s2.bind(("127.0.0.1", 0))
     s2.listen(1)
@@ -1844,8 +1844,16 @@ def test_shell_port(monkeypatch):
     monkeypatch.setattr(config.settings.app, "port", busy)
     _real_is_our_app = port._is_our_app
     monkeypatch.setattr(port, "_is_our_app", lambda p_: False)
+    # Stub the availability check: only `busy` itself is taken, everything
+    # after it is free, so the fallback deterministically picks busy + 1.
+    monkeypatch.setattr(port, "_port_in_use", lambda host, p_: p_ == busy)
+    p_fb, owned_fb = port.resolve_port()
+    assert p_fb == busy + 1 and owned_fb is True
+    # A foreign lease on the whole fallback range -> explicit error
+    monkeypatch.setattr(port, "_port_in_use", lambda host, p_: True)
     with pytest.raises(port.PortOccupiedError):
         port.resolve_port()
+    # A DataAgent backend on the pinned port is still reused (no fallback)
     monkeypatch.setattr(port, "_is_our_app", lambda p_: True)
     p2, owned2 = port.resolve_port()
     assert owned2 is False

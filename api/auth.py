@@ -19,6 +19,22 @@ from pydantic import BaseModel
 
 from api.redact import redact_secrets
 from api.runtime_paths import runtime_file
+from config import settings
+
+
+def self_serve_default_role() -> str:
+    """The role granted when a record has no role at all.
+
+    Always the self-serve standard (``settings.rbac.default_role``, "user"),
+    never the read-only "viewer": legacy records without a role used to
+    surface as viewer, silently locking their owner out of dashboard
+    creation while the account was otherwise signed in. Explicit roles in
+    the store are never overridden by this default.
+    """
+    try:
+        return str(getattr(settings.rbac, "default_role", "user") or "user")
+    except Exception:  # noqa: BLE001
+        return "user"
 from api.user_store import (
     JSONUserStore,
     UserRecord,
@@ -261,7 +277,7 @@ class UserManager:
         return {
             "user_id": user.get("user_id", ""),
             "username": username,
-            "role": user.get("role", "viewer"),
+            "role": user.get("role") or self_serve_default_role(),
             "email": user.get("email", ""),
             "email_verified": bool(user.get("email_verified", False)),
             "invite_accepted_at": user.get("invite_accepted_at", ""),

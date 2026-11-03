@@ -10,9 +10,14 @@
   // server on another port (e.g. serve_web.py on 3000), so API calls must
   // target the API origin, not the page origin. Override with window.API_BASE_URL
   // or window.API_PORT if your backend runs elsewhere.
+  // The API backend itself tags its index page with
+  // window.__DATAAGENT_API_SAME_ORIGIN__ (see serve_index in api/main.py), so
+  // when the desktop shell drifts to a different port because 8002 was busy,
+  // API calls stay same-origin instead of racing the foreign process on 8002.
   const _API_PORT = window.API_PORT || "8002";
   const BASE_URL = window.API_BASE_URL ||
-    (String(window.location.port) === _API_PORT
+    (window.__DATAAGENT_API_SAME_ORIGIN__ === true ||
+      String(window.location.port) === _API_PORT
       ? window.location.origin
       : window.location.protocol + "//" + window.location.hostname + ":" + _API_PORT);
   const API_PREFIX = "";
