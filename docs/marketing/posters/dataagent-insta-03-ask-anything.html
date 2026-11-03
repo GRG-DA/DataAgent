@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DataAgent — IG carousel 03: Ask your data</title>
+<link rel="stylesheet" href="assets/poster-base.css">
+<style>
+  .eyebrow { top:152px; }
+  .headline { top:188px; }
+  .sub { top:404px; width:430px; font-size:23px; }
+
+  .feat { left:72px; width:470px; height:130px; padding:22px 26px; }
+  .f1 { top:512px; } .f2 { top:656px; } .f3 { top:800px; }
+  .feat-icon {
+    width:52px; height:52px; border-radius:14px; flex:0 0 52px;
+    background:linear-gradient(135deg,#E3EBFF 0%,#F2F6FF 100%);
+    border:1px solid rgba(46,99,232,.25);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .feat-title { font-size:24px; font-weight:700; color:#0E1633; }
+  .feat-desc  { font-size:19px; color:#59668C; line-height:1.35; margin-top:4px; }
+  .feat .row2 { display:flex; gap:18px; align-items:center; }
+
+  .panel { left:580px; top:452px; width:430px; padding:12px; }
+  .panel img { width:100%; border-radius:14px; }
+  .screen-tag {
+    position:absolute; left:580px; top:416px;
+    color:#64709A; font-size:17px; font-weight:600; letter-spacing:.1em;
+  }
+
+  .badge { left:620px; top:920px; width:340px; padding:13px 20px;
+    display:flex; align-items:center; gap:12px; z-index:5; }
+  .check {
+    width:34px; height:34px; border-radius:50%; flex:0 0 34px;
+    background:linear-gradient(135deg,#23B26D 0%,#0E8A50 100%);
+    color:#fff; font-size:18px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 20px rgba(14,138,80,.30);
+  }
+  .badge-title { font-size:19px; font-weight:700; color:#0E1633; line-height:1.2; }
+  .badge-sub   { font-size:14px; color:#59668C; }
+
+  .cta { top:972px; height:60px; font-size:24px; padding:0 32px; }
+
+  .ribbon { position:absolute; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <svg class="ribbon" style="bottom:-52px; left:-70px;" width="380" height="220" viewBox="0 0 380 220" fill="none">
+    <defs>
+      <linearGradient id="r3" x1="0" y1="0" x2="380" y2="220" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#7AA0FF"/><stop offset="1" stop-color="#2E63E8"/>
+      </linearGradient>
+    </defs>
+    <path d="M-20 180 C 80 90, 150 190, 250 110 S 340 60, 368 48" stroke="url(#r3)" stroke-width="40" stroke-linecap="round" opacity=".55"/>
+  </svg>
+
+  <div class="brand">
+    <div class="brand-tile">DA</div>
+    <div>
+      <div class="brand-name">DataAgent</div>
+      <div class="brand-sub">Local-first analytics</div>
+    </div>
+  </div>
+  <div class="pageno">03 / 06</div>
+
+  <div class="eyebrow">AI CHAT</div>
+  <div class="headline">Ask your data.<br>In plain English.</div>
+
+  <div class="sub">Type the question — DataAgent writes the SQL, runs it locally, and explains the answer.</div>
+
+  <div class="card feat f1">
+    <div class="row2">
+      <div class="feat-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 4h14M5 9h14M5 14h9" stroke="#2E63E8" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="feat-title">SQL you can inspect</div>
+        <div class="feat-desc">The generated query is shown with every answer.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card feat f2">
+    <div class="row2">
+      <div class="feat-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 19V8m6 11V5m6 14v-7" stroke="#2E63E8" stroke-width="2.6" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="feat-title">Charts on reply</div>
+        <div class="feat-desc">Bars, trends, pie — plus the numbers behind them.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card feat f3">
+    <div class="row2">
+      <div class="feat-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4" width="17" height="13" rx="2" stroke="#2E63E8" stroke-width="2.2"/><path d="M9 20.5h6" stroke="#2E63E8" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="feat-title">Guided quick tasks</div>
+        <div class="feat-desc">Ready-made prompts when you need a starting idea.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-tag">ASK · "SHOW TOTAL PROFIT BY REGION"</div>
+  <div class="panel"><img src="assets/chat-reply.png" alt="DataAgent chat reply"></div>
+
+  <div class="card badge">
+    <div class="check">✓</div>
+    <div>
+      <div class="badge-title">Answer + chart + SQL</div>
+      <div class="badge-sub">one reply, fully traceable</div>
+    </div>
+  </div>
+
+  <div class="cta">Free Windows download <span class="arrow">→</span></div>
+
+</div>
+</body>
+</html>

@@ -7,10 +7,11 @@ Two things were wrong and both are launch-visible:
   same site, and the release checklist's "compare the number in
   download.html with the real installer" could only ever be satisfied for
   one of them;
-* the placeholder domain was in EIGHTEEN files, but the deployment notes
-  in robots.txt and sitemap.xml said there were TWO to change. An operator
-  who followed the notes exactly deployed a site whose every shared link
-  carried an og:url pointing at a domain nobody owns.
+* the deployed domain was once a placeholder in TWENTY-ONE files, but the
+  deployment notes in robots.txt and sitemap.xml said there were TWO to
+  change. An operator who followed the notes exactly deployed a site whose
+  every shared link carried an og:url pointing at a domain nobody owns.
+  The site now names the real domain, so the test guards consistency.
 """
 from __future__ import annotations
 
@@ -23,22 +24,30 @@ import pytest
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SITE = REPO_ROOT / "website"
 
-#: The placeholder domain.  The .example TLD is reserved by RFC 2606, so it
-#: can never resolve to a real host.
-PLACEHOLDER = "dataagent.example"
+if not SITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
 
-#: The files that carry the placeholder: the 16 pages, robots.txt and
-#: sitemap.xml.  A NEW file that carries it must be added here, and the
-#: deployment notes must be updated to match.
-EXPECTED_PLACEHOLDER_FILES = {
-    "403.html", "404.html", "about.html", "billing.html", "blog-post.html",
-    "blog.html", "changelog.html", "comparison.html", "contact.html",
-    "docs.html", "download.html", "faq.html", "features.html", "index.html",
-    "security.html", "usecases.html", "robots.txt", "sitemap.xml",
+#: The deployed domain.
+DEPLOYED_DOMAIN = "data-agent.me"
+
+#: The files that carry the deployed domain: the 17 pages, robots.txt,
+#: sitemap.xml, and the two host configs whose CSP allows the billing API.
+#: A NEW file that carries it must be added here, and the deployment notes
+#: must be updated to match.
+EXPECTED_DOMAIN_FILES = {
+    "403.html", "404.html", "about.html", "account.html", "billing.html",
+    "blog-post.html", "blog.html", "changelog.html", "comparison.html",
+    "contact.html", "docs.html", "download.html", "faq.html", "features.html",
+    "index.html", "security.html", "usecases.html", "robots.txt", "sitemap.xml",
+    "netlify.toml", "vercel.json",
 }
 
-#: Only these are scanned for the placeholder: a binary asset that happens
-#: to contain the bytes is not a placeholder.
+#: Only these are scanned for the domain: a binary asset that happens to
+#: contain the bytes is not a page.
 TEXT_SUFFIXES = {".html", ".txt", ".xml", ".css", ".js", ".json", ".toml", ".md"}
 
 
@@ -89,8 +98,8 @@ def test_the_quoted_installer_size_is_the_one_constant() -> None:
     )
 
 
-def test_the_placeholder_domain_is_only_where_it_is_expected() -> None:
-    """A new file carrying the placeholder must be declared here.
+def test_the_deployed_domain_is_only_where_it_is_expected() -> None:
+    """A new file carrying the domain must be declared here.
 
     The deployment notes can only be honest if they name every file that
     has to change, and the only way to know that is to keep the list
@@ -104,12 +113,12 @@ def test_the_placeholder_domain_is_only_where_it_is_expected() -> None:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if PLACEHOLDER in text:
+        if DEPLOYED_DOMAIN in text:
             found.add(path.name)
-    assert found == EXPECTED_PLACEHOLDER_FILES, (
-        "the placeholder domain is in files the deployment notes do not name:\n"
-        f"  unexpected: {sorted(found - EXPECTED_PLACEHOLDER_FILES)}\n"
-        f"  missing:    {sorted(EXPECTED_PLACEHOLDER_FILES - found)}"
+    assert found == EXPECTED_DOMAIN_FILES, (
+        "the deployed domain is in files the deployment notes do not name:\n"
+        f"  unexpected: {sorted(found - EXPECTED_DOMAIN_FILES)}\n"
+        f"  missing:    {sorted(EXPECTED_DOMAIN_FILES - found)}"
     )
 
 
@@ -142,21 +151,21 @@ def test_every_shared_link_uses_the_sitemap_domain() -> None:
 
 
 def test_the_deployment_notes_cover_the_shared_links() -> None:
-    """The notes must tell the operator about the og:url placeholder.
+    """The notes must name the deployed domain and the og:url tags.
 
-    The placeholder is in eighteen files, and the notes used to say two.
-    The og:url tags are the ones a visitor actually sees, so the notes
-    have to name them.
+    The domain is in twenty-one files, and the notes used to say two.  The
+    og:url tags are the ones a visitor actually sees, so the notes have to
+    name them.
     """
     checklist = (REPO_ROOT / "docs" / "WEBSITE-CHECKLIST.md").read_text(encoding="utf-8")
-    assert PLACEHOLDER in checklist, "the checklist never mentions the placeholder domain"
+    assert DEPLOYED_DOMAIN in checklist, "the checklist never mentions the deployed domain"
     assert "og:url" in checklist, (
         "the checklist does not tell the operator that the og:url tags carry "
-        "the placeholder domain - those are the links a visitor sees"
+        "the deployed domain - those are the links a visitor sees"
     )
     for name in ("robots.txt", "sitemap.xml"):
         text = (SITE / name).read_text(encoding="utf-8")
-        assert PLACEHOLDER in text, f"{name} does not mention the placeholder domain"
+        assert DEPLOYED_DOMAIN in text, f"{name} does not mention the deployed domain"
 
 
 def test_the_social_card_is_monochrome() -> None:

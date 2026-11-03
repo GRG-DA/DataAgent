@@ -1,0 +1,124 @@
+Order ID,Order Date,Region,Category,Product,Units,Unit Price,Revenue,Profit,Customer Segment
+ORD-1001,01/04/2026,west ,Snacks,Chips 150g,21,45,945,302.4,Online
+ORD-1002,2026-04-02,north,Personal Care,Toothpaste 150g,6,95,570,125.4,Online
+ORD-1003,Apr 3 2026, South,Personal Care,Toothpaste 150g,18,95,1710,478.8,
+ORD-1004,04/04/2026,NORTH,Household,Floor Cleaner 1L,21,190,3990,877.8,Wholesale
+ORD-1005,2026-04-05,north,Dairy,Curd 400g,20,45,900,198.0,Wholesale
+ORD-1006,06/04/2026,north,Personal Care,Toothpaste 150g,27,95,2565,564.3,Wholesale
+ORD-1007,07-04-2026,north,Beverages,Cola 750ml,28,40,1120,246.4,Wholesale
+ORD-1008,08/04/2026, South,Dairy,Paneer 200g,8,90,720,201.6,Wholesale
+ORD-1009,2026-04-09,west ,Personal Care,Shampoo 340ml,24,280,6720,2150.4,Wholesale
+ORD-1010,10/04/2026,north,Beverages,Water 1L,24,20,480,105.6,Wholesale
+ORD-1011,11-04-2026,NORTH,Dairy,Milk 1L,19,65,1235,271.7,Wholesale
+ORD-1012,2026-04-12, South,Beverages,Water 1L,35,20,700,196.0,Retail
+ORD-1013,Apr 13 2026,west ,Household,Detergent 1kg,8,220,1760,563.2,Online
+ORD-1014,14-04-2026,North,Snacks,Biscuits 250g,38,40,1520,334.4,Retail
+ORD-1015,15/04/2026,east,Snacks,Biscuits 250g,20,40,800,192.0,Online
+ORD-1016,16-04-2026,West,Personal Care,Shampoo 340ml,13,280,3640,1164.8,Online
+ORD-1017,2026-04-17,North,Personal Care,Toothpaste 150g,35,95,3325,731.5,Wholesale
+ORD-1018,2026-04-18, South,Snacks,Chips 150g,40,45,1800,504.0,Online
+ORD-1019,19/04/2026,NORTH,Beverages,Water 1L,34,20,680,149.6,Retail
+ORD-1020,Apr 20 2026,West,Beverages,Water 1L,23,20,460,147.2,Online
+ORD-1021,2026-04-21,east,Snacks,Chips 150g,18,45,810,194.4,Retail
+ORD-1022,22/04/2026,North,Snacks,Biscuits 250g,7,40,280,61.6,Online
+ORD-1023,23/04/2026, South,Dairy,Paneer 200g,35,90,3150,882.0,Online
+ORD-1024,24/04/2026,east,Beverages,Orange Juice 1L,30,110,3300,792.0,Wholesale
+ORD-1025,2026-04-25,east,Snacks,Biscuits 250g,10,40,400,96.0,Retail
+ORD-1026,26/04/2026, South,Beverages,Water 1L,32,20,640,179.2,Retail
+ORD-1027,2026-04-27,east,Personal Care,Shampoo 340ml,7,280,1960,470.4,Retail
+ORD-1028,Apr 28 2026,East,Household,Floor Cleaner 1L,17,190,3230,775.2,
+ORD-1029,Apr 29 2026,East,Dairy,Curd 400g,22,45,990,237.6,Online
+ORD-1030,30/04/2026,east,Beverages,Cola 750ml,22,40,880,211.2,Online
+ORD-1031,01/05/2026,south,Snacks,Chips 150g,34,45,1530,428.4,Retail
+ORD-1032,May 2 2026,WEST,Snacks,Biscuits 250g,19,40,760,243.2,Online
+ORD-1033,03-05-2026,North,Personal Care,Shampoo 340ml,30,280,8400,1848.0,Retail
+ORD-1034,May 4 2026,South,Household,Dish Soap 500ml,23,120,2760,772.8,Wholesale
+ORD-1035,05/05/2026,WEST,Personal Care,Shampoo 340ml,8,280,2240,716.8,Retail
+ORD-1036,May 6 2026, South,Dairy,Curd 400g,14,45,630,176.4,Online
+ORD-1037,07-05-2026,West,Snacks,Biscuits 250g,39,40,1560,499.2,Wholesale
+ORD-1038,08/05/2026,north,Snacks,Biscuits 250g,39,40,1560,343.2,Retail
+ORD-1039,09-05-2026,west ,Dairy,Paneer 200g,35,90,3150,1008.0,Wholesale
+ORD-1040,10/05/2026,South,Snacks,Chips 150g,25,45,1125,315.0,Online
+ORD-1041,2026-05-11,East,Personal Care,Shampoo 340ml,11,280,3080,739.2,Retail
+ORD-1042,May 12 2026,south,Personal Care,Soap 100g,13,35,455,127.4,Retail
+ORD-1043,2026-05-13,south,Beverages,Water 1L,19,20,380,106.4,Online
+ORD-1044,May 14 2026,NORTH,Beverages,Cola 750ml,15,40,600,132.0,Wholesale
+ORD-1045,2026-05-15,west ,Beverages,Orange Juice 1L,14,110,1540,492.8,Retail
+ORD-1046,16/05/2026,east,Dairy,Curd 400g,18,45,810,194.4,Retail
+ORD-1047,May 17 2026,South,Dairy,Paneer 200g,36,90,3240,907.2,Retail
+ORD-1048,2026-05-18,north,Dairy,Milk 1L,20,65,1300,286.0,Wholesale
+ORD-1049,May 19 2026,East,Personal Care,Soap 100g,11,35,385,92.4,Wholesale
+ORD-1050,20-05-2026,North,Personal Care,Soap 100g,16,35,560,123.2,Online
+ORD-1051,21-05-2026,south,Snacks,Biscuits 250g,23,40,920,257.6,Online
+ORD-1052,22/05/2026,NORTH,Beverages,Orange Juice 1L,28,110,3080,677.6,Retail
+ORD-1053,23-05-2026,South,Dairy,Milk 1L,31,65,2015,564.2,Wholesale
+ORD-1054,24-05-2026,NORTH,Snacks,Namkeen 200g,36,55,1980,435.6,Wholesale
+ORD-1055,2026-05-25, South,Beverages,Cola 750ml,5,40,200,56.0,Retail
+ORD-1056,26/05/2026,east,Household,Detergent 1kg,40,220,8800,2112.0,Retail
+ORD-1057,27/05/2026,west ,Snacks,Chips 150g,31,45,1395,446.4,Retail
+ORD-1058,28/05/2026,West,Beverages,Cola 750ml,33,40,1320,422.4,Online
+ORD-1059,May 29 2026,south,Household,Detergent 1kg,36,220,7920,2217.6,Online
+ORD-1060,30-05-2026,east,Household,Floor Cleaner 1L,19,190,3610,866.4,Wholesale
+ORD-1061,31/05/2026,east,Snacks,Biscuits 250g,22,40,880,211.2,Retail
+ORD-1062,01/06/2026,NORTH,Beverages,Orange Juice 1L,13,110,1430,314.6,Wholesale
+ORD-1063,2026-06-02,North,Beverages,Orange Juice 1L,28,110,3080,677.6,Retail
+ORD-1064,03/06/2026,south,Dairy,Curd 400g,30,45,1350,378.0,Wholesale
+ORD-1065,Jun 4 2026,south,Household,Detergent 1kg,14,220,3080,862.4,Wholesale
+ORD-1066,2026-06-05,WEST,Personal Care,Soap 100g,5,35,175,56.0,Retail
+ORD-1067,Jun 6 2026,South,Household,Floor Cleaner 1L,17,190,3230,904.4,Wholesale
+ORD-1068,2026-06-07,South,Snacks,Namkeen 200g,5,55,275,77.0,Online
+ORD-1069,2026-06-08,North,Snacks,Chips 150g,16,45,720,158.4,Retail
+ORD-1070,09-06-2026,WEST,Beverages,Orange Juice 1L,20,110,2200,704.0,Retail
+ORD-1071,10-06-2026,NORTH,Dairy,Milk 1L,5,65,325,71.5,Online
+ORD-1072,2026-06-11, South,Snacks,Biscuits 250g,19,40,760,212.8,Retail
+ORD-1073,Jun 12 2026,WEST,Snacks,Namkeen 200g,38,55,2090,668.8,Retail
+ORD-1074,13-06-2026,East,Household,Dish Soap 500ml,31,120,3720,892.8,Wholesale
+ORD-1075,Jun 14 2026,NORTH,Personal Care,Soap 100g,21,35,735,161.7,Wholesale
+ORD-1076,15/06/2026, South,Snacks,Namkeen 200g,32,55,1760,492.8,Wholesale
+ORD-1077,Jun 16 2026,North,Household,Floor Cleaner 1L,15,190,2850,627.0,Online
+ORD-1078,17/06/2026,South,Personal Care,Shampoo 340ml,37,280,10360,2900.8,Retail
+ORD-1079,2026-06-18,east,Household,Floor Cleaner 1L,5,190,950,228.0,Online
+ORD-1080,19-06-2026,WEST,Dairy,Curd 400g,39,45,1755,561.6,Online
+ORD-1081,20/06/2026,east,Dairy,Curd 400g,20,45,900,216.0,Online
+ORD-1082,21-06-2026,NORTH,Beverages,Cola 750ml,34,40,1360,299.2,Wholesale
+ORD-1083,22-06-2026,north,Beverages,Orange Juice 1L,18,110,1980,,Wholesale
+ORD-1084,23/06/2026,North,Snacks,Biscuits 250g,22,40,880,193.6,Retail
+ORD-1085,Jun 24 2026,WEST,Dairy,Curd 400g,34,45,1530,489.6,Wholesale
+ORD-1086,2026-06-25,north,Snacks,Namkeen 200g,35,55,1925,423.5,Online
+ORD-1087,Jun 26 2026,South,Snacks,Chips 150g,11,45,495,138.6,Online
+ORD-1088,Jun 27 2026,East,Household,Floor Cleaner 1L,23,190,4370,1048.8,Online
+ORD-1089,28-06-2026,north,Beverages,Water 1L,17,20,340,74.8,Retail
+ORD-1090,Jun 29 2026,NORTH,Snacks,Namkeen 200g,32,55,1760,387.2,Online
+ORD-1091,01-04-2026,east,Snacks,Biscuits 250g,18,40,720,172.8,Retail
+ORD-1092,02/04/2026,East,Snacks,Biscuits 250g,18,40,720,172.8,Retail
+ORD-1093,03-04-2026,South,Personal Care,Soap 100g,40,35,1400,392.0,Wholesale
+ORD-1094,Apr 4 2026,South,Personal Care,Soap 100g,35,35,1225,343.0,Wholesale
+ORD-1095,05/04/2026,WEST,Dairy,Milk 1L,9,65,585,187.2,Retail
+ORD-1096,06/04/2026,west ,Dairy,Paneer 200g,6,90,540,172.8,Retail
+ORD-1097,2026-04-07,WEST,Household,Detergent 1kg,35,220,7700,2464.0,Retail
+ORD-1098,08-04-2026,NORTH,Dairy,Curd 400g,35,45,1575,346.5,Retail
+ORD-1099,09-04-2026,east,Snacks,Namkeen 200g,20,55,1100,264.0,Retail
+ORD-1100,2026-04-10,west ,Personal Care,Toothpaste 150g,30,95,2850,912.0,Online
+ORD-1101,11/04/2026,east,Snacks,Chips 150g,21,45,945,226.8,Retail
+ORD-1102,12-04-2026,North,Personal Care,Shampoo 340ml,14,280,3920,862.4,Retail
+ORD-1103,Apr 13 2026,east,Snacks,Biscuits 250g,13,40,520,124.8,Wholesale
+ORD-1104,14/04/2026,east,Household,Dish Soap 500ml,33,120,3960,950.4,Retail
+ORD-1105,15-04-2026,north,Dairy,Curd 400g,25,45,1125,247.5,Online
+ORD-1106,Apr 16 2026,WEST,Household,Dish Soap 500ml,32,120,3840,1228.8,Wholesale
+ORD-1107,Apr 17 2026,south,Beverages,Water 1L,19,20,380,106.4,Online
+ORD-1108,Apr 18 2026,east,Household,Floor Cleaner 1L,13,190,2470,592.8,Wholesale
+ORD-1109,Apr 19 2026,north,Household,Dish Soap 500ml,,120,4440,976.8,Retail
+ORD-1110,Apr 20 2026,north,Household,Floor Cleaner 1L,25,190,4750,1045.0,Online
+ORD-1111,2026-04-21,East,Dairy,Paneer 200g,35,90,3150,756.0,Wholesale
+ORD-1112,2026-04-22, South,Snacks,Namkeen 200g,10,55,550,154.0,Retail
+ORD-1113,23-04-2026,south,Snacks,Namkeen 200g,26,55,1430,400.4,Online
+ORD-1114,Apr 24 2026,NORTH,Beverages,Cola 750ml,9,40,360,79.2,Retail
+ORD-1115,Apr 25 2026, South,Household,Detergent 1kg,20,220,4400,,Wholesale
+ORD-1116,Apr 26 2026,west ,Personal Care,Shampoo 340ml,8,280,2240,716.8,Wholesale
+ORD-1117,Apr 27 2026,South,Household,Floor Cleaner 1L,16,190,3040,851.2,Wholesale
+ORD-1118,2026-04-28,WEST,Dairy,Paneer 200g,22,90,1980,633.6,Online
+ORD-1119,29-04-2026,west ,Snacks,Biscuits 250g,35,40,1400,448.0,Retail
+ORD-1120,30/04/2026,west ,Beverages,Water 1L,20,20,400,128.0,Wholesale
+ORD-1004,04/04/2026,NORTH,Household,Floor Cleaner 1L,21,190,3990,877.8,Wholesale
+ORD-1018,2026-04-18, South,Snacks,Chips 150g,40,45,1800,504.0,Online
+ORD-1043,2026-05-13,south,Beverages,Water 1L,19,20,380,106.4,Online

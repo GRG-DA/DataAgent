@@ -12,7 +12,10 @@ must never contradict again:
 * the download links come from ONE constant, ``window.DATAAGENT_REPO_URL``
   in ``website/js/main.js``;
 * the PDF export is the **basic** one;
-* "open source" means **AGPL-3.0**.
+* the published source (github.com/GRG-DA/DataAgent) is licensed under
+  PolyForm Noncommercial 1.0.0 — use is noncommercial, the licence is not
+  open source, so DataAgent does not claim open source on the site; only
+  competitor references may use the phrase.
 
 On top of that this file guards the mechanical side of the copy pass:
 broken word joins, emoji in prose, ALL-CAPS headings, placeholder titles and
@@ -38,9 +41,18 @@ import ast
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 WEBSITE = ROOT / "website"
 SITE_JS = WEBSITE / "js"
+
+if not WEBSITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
 
 #: The pages this file reads. ``website/*.html`` is the marketing site; the
 #: checkout script is part of the pricing surface.
@@ -200,13 +212,20 @@ def test_no_retired_feature_label_is_used():
 def test_the_release_url_lives_in_exactly_one_constant():
     """Every download/repository link derives from ``website/js/main.js``."""
     main_js = _read(SITE_JS / "main.js")
-    assert main_js.count("github.com/DataAgent") == 1, (
+    match = re.search(
+        r"window\.DATAAGENT_REPO_URL\s*=\s*['\"](https://github\.com/[^'\"]+)['\"]",
+        main_js,
+    )
+    assert match, (
+        "website/js/main.js must define window.DATAAGENT_REPO_URL"
+    )
+    assert main_js.count(match.group(1)) == 1, (
         "website/js/main.js must hold the release base URL exactly once"
     )
     offenders = [
         _rel(p)
         for p in _site_files()
-        if p != (SITE_JS / "main.js") and "github.com/DataAgent" in _read(p)
+        if p != (SITE_JS / "main.js") and match.group(1) in _read(p)
     ]
     assert not offenders, (
         "a page hardcodes the GitHub repository instead of using the "

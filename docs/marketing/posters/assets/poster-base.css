@@ -1,0 +1,80 @@
+/* ============ DataAgent IG poster series — shared design tokens (1080x1080)
+   Matches 01-hero (dataagent-insta-post.html). Segoe UI, no external requests. ============ */
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1080px; height:1080px; }
+body {
+  font-family:"Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+.stage {
+  position:relative; width:1080px; height:1080px;
+  background:
+    radial-gradient(950px 640px at 88% -12%, #F6F9FF 0%, rgba(246,249,255,0) 62%),
+    radial-gradient(1000px 720px at -12% 112%, #E2ECFF 0%, rgba(226,236,255,0) 55%),
+    linear-gradient(142deg, #EEF3FF 0%, #E3EBFF 46%, #D8E4FF 100%);
+  overflow:hidden;
+}
+
+/* ---------- shared atoms ---------- */
+.brand { position:absolute; left:72px; top:56px; display:flex; align-items:center; gap:15px; }
+.brand-tile {
+  width:58px; height:58px; border-radius:16px;
+  background:linear-gradient(135deg,#2E63E8 0%,#123069 100%);
+  color:#fff; font-weight:700; font-size:23px; letter-spacing:.02em;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 12px 26px rgba(23,43,90,.28);
+}
+.brand-name { font-size:30px; font-weight:700; color:#0E1633; line-height:1.05; }
+.brand-sub  { font-size:19px; color:#4A5880; line-height:1.2; margin-top:2px; }
+
+.pageno {
+  position:absolute; right:72px; top:74px;
+  font-size:20px; font-weight:600; color:#8D9ABB; letter-spacing:.14em;
+}
+
+.eyebrow {
+  position:absolute; left:72px;
+  font-size:20px; font-weight:700; color:#2E63E8;
+  letter-spacing:.18em;
+}
+.headline {
+  position:absolute; left:72px;
+  font-size:64px; line-height:1.09; font-weight:800; color:#0E1633; letter-spacing:-0.022em;
+}
+.sub {
+  position:absolute; left:72px;
+  font-size:25px; line-height:1.48; color:#45527A;
+}
+.sub strong { color:#2E4BB8; font-weight:600; }
+
+.cta {
+  position:absolute; left:72px;
+  display:inline-flex; align-items:center; gap:14px;
+  height:64px; padding:0 36px; border-radius:999px;
+  background:linear-gradient(135deg,#2E63E8 0%,#1F49B8 100%);
+  color:#fff; font-size:26px; font-weight:600; letter-spacing:-0.01em;
+  box-shadow:0 16px 34px rgba(46,99,232,.35);
+}
+.cta .arrow { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.18);
+  display:flex; align-items:center; justify-content:center; font-size:19px; }
+
+.chip {
+  padding:9px 18px; border-radius:999px; background:rgba(255,255,255,.75);
+  border:1px solid rgba(14,22,51,.10); color:#59668C;
+  font-size:19px; font-weight:500;
+}
+
+.card {
+  position:absolute; background:#FFFFFF;
+  border:1px solid rgba(14,22,51,.07); border-radius:20px;
+  box-shadow:0 26px 60px rgba(23,43,90,.20), 0 6px 16px rgba(23,43,90,.08);
+}
+
+/* dark screenshot panel (screen bezel) */
+.panel {
+  position:absolute; border-radius:24px;
+  background:linear-gradient(180deg,#171E38 0%,#0D1226 100%);
+  box-shadow:0 46px 90px rgba(23,43,90,.38), 0 10px 26px rgba(23,43,90,.22);
+}
+.panel img { display:block; }

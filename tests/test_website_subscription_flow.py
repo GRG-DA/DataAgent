@@ -11,6 +11,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+if not (Path(__file__).resolve().parents[1] / "website").is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 ROOT = Path(__file__).resolve().parents[1]
 BILLING_JS = (ROOT / "website" / "js" / "billing.js").read_text(encoding="utf-8")
 BILLING_HTML = (ROOT / "website" / "billing.html").read_text(encoding="utf-8")

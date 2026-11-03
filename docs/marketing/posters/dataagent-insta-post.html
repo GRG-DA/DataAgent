@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DataAgent — Instagram post (1080x1080)</title>
+<style>
+  /* ============ DataAgent IG poster — mirror of the "Enterprise Software" style reference
+     Layout: brand top-left / big navy headline / subline / CTA pill / trust chips /
+     laptop mockup bottom-center with floating stat cards / blue ribbon decor.
+     All metrics shown are real values from the DataAgent dashboard render. ============ */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:1080px; height:1080px; }
+  body {
+    font-family:"Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .stage {
+    position:relative; width:1080px; height:1080px;
+    background:
+      radial-gradient(950px 640px at 88% -12%, #F6F9FF 0%, rgba(246,249,255,0) 62%),
+      radial-gradient(1000px 720px at -12% 112%, #E2ECFF 0%, rgba(226,236,255,0) 55%),
+      linear-gradient(142deg, #EEF3FF 0%, #E3EBFF 46%, #D8E4FF 100%);
+    overflow:hidden;
+  }
+
+  /* ---------- decor ribbons ---------- */
+  .ribbon { position:absolute; pointer-events:none; }
+
+  /* ---------- brand ---------- */
+  .brand { position:absolute; left:72px; top:56px; display:flex; align-items:center; gap:15px; }
+  .brand-tile {
+    width:58px; height:58px; border-radius:16px;
+    background:linear-gradient(135deg,#2E63E8 0%,#123069 100%);
+    color:#fff; font-weight:700; font-size:23px; letter-spacing:.02em;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 26px rgba(23,43,90,.28);
+  }
+  .brand-name { font-size:30px; font-weight:700; color:#0E1633; line-height:1.05; }
+  .brand-sub  { font-size:19px; color:#4A5880; line-height:1.2; margin-top:2px; }
+
+  /* ---------- headline ---------- */
+  .headline {
+    position:absolute; left:72px; top:142px; width:950px;
+    font-size:64px; line-height:1.09; font-weight:800; color:#0E1633; letter-spacing:-0.022em;
+  }
+
+  /* ---------- subline ---------- */
+  .sub {
+    position:absolute; left:72px; top:310px; width:880px;
+    font-size:25px; line-height:1.48; color:#45527A;
+  }
+  .sub strong { color:#2E4BB8; font-weight:600; }
+
+  /* ---------- CTA ---------- */
+  .cta {
+    position:absolute; left:72px; top:414px;
+    display:inline-flex; align-items:center; gap:14px;
+    height:64px; padding:0 36px; border-radius:999px;
+    background:linear-gradient(135deg,#2E63E8 0%,#1F49B8 100%);
+    color:#fff; font-size:26px; font-weight:600; letter-spacing:-0.01em;
+    box-shadow:0 16px 34px rgba(46,99,232,.35);
+  }
+  .cta .arrow { width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.18);
+    display:flex; align-items:center; justify-content:center; font-size:19px; }
+
+  /* ---------- trust chips ---------- */
+  .trust {
+    position:absolute; left:74px; top:504px;
+    display:flex; align-items:center; gap:12px;
+    color:#59668C; font-size:19px; font-weight:500;
+  }
+  .chip {
+    padding:7px 16px; border-radius:999px; background:rgba(255,255,255,.75);
+    border:1px solid rgba(14,22,51,.10);
+  }
+
+  /* ---------- laptop mockup ---------- */
+  .laptop { position:absolute; left:155px; top:568px; width:770px; }
+  .screen {
+    background:linear-gradient(180deg,#171E38 0%,#0D1226 100%);
+    padding:13px; border-radius:24px;
+    box-shadow:0 46px 90px rgba(23,43,90,.38), 0 10px 26px rgba(23,43,90,.22);
+  }
+  .screen img { width:100%; display:block; border-radius:13px; }
+  .base {
+    width:852px; height:19px; position:relative; left:-41px;
+    background:linear-gradient(180deg,#F4F7FE 0%,#C9D4EA 100%);
+    border-radius:2px 2px 20px 20px;
+    box-shadow:0 20px 40px rgba(23,43,90,.25);
+  }
+  .notch {
+    position:absolute; left:50%; transform:translateX(-50%); top:0;
+    width:118px; height:9px; border-radius:0 0 12px 12px;
+    background:rgba(151,166,196,.45);
+  }
+
+  /* ---------- floating cards ---------- */
+  .card {
+    position:absolute; background:#FFFFFF;
+    border:1px solid rgba(14,22,51,.07); border-radius:20px;
+    box-shadow:0 26px 60px rgba(23,43,90,.20), 0 6px 16px rgba(23,43,90,.08);
+  }
+
+  .chat-card { left:22px; top:562px; width:326px; padding:18px; }
+  .chat-label { font-size:14px; font-weight:700; color:#8894B4; letter-spacing:.08em; }
+  .chat-bubble {
+    margin-top:9px; background:#0E1633; color:#EAF0FF;
+    font-size:19px; font-weight:500; line-height:1.35;
+    padding:12px 16px; border-radius:14px 14px 14px 4px; width:fit-content;
+  }
+  .chat-meta { margin-top:10px; display:flex; align-items:center; gap:8px;
+    font-size:16px; color:#45527A; font-weight:500; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#2E63E8; }
+
+  .kpi-card { left:668px; top:500px; width:330px; padding:18px 22px 20px; }
+  .kpi-label { font-size:15px; font-weight:600; color:#8894B4; letter-spacing:.06em; }
+  .kpi-value { font-size:42px; font-weight:800; color:#0E1633; letter-spacing:-0.02em; margin-top:2px; line-height:1;}
+  .kpi-bars { display:flex; align-items:flex-end; gap:10px; height:52px; margin-top:14px; }
+  .kpi-bars .bar { width:34px; border-radius:6px 6px 2px 2px;
+    background:linear-gradient(180deg,#7AA0FF 0%,#2E63E8 100%); }
+  .kpi-bars .bar.b1 { height:26px; opacity:.55; }
+  .kpi-bars .bar.b2 { height:33px; opacity:.75; }
+  .kpi-bars .bar.b3 { height:52px; }
+  .kpi-bars .bar.b4 { height:30px; opacity:.6; }
+  .kpi-bars .bar.b5 { height:18px; opacity:.4; }
+
+  .pbix-card { left:620px; top:966px; width:288px; padding:14px 20px;
+    display:flex; align-items:center; gap:13px; }
+  .check {
+    width:38px; height:38px; border-radius:50%; flex:0 0 38px;
+    background:linear-gradient(135deg,#23B26D 0%,#0E8A50 100%);
+    color:#fff; font-size:20px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 20px rgba(14,138,80,.30);
+  }
+  .pbix-title { font-size:21px; font-weight:700; color:#0E1633; line-height:1.15; }
+  .pbix-sub   { font-size:15px; color:#59668C; margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- decorative ribbon artwork -->
+  <svg class="ribbon" style="top:-58px; right:-64px;" width="470" height="290" viewBox="0 0 470 290" fill="none">
+    <defs>
+      <linearGradient id="r1" x1="0" y1="0" x2="470" y2="290" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#9DBBFF"/><stop offset=".55" stop-color="#4C7DFF"/><stop offset="1" stop-color="#1F49B8"/>
+      </linearGradient>
+      <linearGradient id="r2" x1="60" y1="40" x2="430" y2="240" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#D9E4FF"/><stop offset="1" stop-color="#7AA0FF"/>
+      </linearGradient>
+    </defs>
+    <path d="M30 235 C 120 130, 205 240, 300 150 S 430 55, 452 38" stroke="url(#r1)" stroke-width="52" stroke-linecap="round" opacity=".9"/>
+    <path d="M52 246 C 140 150, 220 250, 312 162 S 428 70, 452 52" stroke="url(#r2)" stroke-width="16" stroke-linecap="round" opacity=".85"/>
+    <circle cx="52" cy="246" r="13" fill="#2E63E8" opacity=".85"/>
+  </svg>
+  <svg class="ribbon" style="bottom:-46px; left:-56px;" width="380" height="220" viewBox="0 0 380 220" fill="none">
+    <defs>
+      <linearGradient id="r3" x1="0" y1="0" x2="380" y2="220" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#7AA0FF"/><stop offset="1" stop-color="#2E63E8"/>
+      </linearGradient>
+    </defs>
+    <path d="M-20 180 C 80 90, 150 190, 250 110 S 340 60, 368 48" stroke="url(#r3)" stroke-width="40" stroke-linecap="round" opacity=".8"/>
+    <circle cx="332" cy="72" r="10" fill="#D9E4FF"/>
+  </svg>
+
+  <!-- brand -->
+  <div class="brand">
+    <div class="brand-tile">DA</div>
+    <div>
+      <div class="brand-name">DataAgent</div>
+      <div class="brand-sub">Local-first analytics</div>
+    </div>
+  </div>
+
+  <!-- headline -->
+  <div class="headline">Enterprise analytics.<br>Without the enterprise stack.</div>
+
+  <!-- subline -->
+  <div class="sub">Point it at a messy CSV, ask a plain-English question —
+    get charts, dashboards, and a <strong>real .pbix</strong> on your Windows laptop.</div>
+
+  <!-- CTA -->
+  <div class="cta">Free Windows download <span class="arrow">→</span></div>
+
+  <!-- trust chips -->
+  <div class="trust">
+    <span class="chip">AI chat</span><span class="chip">Dashboards</span>
+    <span class="chip">.pbix export</span><span class="chip">Windows 10 / 11</span>
+  </div>
+
+  <!-- laptop mockup -->
+  <div class="laptop">
+    <div class="screen"><img src="assets/dashboard-crop.png" alt="DataAgent dashboard"></div>
+    <div class="base"><div class="notch"></div></div>
+  </div>
+
+  <!-- floating card: chat -->
+  <div class="card chat-card">
+    <div class="chat-label">YOU ASK</div>
+    <div class="chat-bubble">What's the profit by region?</div>
+    <div class="chat-meta"><span class="dot"></span> Bar chart · 4 regions</div>
+  </div>
+
+  <!-- floating card: KPI -->
+  <div class="card kpi-card">
+    <div class="kpi-label">TOTAL REVENUE</div>
+    <div class="kpi-value">240K</div>
+    <div class="kpi-bars">
+      <div class="bar b1"></div><div class="bar b2"></div><div class="bar b3"></div>
+      <div class="bar b4"></div><div class="bar b5"></div>
+    </div>
+  </div>
+
+  <!-- floating card: export badge -->
+  <div class="card pbix-card">
+    <div class="check">✓</div>
+    <div>
+      <div class="pbix-title">Real .pbix exported</div>
+      <div class="pbix-sub">opens in Power BI Desktop</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

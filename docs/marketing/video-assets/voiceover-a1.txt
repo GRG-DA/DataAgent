@@ -1,0 +1,54 @@
+A1 — "ChatGPT gives you a chart. This gives you a real .pbix."
+Target video length: 21.8 seconds
+Voice (final): en-US-AndrewNeural, +0% rate, natural US English,
+analyst-to-analyst, no hype. Final read: 21.53 s.
+Alternate: en-IN-PrabhatNeural, +45%, 22.0 s.
+Format: screen-only, no avatar.
+
+0:00.100–0:02.275
+ChatGPT gives you a chart.
+
+0:02.275–0:03.937
+This gives you a .pbix.
+
+0:03.937–0:05.612
+I imported a messy CSV
+
+0:05.612–0:07.037
+and asked one question.
+
+0:07.037–0:08.187
+It wrote the SQL
+
+0:08.187–0:09.375
+and drew the chart.
+
+0:09.375–0:11.375
+Then I exported a .pbix.
+
+0:11.375–0:13.537
+Opened it in Power BI Desktop,
+
+0:13.537–0:14.587
+real file.
+
+0:14.587–0:15.775
+Export is Pro.
+
+0:15.775–0:18.862
+The 14-day trial unlocks it, no card.
+
+0:18.862–0:20.487
+Free Windows download.
+
+0:20.487–0:21.800
+Link in bio.
+
+---
+Word count: 56. Final read: 21.53 s at en-US-AndrewNeural +0%.
+The 21.8 s video holds the end card for the final 2.94 s.
+
+Disclosure: AI-generated voice (Edge TTS); product demo is real screen capture.
+
+Do not add: "free .pbix", "unlimited", "100% private", "open source",
+absolute privacy claims ("never leaves your machine", "fully offline").

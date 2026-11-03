@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DataAgent — IG carousel 05: Real .pbix</title>
+<link rel="stylesheet" href="assets/poster-base.css">
+<style>
+  .eyebrow { top:152px; }
+  .headline { top:188px; }
+  .sub { top:404px; width:920px; }
+
+  .flow { position:absolute; left:72px; top:468px; display:flex; align-items:center; gap:12px; }
+  .fnode { padding:10px 20px; border-radius:999px; font-size:19px; font-weight:600;
+    background:rgba(255,255,255,.8); border:1px solid rgba(14,22,51,.10); color:#3A466B; }
+  .fnode.hot { background:#0E1633; color:#fff; border-color:#0E1633;
+    box-shadow:0 10px 24px rgba(23,43,90,.25); }
+  .fnode.pbi { border-color:rgba(0,153,10,.35); }
+  .farr { color:#8D9ABB; font-size:20px; font-weight:700; }
+
+  .frame {
+    position:absolute; left:120px; top:536px; width:840px;
+    border-radius:18px; overflow:hidden;
+    box-shadow:0 40px 90px rgba(23,43,90,.35), 0 10px 26px rgba(23,43,90,.20);
+  }
+  .frame img { width:100%; display:block; }
+
+  .badge { left:640px; top:948px; width:340px; padding:13px 20px;
+    display:flex; align-items:center; gap:12px; z-index:5; }
+  .check {
+    width:34px; height:34px; border-radius:50%; flex:0 0 34px;
+    background:linear-gradient(135deg,#23B26D 0%,#0E8A50 100%);
+    color:#fff; font-size:18px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 20px rgba(14,138,80,.30);
+  }
+  .badge-title { font-size:19px; font-weight:700; color:#0E1633; line-height:1.2; }
+  .badge-sub   { font-size:14px; color:#59668C; }
+
+  .cta { top:966px; height:60px; font-size:24px; padding:0 32px; }
+
+  .ribbon { position:absolute; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="brand">
+    <div class="brand-tile">DA</div>
+    <div>
+      <div class="brand-name">DataAgent</div>
+      <div class="brand-sub">Local-first analytics</div>
+    </div>
+  </div>
+  <div class="pageno">05 / 06</div>
+
+  <div class="eyebrow">POWER BI EXPORT</div>
+  <div class="headline">Real .pbix.<br>No manual build.</div>
+
+  <div class="sub">Your tables, measures, and visuals — exported as one real .pbix.</div>
+
+  <div class="flow">
+    <span class="fnode">DataAgent</span><span class="farr">→</span>
+    <span class="fnode hot">sales-overview.pbix</span><span class="farr">→</span>
+    <span class="fnode pbi">Power BI Desktop</span>
+  </div>
+
+  <div class="frame"><img src="assets/pbi-desk.png" alt="Sales Overview report opened in Power BI Desktop"></div>
+
+  <div class="card badge">
+    <div class="check">✓</div>
+    <div>
+      <div class="badge-title">One-click export</div>
+      <div class="badge-sub">17 KB .pbix in this demo</div>
+    </div>
+  </div>
+
+  <div class="cta">Free Windows download <span class="arrow">→</span></div>
+
+</div>
+</body>
+</html>

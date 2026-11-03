@@ -50,8 +50,12 @@ Every edit to `website/` must keep all of these true at the same time:
       self-hosted Docker build, which really is free) is false.
 - [ ] **"No telemetry" is scoped.** True for the desktop app; false as an absolute for a hosted tier. Write
       "the desktop app ships no telemetry", not "no telemetry".
-- [ ] **"Open source" names the licence.** The tree is AGPL-3.0 (`LICENSE`). Say "open source under the GNU
-      AGPL v3 licence" at least once per page that makes the claim.
+- [ ] **Never claim "open source" — name the licence instead.** The source is published at
+      `github.com/GRG-DA/DataAgent` under PolyForm Noncommercial 1.0.0 (`LICENSE`; ADR-023). State the
+      licence wherever the source is mentioned, and never style it as open source — PolyForm is not an
+      OSI open-source licence, and the no-claim guard in `tests/test_launch_frontend_claims.py` stays.
+- [ ] **`website/` is not part of this repository.** The marketing site ships separately via its own
+      hosting (ADR-023); `docs/FRONTENDS.md` still documents both frontends.
 - [ ] **The release/download URL is not hardcoded.** It comes from the single constant
       `window.DATAAGENT_REPO_URL` in `website/js/main.js`. No page in `website/` may contain a literal
       `github.com/...` URL.
@@ -91,8 +95,11 @@ The shell and the SPA are the **same** frontend: the shell starts the FastAPI ba
 ```
 web/
   index.html          # app shell: top nav, mobile nav, page container
-  css/                # styles.css (357 KB), chat-pro.css (37 KB), enterprise.css,
-                      # kpiStyles.css, propsPanel.css, fonts.css
+  css/                # styles.css (app chrome + components), utilities.css (the
+                      # token-driven utility layer), chat-pro.css, kpiStyles.css,
+                      # propsPanel.css, fonts.css
+                      # Design tokens live in styles.css :root — see
+                      # docs/plans/design-system.md for the contract.
   js/
     app.js            # hash router, page lifecycle, notifications, dark mode, top nav, onboarding
     api.js            # the API client (window.API)
@@ -357,7 +364,7 @@ No page in `website/` contains a literal `github.com/...` URL. Everything is der
 constants in **`website/js/main.js`**:
 
 ```js
-window.DATAAGENT_REPO_URL         = 'https://github.com/DataAgent/DataAgent';
+window.DATAAGENT_REPO_URL         = 'https://github.com/java22113344/data-agent';
 window.DATAAGENT_RELEASE_BASE_URL = window.DATAAGENT_REPO_URL + '/releases/latest/download';
 window.DATAAGENT_DOWNLOADS        = { setup: 'DataAgent-Setup.exe', portable: 'DataAgent.exe' };
 ```

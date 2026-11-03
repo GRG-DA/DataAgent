@@ -32,7 +32,7 @@ with `WAREHOUSE_RELOAD=1`.
 - **Enterprise:** catalog, SLA, cost/usage, compliance, workflows, masking, collaboration, org, API keys, SSO/SAML, audit, RLS (see `config/settings.yaml: security`).
 - **Billing:** plans/entitlements/usage metering in-app; checkout externally. See `docs/BILLING.md`.
 
-Frontend: `web/` (app SPA). Marketing: `website/`. See `docs/FRONTENDS.md`.
+Frontend: `web/` (app SPA). The marketing site (`website/`) ships separately via its own hosting and is not part of this repository — see `docs/FRONTENDS.md` and ADR-023.
 
 ## Layout
 
@@ -61,6 +61,7 @@ Frontend: `web/` (app SPA). Marketing: `website/`. See `docs/FRONTENDS.md`.
 - Billing: `billing.external_url` / `sync_url` empty = self-hosted free plan.
 
 Full ops: `docs/OPERATIONS.md`. Billing & entitlements: `docs/BILLING.md`.
+
 Frontends: `docs/FRONTENDS.md`. Coverage plan: `docs/COVERAGE.md`.
 
 ## Tests / quality
@@ -79,3 +80,11 @@ Workflow: plan → TDD → code-review → security-review (auth/SQL/billing) �
 - Never `pip install mcp` into the main venv (breaks FastAPI/starlette). MCP servers run from `.venv-mcp`.
 - One DuckDB writer at a time on Windows; MCP server is read-only, non-SELECT blocked.
 - Runtime secrets — never commit or log: `config/users.json`, `config/db_connections.json`, `config/google_login_pending.json`, `config/llm_runtime.json`, `data/.jwt_secret`, `data/.grant_key`, `data/.grant_migrated`, `.env`.
+
+## License
+
+The published source is licensed under the PolyForm Noncommercial 1.0.0
+(`LICENSE`): use, modification and redistribution are allowed for personal,
+educational and other noncommercial purposes. Commercial use requires the
+author's permission. Note this is not an OSI open-source licence, and the
+marketing site (`website/`) is not part of this repository.

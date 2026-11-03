@@ -24,6 +24,13 @@ import pytest
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SITE = REPO_ROOT / "website"
 
+if not SITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 #: The asset kinds whose bytes the browser caches hard.
 BUMPED_SUFFIXES = (".css", ".js", ".webm", ".mp4", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 

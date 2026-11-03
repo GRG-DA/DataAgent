@@ -37,8 +37,17 @@ import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 WEBSITE = ROOT / "website"
+
+if not WEBSITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
 
 ROBOTS = WEBSITE / "robots.txt"
 SITEMAP = WEBSITE / "sitemap.xml"

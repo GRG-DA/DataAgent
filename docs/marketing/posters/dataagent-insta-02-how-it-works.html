@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DataAgent — IG carousel 02: How it works</title>
+<link rel="stylesheet" href="assets/poster-base.css">
+<style>
+  .eyebrow { top:152px; }
+  .headline { top:188px; }
+  .sub { top:322px; width:900px; }
+
+  .step { left:72px; width:936px; height:130px; padding:24px 30px;
+    display:flex; align-items:center; gap:26px; }
+  .num {
+    width:64px; height:64px; border-radius:50%; flex:0 0 64px;
+    background:linear-gradient(135deg,#2E63E8 0%,#1F49B8 100%);
+    color:#fff; font-size:26px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 24px rgba(46,99,232,.35);
+  }
+  .step-title { font-size:30px; font-weight:700; color:#0E1633; line-height:1.15; }
+  .step-desc  { font-size:21px; color:#59668C; line-height:1.35; margin-top:5px; }
+
+  .s1 { top:430px; }
+  .s2 { top:592px; }
+  .s3 { top:754px; }
+
+  .conector { position:absolute; left:102px; width:2px; height:32px;
+    background:linear-gradient(180deg,#2E63E8,rgba(46,99,232,.15)); }
+  .c1 { top:560px; } .c2 { top:722px; }
+
+  .cta { top:944px; height:60px; font-size:24px; padding:0 32px; }
+  .chips { position:absolute; left:492px; top:954px; display:flex; gap:12px; }
+  .pageno { top:auto; bottom:66px; right:72px; }
+
+  .ribbon { position:absolute; pointer-events:none; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <svg class="ribbon" style="top:-58px; right:-64px;" width="470" height="290" viewBox="0 0 470 290" fill="none">
+    <defs>
+      <linearGradient id="r1" x1="0" y1="0" x2="470" y2="290" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#9DBBFF"/><stop offset=".55" stop-color="#4C7DFF"/><stop offset="1" stop-color="#1F49B8"/>
+      </linearGradient>
+    </defs>
+    <path d="M30 235 C 120 130, 205 240, 300 150 S 430 55, 452 38" stroke="url(#r1)" stroke-width="52" stroke-linecap="round" opacity=".9"/>
+    <circle cx="52" cy="246" r="13" fill="#2E63E8" opacity=".85"/>
+  </svg>
+
+  <div class="brand">
+    <div class="brand-tile">DA</div>
+    <div>
+      <div class="brand-name">DataAgent</div>
+      <div class="brand-sub">Local-first analytics</div>
+    </div>
+  </div>
+  <div class="pageno">02 / 06</div>
+
+  <div class="eyebrow">HOW IT WORKS</div>
+  <div class="headline">Three steps. No BI team.</div>
+
+  <div class="sub">Point it at a CSV. Ask. Export — that's the whole workflow.</div>
+
+  <div class="card step s1">
+    <div class="num">1</div>
+    <div>
+      <div class="step-title">Connect a CSV</div>
+      <div class="step-desc">Open any messy CSV — you get live previews and clean tables.</div>
+    </div>
+  </div>
+  <div class="conector c1"></div>
+
+  <div class="card step s2">
+    <div class="num">2</div>
+    <div>
+      <div class="step-title">Ask in plain English</div>
+      <div class="step-desc">DataAgent writes the SQL, runs it locally, and answers with a chart.</div>
+    </div>
+  </div>
+  <div class="conector c2"></div>
+
+  <div class="card step s3">
+    <div class="num">3</div>
+    <div>
+      <div class="step-title">Export your report</div>
+      <div class="step-desc">Send a real .pbix to Power BI Desktop, or Excel to your team.</div>
+    </div>
+  </div>
+
+  <div class="cta">Free Windows download <span class="arrow">→</span></div>
+  <div class="chips"><span class="chip">CSV in</span><span class="chip">.pbix out</span></div>
+
+</div>
+</body>
+</html>

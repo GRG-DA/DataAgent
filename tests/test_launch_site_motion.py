@@ -46,6 +46,13 @@ JS_DIR = WEBSITE / "js"
 CSS_DIR = WEBSITE / "css"
 VENDOR_GSAP = WEBSITE / "vendor" / "gsap"
 
+if not WEBSITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 PAGES = sorted(WEBSITE.glob("*.html"))
 SCRIPTS = sorted(JS_DIR.glob("*.js"))
 STYLESHEETS = sorted(CSS_DIR.glob("*.css"))
@@ -55,7 +62,7 @@ STYLESHEETS = sorted(CSS_DIR.glob("*.css"))
 EXPECTED_PAGES = (
     "index", "about", "features", "comparison", "usecases", "billing",
     "docs", "faq", "blog", "blog-post", "changelog", "security",
-    "contact", "download",
+    "contact", "download", "account",
 )
 EXPECTED_PAGE_COUNT = len(EXPECTED_PAGES)
 

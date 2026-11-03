@@ -30,6 +30,13 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CSS_DIR = REPO_ROOT / "website" / "css"
 
+if not (REPO_ROOT / "website").is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 CANONICAL_FILE = "style.css"
 STYLESHEETS = ("style.css", "pro.css", "premium.css")
 

@@ -43,6 +43,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
+if not (ROOT / "website").is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 #: The site under test.  Overridable so the same guards can be pointed at a
 #: pristine copy of the site (used to prove the guards actually fail).
 SITE = Path(os.environ.get("DATAAGENT_SITE_ROOT", ROOT / "website"))

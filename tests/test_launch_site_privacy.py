@@ -23,8 +23,18 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "website"
+
+if not SITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 PAGES = sorted(SITE.glob("*.html"))
 
 #: A third-party origin the site is allowed to contact, and where.
@@ -202,7 +212,7 @@ def test_every_external_link_is_a_documented_one():
     _subresources, anchors = _scan()
     known = {
         "https://github.com/",
-        "https://github.com/DataAgent/DataAgent",
+        "https://github.com/java22113344/data-agent",
         "https://ollama.ai/download",
         "https://billing.yourdomain.com",
     }

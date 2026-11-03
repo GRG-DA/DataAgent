@@ -36,6 +36,13 @@ WEB = ROOT / "web"
 WEBSITE = ROOT / "website"
 DOCS = ROOT / "docs"
 
+if not WEBSITE.is_dir():
+    pytest.skip(
+        "website/ (the marketing site) ships separately and is not part of "
+        "this repository - see ADR-023",
+        allow_module_level=True,
+    )
+
 # --------------------------------------------------------------------------
 # helpers
 # --------------------------------------------------------------------------
@@ -269,38 +276,63 @@ def test_c6_every_page_scopes_the_telemetry_claim_to_the_app():
             )
 
 
-def test_c6_open_source_claim_names_the_licence():
-    """The tree ships the GNU AGPL v3 — say so, do not just say 'open source'."""
-    contact = _read(WEBSITE / "contact.html")
-    assert "GNU AGPL v3" in contact, (
-        "the open-source claim must name the licence (GNU AGPL v3)"
-    )
+def test_c6_site_does_not_claim_open_source_without_published_source():
+    """The source is published under the PolyForm Noncommercial Licence
+    1.0.0, which is not open source. The marketing site must therefore not
+    claim open source or name AGPL. The only allowed 'open source'
+    reference is the competitor category on comparison.html
+    (Metabase/Superset)."""
+    offenders: list[str] = []
     for path in _website_pages():
-        text = _read(path)
-        if "Open Source" in text or "open source" in text:
-            assert "AGPL" in text or "open source" in text.lower()
+        text = re.sub(r"<!--.*?-->", "", _read(path), flags=re.S)
+        low = text.lower()
+        if "agpl" in low:
+            offenders.append(f"{path.name}: AGPL")
+        for line in text.splitlines():
+            line_low = line.lower()
+            if "open source" not in line_low and "open-source" not in line_low:
+                continue
+            allowed = path.name == "comparison.html" and (
+                "metabase" in line_low or "superset" in line_low
+            )
+            if not allowed:
+                offenders.append(f"{path.name}: {line.strip()!r}")
+    assert not offenders, (
+        "the source is published under PolyForm Noncommercial 1.0.0, which "
+        "is not open source; remove the open-source/AGPL claim "
+        "from the marketing site: " + "; ".join(offenders)
+    )
 
 
-def test_c6_license_file_is_the_claimed_licence():
+def test_c6_repository_license_file_is_noncommercial():
+    """The repository licence file is PolyForm Noncommercial 1.0.0: the
+    published source may be used for personal and other noncommercial
+    purposes only, so the site must not claim open source."""
     license_text = _read(ROOT / "LICENSE")
-    assert "GNU AFFERO GENERAL PUBLIC LICENSE" in license_text.upper()
-    assert "Version 3" in license_text
+    assert "PolyForm Noncommercial License 1.0.0" in license_text
+    assert "Required Notice: Copyright 2026 DataAgent" in license_text
 
 
 def test_c6_download_urls_come_from_one_configurable_constant():
     """Every GitHub URL in the marketing site resolves from ONE constant."""
     main_js = _read(WEBSITE / "js" / "main.js")
-    assert "github.com/DataAgent" in main_js, (
-        "website/js/main.js must hold the single release-base-URL constant"
+    match = re.search(
+        r"window\.DATAAGENT_REPO_URL\s*=\s*['\"](https://github\.com/[^'\"]+)['\"]",
+        main_js,
     )
-    assert main_js.count("github.com/DataAgent") == 1, (
+    assert match, (
+        "website/js/main.js must define window.DATAAGENT_REPO_URL with the "
+        "single GitHub repository URL"
+    )
+    repo_url = match.group(1)
+    assert main_js.count(repo_url) == 1, (
         "the release base URL must be defined exactly once"
     )
 
     html_offenders = [
         str(p.relative_to(ROOT))
         for p in _website_pages()
-        if "github.com/DataAgent" in _read(p)
+        if repo_url in _read(p)
     ]
     assert not html_offenders, (
         "download / repo URLs are hardcoded in the markup; they must be "
@@ -311,7 +343,7 @@ def test_c6_download_urls_come_from_one_configurable_constant():
     other_script_offenders = [
         str(p.relative_to(ROOT))
         for p in _website_scripts()
-        if p.name != "main.js" and "github.com/DataAgent" in _read(p)
+        if p.name != "main.js" and repo_url in _read(p)
     ]
     assert not other_script_offenders, (
         "only website/js/main.js may hold the GitHub base URL. Offenders: "
@@ -334,7 +366,10 @@ def test_c6_download_page_uses_the_constant_for_both_downloads():
 
 def test_c6_release_constant_has_a_naming_comment():
     main_js = _read(WEBSITE / "js" / "main.js")
-    window = main_js[main_js.find("github.com/DataAgent") - 800 : main_js.find("github.com/DataAgent") + 200]
+    marker = "DATAAGENT_RELEASE_BASE_URL"
+    start = main_js.find(marker)
+    assert start != -1, "website/js/main.js must define the release base URL"
+    window = main_js[max(0, start - 800) : start + 200]
     assert "RELEASE" in window.upper() or "release" in window, (
         "the constant must be named/documented as the release base URL so the "
         "operator knows what to flip"

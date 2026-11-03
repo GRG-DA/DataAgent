@@ -1,0 +1,52 @@
+1
+00:00:00,000 --> 00:00:02,275
+ChatGPT gives you a chart.
+
+2
+00:00:02,275 --> 00:00:03,937
+This gives you a .pbix.
+
+3
+00:00:03,937 --> 00:00:05,612
+I imported a messy CSV
+
+4
+00:00:05,612 --> 00:00:07,037
+and asked one question.
+
+5
+00:00:07,037 --> 00:00:08,187
+It wrote the SQL
+
+6
+00:00:08,187 --> 00:00:09,375
+and drew the chart.
+
+7
+00:00:09,375 --> 00:00:11,375
+Then I exported a .pbix.
+
+8
+00:00:11,375 --> 00:00:13,537
+Opened it in Power BI Desktop,
+
+9
+00:00:13,537 --> 00:00:14,587
+real file.
+
+10
+00:00:14,587 --> 00:00:15,775
+Export is Pro.
+
+11
+00:00:15,775 --> 00:00:18,862
+The 14-day trial unlocks it,
+no card.
+
+12
+00:00:18,862 --> 00:00:20,487
+Free Windows download.
+
+13
+00:00:20,487 --> 00:00:21,800
+Link in bio.

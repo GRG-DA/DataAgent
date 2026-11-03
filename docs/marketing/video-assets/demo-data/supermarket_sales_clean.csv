@@ -1,0 +1,31 @@
+Order ID,Order Date,Region,Category,Product,Units,Unit Price,Revenue,Profit,Customer Segment
+ORD-1001,2026-04-02,North,Snacks,Chips 150g,12,45,540,120,Retail
+ORD-1002,2026-04-03,South,Beverages,Cola 750ml,24,40,960,180,Wholesale
+ORD-1003,2026-04-04,North,Dairy,Milk 1L,36,65,2340,310,Retail
+ORD-1004,2026-04-05,East,Household,Dish Soap 500ml,18,120,2160,420,Retail
+ORD-1005,2026-04-06,West,Personal Care,Shampoo 340ml,10,280,2800,560,Online
+ORD-1006,2026-04-07,South,Snacks,Namkeen 200g,30,55,1650,290,Retail
+ORD-1007,2026-04-08,North,Beverages,Orange Juice 1L,15,110,1650,250,Online
+ORD-1008,2026-04-09,East,Dairy,Curd 400g,20,45,900,120,Retail
+ORD-1009,2026-04-10,West,Household,Floor Cleaner 1L,8,190,1520,300,Wholesale
+ORD-1010,2026-04-11,North,Personal Care,Toothpaste 150g,25,95,2375,475,Retail
+ORD-1011,2026-04-12,South,Snacks,Biscuits 250g,40,35,1400,210,Retail
+ORD-1012,2026-04-13,North,Dairy,Butter 500g,6,260,1560,240,Online
+ORD-1013,2026-04-14,East,Beverages,Green Tea 25 bags,14,180,2520,630,Online
+ORD-1014,2026-04-15,West,Household,Laundry Detergent 2kg,7,420,2940,520,Wholesale
+ORD-1015,2026-04-16,South,Personal Care,Hand Wash 250ml,22,85,1870,340,Retail
+ORD-1016,2026-04-17,North,Snacks,Pretzels 180g,16,60,960,150,Retail
+ORD-1017,2026-04-18,East,Dairy,Cheese Slices 200g,9,150,1350,270,Online
+ORD-1018,2026-04-19,West,Beverages,Sparkling Water 500ml,28,70,1960,390,Retail
+ORD-1019,2026-04-20,South,Household,Tissue Box 100 pulls,32,55,1760,280,Wholesale
+ORD-1020,2026-04-21,North,Personal Care,Body Lotion 400ml,11,320,3520,640,Online
+ORD-1021,2026-04-22,East,Snacks,Cookies 300g,19,75,1425,230,Retail
+ORD-1022,2026-04-23,South,Dairy,Paneer 200g,13,95,1235,185,Retail
+ORD-1023,2026-04-24,West,Beverages,Iced Tea 1L,17,95,1615,260,Online
+ORD-1024,2026-04-25,North,Household,Aluminium Foil 20m,12,130,1560,310,Retail
+ORD-1025,2026-04-26,East,Personal Care,Razor Pack 4,21,110,2310,525,Online
+ORD-1026,2026-04-27,South,Snacks,Salted Peanuts 500g,26,85,2210,390,Wholesale
+ORD-1027,2026-04-28,North,Dairy,Yogurt 1kg,15,120,1800,260,Retail
+ORD-1028,2026-04-29,West,Beverages,Coffee 200g,8,450,3600,720,Online
+ORD-1029,2026-04-30,East,Household,Garbage Bags 30,25,90,2250,450,Retail
+ORD-1030,2026-05-01,North,Personal Care,Face Wash 100ml,18,160,2880,610,Online

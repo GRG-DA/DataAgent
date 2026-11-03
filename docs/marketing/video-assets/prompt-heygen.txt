@@ -1,0 +1,31 @@
+LEGACY / NOT USED FOR A1
+A1 is screen-only: no presenter, no avatar. This file is kept only for optional avatar experiments and does not describe the 21.8 s A1 cut.
+---
+
+Create a 21-22 second vertical 9:16 (1080x1920) promotional video for DataAgent, a local AI data analyst for Windows.
+
+PRESENTER: Indian data analyst, early 30s, smart-casual navy shirt, natural skin texture, calm and confident, direct eye contact, minimal natural hand gestures, no exaggerated smile.
+SETTING: clean home office, blurred desk with laptop, soft window daylight, neutral background, no logos or text.
+CAMERA: eye level, 50mm look, shallow depth of field, presenter centered in the upper two-thirds.
+VOICE: warm Indian English, ~145-150 wpm, analyst-to-analyst tone, no music.
+SAFE ZONES: keep the bottom 420 px and right 120 px clear for captions and platform UI.
+
+STRUCTURE:
+0:00-0:03 - Hook: presenter to camera.
+0:03-0:15 - Screen proof: cut to the attached real screen recording - messy CSV imported, plain-English question, SQL + chart, .pbix exported and opened in Power BI Desktop.
+0:15-0:19 - Presenter CTA.
+0:19-0:22 - End card.
+
+SCRIPT:
+"ChatGPT gives you a chart. This gives you a .pbix. I imported a messy CSV and asked one question. It wrote the SQL and drew the chart. Then I exported a .pbix. Opened it in Power BI Desktop - real file. Export is Pro. The 14-day trial unlocks it - no card. Free Windows download. Link in bio."
+
+ON-SCREEN:
+- Burned captions, 2-4 words per line, bold white with dark outline.
+- End card: "Free Windows download | 14-day Pro trial, no card | data-agent.me/download"
+- Disclosure: "AI-generated presenter; product demo is real screen capture."
+
+RULES:
+- Do not generate or fake the software UI; use only the attached real recording.
+- Do not say "free .pbix," "unlimited," "100% private," "zero telemetry," "open source," "Mac/Linux," or "replaces Power BI."
+- Windows 10/11 x64 must appear in the caption.
+- No logos other than DataAgent. No trending audio. No QR code. No fake urgency.
