@@ -81,7 +81,7 @@ def provision_user(
     is exempt, matching local registration (ADR-019). Without the gate,
     "whoever registers first is admin" would be a takeover, not a bootstrap.
     """
-    from api.auth import user_manager
+    from api.auth import user_manager, self_serve_default_role
 
     email = (email or "").strip().lower()
     if not email:
@@ -108,7 +108,10 @@ def provision_user(
         counter += 1
 
     first_user = not user_manager.get_users()
-    role = "admin" if first_user else "viewer"
+    # Same rule as local self-registration: the first account becomes
+    # admin, everyone else gets the self-serve standard — not read-only
+    # "viewer". A billing/checkout account must never land read-only.
+    role = "admin" if first_user else self_serve_default_role()
     if first_user:
         _enforce_bootstrap_gate(bootstrap_token, request)
 
@@ -145,6 +148,7 @@ def _enforce_bootstrap_gate(supplied_token: str, request: Any = None) -> None:
 def _complete_login(user: Dict[str, Any], email: str, request_ctx: Request) -> JSONResponse:
     """Issue the app JWT (+ best-effort session cookie), sync entitlements."""
     from api.auth import create_jwt_token
+    from api.auth import self_serve_default_role
     from api.session import session_manager
 
     try:
@@ -153,7 +157,9 @@ def _complete_login(user: Dict[str, Any], email: str, request_ctx: Request) -> J
     except Exception as e:  # noqa: BLE001 — never block login on sync
         logger.warning("central accounts entitlement sync failed: %s", e)
 
-    token = create_jwt_token(user["username"], role=user.get("role", "viewer"))
+    token = create_jwt_token(
+        user["username"], role=user.get("role") or self_serve_default_role()
+    )
     resp = JSONResponse(status_code=200, content={
         "success": True, "message": "Login successful",
         "user": user, "token": token,

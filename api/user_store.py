@@ -70,7 +70,10 @@ class UserRecord:
     user_id: str = ""
     password_hash: str = ""
     salt: str = ""
-    role: str = "viewer"
+    # Self-serve default, matching rbac.default_role. "viewer" used to be the
+    # dataclass default, so every role-less record (above all the legacy
+    # users.json import) landed read-only.
+    role: str = "user"
     email: str = ""
     tenant_id: str = ""
     sso_subject: str = ""
@@ -548,11 +551,20 @@ def _read_legacy_json(path: Path) -> Dict[str, Dict[str, Any]]:
 
 def _record_from_legacy(username: str, payload: Dict[str, Any]) -> UserRecord:
     """Build a record from a legacy JSON row, keeping unknown fields out."""
+    from api.auth import self_serve_default_role
+
     known = {f.name for f in fields(UserRecord)}
     values = {k: v for k, v in payload.items() if k in known}
     values["username"] = username
     values.setdefault("user_id", _new_user_id())
     values["email"] = _normalise_email(str(values.get("email", "")))
+    # Legacy rows predate role-based access control: they were de-facto
+    # self-serve users (uploads, dashboards, exports). An absent or blank
+    # role must come in as `user`, not read-only `viewer`, or every legacy
+    # install silently loses write access on upgrade. Explicit roles in the
+    # JSON — including "viewer" — are honoured untouched.
+    if not values.get("role"):
+        values["role"] = self_serve_default_role()
     return UserRecord(**values)
 
 

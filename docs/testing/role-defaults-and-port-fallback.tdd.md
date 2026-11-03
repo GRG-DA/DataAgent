@@ -56,3 +56,26 @@ then rebuild the installer.
 Inline `security-reviewer` verdict: **PASS with notes, no blockers** — explicit
 roles untouched, RBAC fail-closed unchanged (`AuthMiddleware` reads the store,
 not the token claim), no secrets in the diff, port drift fail-closed on loopback.
+
+## Addendum (2026-11-03, second fix round)
+
+Investigating the shipped install's store (1 `admin` + 12 viewers with no
+`sso_provider`, 2 `billing_accounts` viewers) found two more viewer sinks,
+both fixed with their own RED/GREEN:
+
+| # | Guarantee | Test | RED evidence |
+|---|-----------|------|--------------|
+| 10 | Legacy `config/users.json` import with missing/blank role → `user` | `tests/test_auth_role_defaults.py::test_legacy_import_missing_or_blank_role_becomes_self_serve_user` | `git stash` revert → 3 failed (3,5 passed); `stash pop` → 8 passed |
+| 11 | Explicit legacy roles (incl. `viewer`) preserved | `::test_legacy_import_keeps_explicit_roles` | covered by above run |
+| 12 | `UserRecord` dataclass default is `user` | `::test_user_record_default_role_is_self_serve` | same |
+| 13 | Central (billing/checkout) non-first account provisions as `user` | `::test_central_provision_nonfirst_account_is_self_serve` | same |
+
+Scope note: SQL column defaults (`DEFAULT 'viewer'`) intentionally kept
+(fail-closed SQL layer; no code path relies on them). Existing user stores
+are NOT auto-migrated — each install promotes accounts deliberately via
+Admin → Users (`PATCH /auth/users/{username}`, audited).
+
+Sweep with all rounds applied: **195 passed**
+(`test_security_regressions`, `test_auth_hardening`, `test_account_lifecycle`,
+`test_central_accounts`, `test_billing_server_accounts`,
+`test_auth_role_defaults`, `test_cov_wave3`, `test_cov_export2`).

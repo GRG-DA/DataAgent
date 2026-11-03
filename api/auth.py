@@ -960,7 +960,7 @@ def _save_revoked() -> None:
 _load_revoked()
 
 
-def create_jwt_token(username: str, role: str = "viewer", expires_delta: Optional[int] = None) -> str:
+def create_jwt_token(username: str, role: str = "user", expires_delta: Optional[int] = None) -> str:
     """Create a JWT token for a user.
 
     Args:

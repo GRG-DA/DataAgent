@@ -74,3 +74,33 @@ self-serve standard every other signup path grants.
   exhaustion), `tests/test_cov_wave3.py::test_shell_port_owned_and_foreign`,
   `tests/test_spa_serving.py` (marker injection), and
   `tests/test_auth_role_defaults.py` (role fall-throughs).
+
+## Addendum (2026-11-03): further viewer sinks found after the first pass
+
+Deep investigation of the shipped install's store (1 admin + 12 viewers with
+no `sso_provider`, 2 `billing_accounts` viewers) found the bug ran deeper
+than the two defaults fixed above:
+
+1. **Legacy `config/users.json` import** — `api/user_store.py::_record_from_legacy`
+   transfers only *known* fields into the new row. Rows written before roles
+   existed had no `role`; the row was created with the `UserRecord` dataclass
+   default, which was `viewer`. Every legacy install bulk-imported its whole
+   user base as read-only. Fix: the importer keeps explicit/valid roles and
+   lands missing or blank ones on `self_serve_default_role()`; the dataclass
+   default is now `user` too.
+2. **Central (billing/checkout) accounts** — `provision_user` in
+   `api/central_accounts.py` minted every account after the first as
+   `viewer`. Fix: same rule as local self-registration — the first account
+   (bootstrap-gated) is admin, everyone else `user`.
+3. **`create_jwt_token` signature default** aligned to `"user"` (all in-repo
+   callers pass `role` explicitly; this only stops a future caller from
+   minting read-only sessions by omission).
+4. The SQL column defaults (`DEFAULT 'viewer'`) are **deliberately kept** —
+   no code path inserts a row without a role, and fail-closed at the SQL
+   layer is the right bias if one ever does.
+
+**Existing stores are NOT auto-repaired.** `viewer` is a legitimate role and
+the migrated rows are indistinguishable from deliberately-granted viewers,
+so no write happens silently. Each install promotes the accounts it needs
+to `user` deliberately via `PATCH /auth/users/{username}` (Admin → Users;
+audited; `update_user` keeps `is_admin` in sync at `api/auth.py`).
