@@ -60,7 +60,7 @@
     return (
       '<div class="account-view">' +
         '<div class="account-card">' +
-          '<div class="account-mark"><i class="fas fa-chart-network"></i></div>' +
+          '<div class="account-mark"><i class="fas fa-network-wired"></i></div>' +
           '<h1 class="account-title">' + esc(title) + "</h1>" +
           '<p class="account-lead">' + esc(lead) + "</p>" +
           '<div id="account-body">' + body + "</div>" +

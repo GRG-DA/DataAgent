@@ -15,20 +15,31 @@ Binary resolution order:
   5. Download from the official opencode release (GitHub) into that dir.
 
 Server start:
-  ``ensure_opencode_server`` health-probes ``GET /config`` on the configured
-  ``server_url`` and, when nothing answers, spawns ``opencode serve`` on the
-  loopback host/port (detached, hidden on Windows) with a pidfile guard so only
-  one instance runs.
+  ``ensure_opencode_server`` health-probes the configured ``server_url`` and,
+  when nothing answers, spawns ``opencode serve`` on the loopback host/port
+  (detached, hidden on Windows) with a pidfile guard so only one instance runs.
+
+Server API (v1):
+  the project speaks only the v1 session API:
+
+      POST /session              -> {"id": "<session id>"}
+      POST /session/{id}/message -> {"parts": [...], "info": {...}}
+
+  A server that serves the v2 SPA shell (or any other foreign process) is
+  rejected with a diagnostic instead of being used. The bundled CLI is pinned
+  to a v1 release (ADR-012 / ADR-014).
 
 The ``progress`` callback has the signature ``(stage, pct, line)`` and is
 awaited, matching the ``_install_jobs`` polling shape used by the API.
 """
 
 import asyncio
+import base64
 import logging
 import os
 import platform
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -646,6 +657,132 @@ def schedule_background_opencode_update() -> None:
 
 # ── server start ─────────────────────────────────────────────────
 
+# Optional HTTP Basic auth for a v1 server placed behind an authenticated
+# proxy. The username defaults to "opencode"; the password comes from
+# OPENCODE_SERVER_PASSWORD (OPENCODE_PASSWORD is the older spelling).
+SERVER_USERNAME = "opencode"
+SERVER_PASSWORD_ENV = "OPENCODE_SERVER_PASSWORD"
+SERVER_PASSWORD_ALT_ENV = "OPENCODE_PASSWORD"
+
+# Passwords this process generated for servers it started, keyed "host:port".
+# The authoritative copy lives in a file next to the pidfile so a RESTARTED
+# app can still authenticate against a server it started earlier.
+_generated_passwords: Dict[str, str] = {}
+
+
+def _generate_server_password() -> str:
+    """Random password for an opencode server the app starts itself."""
+    return secrets.token_urlsafe(24)
+
+
+def _passwordfile_path(port: int) -> Path:
+    return _runtime_bin_dir() / f"opencode-serve-{port}.password"
+
+
+def _read_passwordfile(port: int) -> str:
+    try:
+        return _passwordfile_path(port).read_text(encoding="utf-8").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _write_passwordfile(port: int, password: str) -> None:
+    """Persist the generated password next to the pidfile (best-effort)."""
+    try:
+        path = _passwordfile_path(port)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(password, encoding="utf-8")
+    except OSError as e:  # noqa: BLE001
+        logger.warning("opencode password file write failed: %s", e)
+
+
+def _runtime_config_password() -> str:
+    """``opencode_server_password`` from the Settings-UI runtime file.
+
+    ``config/__init__.py`` filters runtime overrides through a fixed key
+    allowlist, so this key never reaches ``settings.llm`` — read the file
+    directly instead. A later Settings-UI save rewrites the file through
+    that allowlist and drops the key, so the env var stays the durable
+    option.
+    """
+    try:
+        import json as _json
+
+        from config import LLM_RUNTIME_OVERRIDES_PATH
+
+        data = _json.loads(
+            LLM_RUNTIME_OVERRIDES_PATH.read_text(encoding="utf-8")
+        )
+        return str(data.get("opencode_server_password") or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def server_password(server_url: str) -> str:
+    """Password to use for the server's HTTP Basic auth ("" when unknown).
+
+    Resolution order:
+      1. ``OPENCODE_SERVER_PASSWORD`` / ``OPENCODE_PASSWORD`` — the same
+         env vars the opencode server reads, so the app and the server can
+         be started from one shell.
+      2. ``opencode_server_password`` in the Settings-UI runtime file.
+      3. The password this app generated when it started the server
+         (persisted next to the pidfile, so it survives an app restart).
+    """
+    for var in (SERVER_PASSWORD_ENV, SERVER_PASSWORD_ALT_ENV):
+        value = (os.environ.get(var) or "").strip()
+        if value:
+            return value
+    value = _runtime_config_password()
+    if value:
+        return value
+    try:
+        host, port = _parse_server_url(server_url)
+    except Exception:  # noqa: BLE001
+        return ""
+    key = f"{host}:{port}"
+    if key in _generated_passwords:
+        return _generated_passwords[key]
+    return _read_passwordfile(port)
+
+
+def server_auth_headers(server_url: str) -> Dict[str, str]:
+    """Authorization header for the opencode server API ({} when unknown)."""
+    password = server_password(server_url)
+    if not password:
+        return {}
+    raw = f"{SERVER_USERNAME}:{password}".encode("utf-8")
+    return {"Authorization": "Basic " + base64.b64encode(raw).decode("ascii")}
+
+
+def last_probe_error() -> str:
+    """Why the last health probe failed ("" when the server answered)."""
+    return _last_probe_error
+
+
+def _server_env(host: str, port: int) -> Dict[str, str]:
+    """Environment for a spawned ``opencode serve``.
+
+    The v1 server does not require a password, but the app still forwards
+    ``OPENCODE_SERVER_PASSWORD`` for deployments that put it behind an
+    authenticated proxy. When the operator did not set one, a random
+    password is generated and remembered next to the pidfile.
+    """
+    env = dict(os.environ)
+    password = ""
+    for var in (SERVER_PASSWORD_ENV, SERVER_PASSWORD_ALT_ENV):
+        password = (env.get(var) or "").strip()
+        if password:
+            break
+    if not password:
+        password = _generate_server_password()
+    env[SERVER_PASSWORD_ENV] = password
+    env[SERVER_PASSWORD_ALT_ENV] = password
+    _generated_passwords[f"{host}:{port}"] = password
+    _write_passwordfile(port, password)
+    return env
+
+
 def _parse_server_url(server_url: str) -> tuple:
     """Return (hostname, port) from a server_url like http://127.0.0.1:3000."""
     parsed = urllib.parse.urlsplit(server_url)
@@ -678,14 +815,47 @@ async def server_status(server_url: str) -> Dict[str, object]:
     holder: Dict[str, object] = {}
     if port_busy:
         holder = await asyncio.to_thread(_port_holder_info, port)
+    server_kind = KIND_UNKNOWN
+    server_version = ""
+    if running:
+        base = server_url.rstrip("/")
+        server_kind = await _probe_config_kind(base=base)
+        if server_kind == KIND_V1:
+            server_version = await _probe_server_version(base=base) or ""
     return {"installed": installed, "running": running, "port": port,
             "pid": pid, "binary": str(binary) if binary else "",
             "version": version, "port_busy": port_busy, "holder": holder,
+            "server_kind": server_kind, "server_version": server_version,
             "last_error": _last_probe_error}
 
 
 def _pidfile_path(port: int) -> Path:
     return _runtime_bin_dir() / f"opencode-serve-{port}.pid"
+
+
+def _server_cwd() -> Path:
+    """The working directory the opencode server runs in.
+
+    opencode loads the PROJECT configuration from its working directory, and
+    that configuration is where MCP servers live. Started in the app's own
+    directory, the server would inherit the project's MCP servers - which
+    include a DuckDB server (direct access to the warehouse, around the
+    app's own row-level security) and a filesystem server scoped to
+    ``config/`` and ``data/`` (where ``.jwt_secret`` and ``.grant_key``
+    live). The app's LLM must not be able to reach those.
+
+    A dedicated, empty directory gives the server no project at all: it
+    still serves the free tier, and it still finds the USER's global
+    opencode configuration (their own choice), but the project's tools
+    never reach the model.
+    """
+    path = _runtime_bin_dir() / "server-cwd"
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError as e:  # noqa: BLE001
+        logger.warning("opencode server working directory unavailable: %s", e)
+        return Path(tempfile.gettempdir())
+    return path
 
 
 def _read_pidfile(port: int) -> Optional[int]:
@@ -811,7 +981,11 @@ def _port_holder_info(port: int) -> Dict[str, object]:
 
 
 async def _probe_config(base: str, timeout_s: float = 2.0) -> bool:
-    """True when GET <base>/config answers HTTP 200. Never raises.
+    """True when ``GET <base>/config`` answers. Never raises.
+
+    Only the v1 route is probed. A foreign server (for example the v2 SPA
+    shell) may still return HTTP 200 here, so callers must follow up with
+    ``_probe_config_kind`` and refuse anything that is not ``KIND_V1``.
 
     The last failure is remembered in ``_last_probe_error`` (surfaced via
     ``server_status``) so a silent outage stays diagnosable without spamming
@@ -820,9 +994,14 @@ async def _probe_config(base: str, timeout_s: float = 2.0) -> bool:
     global _last_probe_error
     try:
         async with httpx.AsyncClient(
-            timeout=httpx.Timeout(timeout_s, connect=min(timeout_s, 2.0))
+            timeout=httpx.Timeout(timeout_s, connect=min(timeout_s, 2.0)),
+            headers=server_auth_headers(base) or None,
         ) as client:
-            status = (await client.get(f"{base}/config")).status_code
+            try:
+                status = (await client.get(f"{base}/config")).status_code
+            except Exception as e:  # noqa: BLE001
+                _last_probe_error = f"{type(e).__name__}: {e}"[:300]
+                return False
             if status == 200:
                 _last_probe_error = ""
                 return True
@@ -831,6 +1010,111 @@ async def _probe_config(base: str, timeout_s: float = 2.0) -> bool:
     except Exception as e:  # noqa: BLE001
         _last_probe_error = f"{type(e).__name__}: {e}"[:300]
         return False
+
+
+# ── server identity (which opencode answered?) ──────────────────
+#
+# The provider speaks the opencode **v1** session API:
+#   POST /session              -> {"id": "<session id>"}
+#   POST /session/{id}/message -> {"parts": [...], "info": {...}}
+#
+# An opencode **v2** server answers the same paths with a different shape and
+# serves its SPA shell on /config, so the app must recognise it and refuse
+# instead of silently degrading into an empty answer. The check is on the
+# BODY, not the status code: BOTH a v1 and a v2 server answer 200 on /config.
+
+#: What answered on the loopback port.
+KIND_V1 = "v1"          # an opencode v1 server — the API this build speaks
+KIND_FOREIGN = "foreign"  # something else serves the port (e.g. opencode v2)
+KIND_UNKNOWN = "unknown"  # it answered, but not recognisably
+
+
+async def _probe_config_kind(base: str, timeout_s: float = 3.0) -> str:
+    """Classify whatever answers ``GET <base>/config``.
+
+    Returns ``KIND_V1``, ``KIND_FOREIGN`` or ``KIND_UNKNOWN``. Never raises:
+    an unreachable or unrecognisable server is reported as ``KIND_UNKNOWN``,
+    which ``_reject_non_v1_server`` treats as a hard error (fail closed).
+    """
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(timeout_s, connect=min(timeout_s, 2.0)),
+            headers=server_auth_headers(base) or None,
+        ) as client:
+            resp = await client.get(f"{base}/config")
+            if resp.status_code != 200:
+                return KIND_UNKNOWN
+            body = (resp.text or "").strip()
+            if body.startswith("<"):
+                # An HTML shell: an opencode v2 server serves its UI here.
+                return KIND_FOREIGN
+            try:
+                data = resp.json()
+            except Exception:  # noqa: BLE001
+                return KIND_UNKNOWN
+            if isinstance(data, dict) and (
+                "$schema" in data or "agent" in data or "command" in data
+            ):
+                return KIND_V1
+            return KIND_UNKNOWN
+    except Exception:  # noqa: BLE001
+        return KIND_UNKNOWN
+
+
+async def _probe_server_version(base: str, timeout_s: float = 3.0) -> Optional[str]:
+    """The version the running opencode server reports, or None.
+
+    A v1 server answers ``GET /global/health`` with
+    ``{"healthy": true, "version": "1.19.3"}``; a v2 server answers the same
+    path with its SPA HTML, so the JSON shape is what identifies a v1 server.
+    """
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(timeout_s, connect=min(timeout_s, 2.0)),
+            headers=server_auth_headers(base) or None,
+        ) as client:
+            resp = await client.get(f"{base}/global/health")
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            version = data.get("version") if isinstance(data, dict) else None
+            return str(version) if version else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+async def _reject_non_v1_server(
+    base: str,
+    host: str,
+    port: int,
+    progress: Optional[Progress] = None,
+) -> bool:
+    """Reject anything that is not the pinned opencode v1. Never raises.
+
+    Returns True when the server should NOT be used. A v2 server (or any
+    other process that answers ``/config``) is a hard error: the provider
+    only speaks the v1 session API, so silently using it would produce
+    empty or malformed answers.
+    """
+    kind = await _probe_config_kind(base)
+    if kind == KIND_V1:
+        return False
+    safe_host = re.sub(r"[\r\n\t ]+", "", host)
+    what = (
+        "an opencode v2 server"
+        if kind == KIND_FOREIGN
+        else "an unrecognised server"
+    )
+    message = (
+        f"{what.capitalize()} is answering on {safe_host}:{port}. This build "
+        f"speaks only the opencode v1 session API and will not use it. Stop "
+        f"that server, or point opencode_server_port at a free port, to use "
+        f"the bundled opencode {OPENCODE_VERSION}.\n"
+    )
+    if progress:
+        await progress("error", 0, message)
+    logger.error("opencode: %s", message.strip())
+    return True
 
 
 async def _wait_for_config(base: str, wait_s: float) -> bool:
@@ -880,6 +1164,10 @@ async def ensure_opencode_server(
 
     # Already running? Fast path — no version probes, no pidfile, no spawn.
     if await _probe_config(base):
+        # It answers — but is it the opencode v1 this build ships? A stray
+        # v2 server must be refused, not silently used.
+        if await _reject_non_v1_server(base, host, port, progress):
+            return False
         # Server is up — refresh the CLI in the background so a
         # shipped .exe never rots on an old version. Never blocks.
         schedule_background_opencode_update()
@@ -890,6 +1178,8 @@ async def ensure_opencode_server(
         # A process claims the pidfile but isn't answering — it may still be
         # cold-starting, so give it a moment before doing anything drastic.
         if await _wait_for_config(base, 5.0):
+            if await _reject_non_v1_server(base, host, port, progress):
+                return False
             schedule_background_opencode_update()
             return True
     else:
@@ -904,6 +1194,8 @@ async def ensure_opencode_server(
         # Double-checked probe: another coroutine may have started the
         # server while we waited for the lock.
         if await _probe_config(base):
+            if await _reject_non_v1_server(base, host, port, progress):
+                return False
             schedule_background_opencode_update()
             return True
 
@@ -960,6 +1252,12 @@ async def ensure_opencode_server(
                         start_new_session=True,
                         startupinfo=startupinfo,
                         creationflags=creationflags,
+                        env=_server_env(host, port),
+                        # A dedicated working directory: the server must not
+                        # inherit the project's MCP servers (a DuckDB server
+                        # and a filesystem server that can read the app's
+                        # key material). See _server_cwd.
+                        cwd=str(_server_cwd()),
                     )
             except Exception as e:  # noqa: BLE001
                 await _p("error", 0, f"Failed to start opencode server: {e}\n")
@@ -977,6 +1275,8 @@ async def ensure_opencode_server(
         await _p("starting", 50,
                  f"Port {port} is busy — waiting for the running server…\n")
         if await _wait_for_config(base, _HOLDER_WAIT_S):
+            if await _reject_non_v1_server(base, host, port, progress):
+                return False
             schedule_background_opencode_update()
             return True
         holder = await asyncio.to_thread(_port_holder_info, port)
@@ -995,6 +1295,8 @@ async def ensure_opencode_server(
         # of the 180MB binary + instance bootstrap can take ~30s).
         try:
             if await _wait_for_config(base, _READY_WAIT_S):
+                if await _reject_non_v1_server(base, host, port, progress):
+                    return False
                 await _p("started", 100, f"opencode server ready on {safe_host}:{port}.\n")
                 schedule_background_opencode_update()
                 return True

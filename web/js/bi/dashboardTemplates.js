@@ -253,7 +253,7 @@ window.BIDashTemplates = (function () {
     {
       id: "marketing", name: "Marketing Campaign", icon: "fa-bullhorn",
       category: "Marketing", nav: "tabs",
-      accent: "#BE185D", tags: ["Marketing", "Funnel", "ROI"],
+      accent: "#b91c1c", tags: ["Marketing", "Funnel", "ROI"],
       blurb: "Spend/ROI KPIs, a channel funnel and a clicks-vs-conversion combo.",
       kpis: 5,
       charts: [
@@ -586,7 +586,7 @@ window.BIDashTemplates = (function () {
     {
       id: "digital_marketing", name: "Digital Marketing", icon: "fa-bullseye",
       category: "Marketing", nav: "sidebar",
-      accent: "#BE185D", tags: ["Marketing", "PPC", "ROI", "Power BI"],
+      accent: "#b91c1c", tags: ["Marketing", "PPC", "ROI", "Power BI"],
       blurb: "PPC-style pack: spend, impressions, clicks, CTR, CPM & CPC KPIs with channel funnel and cost gauges.",
       kpis: 6,
       charts: [
@@ -964,7 +964,7 @@ window.BIDashTemplates = (function () {
 
   /* Power BI-style page navigator pill strip (grid layout, full-width row). */
   function _navWidget(pageNames, accent) {
-    var acc = accent || "#7B61FF";
+    var acc = accent || "var(--color-primary)";
     var esc = function (s) {
       var d = document.createElement("div");
       d.appendChild(document.createTextNode(String(s == null ? "" : s)));
@@ -975,7 +975,7 @@ window.BIDashTemplates = (function () {
       return '<span onclick="event.stopPropagation();window.BlankDash&&BlankDash._switchPage(' + i + ')" style="display:inline-block;padding:6px 14px;margin:2px 4px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.3px;white-space:nowrap;' +
         (active
           ? 'background:' + acc + ';color:#fff;'
-          : 'background:rgba(123,97,255,0.08);color:#0f172a;border:1px solid rgba(123,97,255,0.18);') +
+          : 'background:color-mix(in srgb,' + acc + ' 8%,transparent);color:var(--color-text);border:1px solid color-mix(in srgb,' + acc + ' 18%,transparent);') +
         '">' + (i + 1) + '&nbsp;&middot;&nbsp;' + esc(nm) + '</span>';
     }).join("");
     var html =

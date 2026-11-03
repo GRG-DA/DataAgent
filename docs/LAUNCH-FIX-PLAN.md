@@ -143,7 +143,7 @@ The download-link rewrite was additionally verified in a real browser (Playwrigh
 
 ### The one setting the operator must flip (D6)
 
-`website/js/main.js` → `window.DATAAGENT_REPO_URL = 'https://github.com/DataAgent/DataAgent';`
+`website/js/main.js` → `window.DATAAGENT_REPO_URL = 'https://github.com/java22113344/data-agent';`
 
 Change it to the real `<owner>/<repo>` once the repository is published, and upload `DataAgent-Setup.exe`
 and `DataAgent.exe` to that repository's latest release. No page needs editing — the markup carries

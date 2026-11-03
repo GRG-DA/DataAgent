@@ -32,7 +32,7 @@
     if (window._PAGES && window._PAGES['#chat-pro']) return; // already registered
 
     var CSS_ID = 'cpx-stylesheet';
-    var CSS_HREF = 'css/chat-pro.css?v=6';
+    var CSS_HREF = 'css/chat-pro.css?v=7';
     var VIZ_SEQ = 0;
     var MAX_TITLE = 60;
 
@@ -59,7 +59,7 @@
 
     var TONE_TINTS = {
         indigo:  { tint: 'rgba(79, 70, 229, 0.12)',  accent: '#4f46e5', edge: 'rgba(79, 70, 229, 0.45)' },
-        amber:   { tint: 'rgba(245, 158, 11, 0.14)', accent: '#d97706', edge: 'rgba(245, 158, 11, 0.5)' },
+        amber:   { tint: 'rgba(180, 83, 9, 0.14)', accent: 'var(--color-warning)', edge: 'rgba(180, 83, 9, 0.5)' },
         emerald: { tint: 'rgba(16, 185, 129, 0.14)', accent: '#059669', edge: 'rgba(16, 185, 129, 0.5)' },
         sky:     { tint: 'rgba(59, 130, 246, 0.13)', accent: '#2563eb', edge: 'rgba(59, 130, 246, 0.5)' },
         violet:  { tint: 'rgba(139, 92, 246, 0.14)', accent: '#7c3aed', edge: 'rgba(139, 92, 246, 0.5)' },
@@ -81,6 +81,13 @@
 
     function uid(prefix) {
         return prefix + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+    }
+
+    /** Number or null — keeps "0" but drops empty/NaN values. */
+    function toNum(v) {
+        if (v == null || v === '') return null;
+        var n = Number(v);
+        return isFinite(n) ? n : null;
     }
 
     function fmtTime(ts) {
@@ -272,6 +279,7 @@
         _isWaiting: false,
         _abortCtrl: null,
         _stopped: false,
+        _gen: 0,                   // bumped on teardown/init; invalidates in-flight turns
         _sessionId: 'cpx_' + Date.now(),
         _selectedTables: [],
         _tableList: [],             // [{name, rows}]
@@ -306,6 +314,7 @@
             this._isWaiting = false;
             this._abortCtrl = null;
             this._stopped = false;
+            this._gen++;            // a new page instance: older turns are void
             this._editIndex = -1;
             this._scopeOpen = false;
             this._renamingId = null;
@@ -341,6 +350,10 @@
         },
 
         async destroy() {
+            // Bump first: an in-flight stream aborts below, and the answer
+            // handler must not mistake that teardown for a failed stream and
+            // start a second (non-streaming) run for a page nobody watches.
+            this._gen++;
             if (this._abortCtrl) { try { this._abortCtrl.abort(); } catch (_) {} this._abortCtrl = null; }
             this._saveConversations();
             try { localStorage.setItem(this._K_ACTIVE, this._activeId || ''); } catch (_) {}
@@ -1008,6 +1021,7 @@
                     inner += '<button type="button" class="cpx-sql-cta" data-cpx-action="open-sql">' +
                         '<i class="fas fa-terminal"></i> Open SQL Explorer</button>';
                 }
+                inner += this._renderArtifactsHtml(m.artifacts);
                 body = '<div class="cpx-bubble cpx-bubble-ai' + (m.error ? ' cpx-error' : '') + '">' + stepsHtml + viz + inner + '</div>';
                 if (!m.streaming) {
                     actions =
@@ -1055,8 +1069,97 @@
                         if (payload.rows != null) s.rows = payload.rows;
                     }
                 });
+                if (payload.artifact) {
+                    m.artifacts = m.artifacts || [];
+                    var key = String(payload.artifact.kind || '') + ':' +
+                        String(payload.artifact.id || payload.artifact.name || '');
+                    var seen = m.artifacts.some(function (a) {
+                        return (String(a.kind || '') + ':' +
+                            String(a.id || a.name || '')) === key;
+                    });
+                    if (!seen) m.artifacts.push(payload.artifact);
+                }
             }
             // 'answering' needs no state change — the panel collapses on finish.
+        },
+
+        // Map the non-streaming /ask response's steps[] onto the very same
+        // shape the SSE plan/start/done events produce, so the steps panel
+        // renders identically no matter which transport answered:
+        //   SSE  {id, tool, description, status, ms, rows}
+        //   /ask {step_id, tool, success, time_ms, error, query, result_rows}
+        // A step that is missing fields still renders with whatever it has.
+        _mapAskSteps(steps) {
+            var out = [];
+            var list = (steps && steps.length) ? steps : [];
+            for (var i = 0; i < list.length; i++) {
+                var s = list[i];
+                if (!s || typeof s !== 'object') continue;
+                var tool = s.tool ? String(s.tool) : '';
+                out.push({
+                    id: (s.step_id != null) ? s.step_id : ('ask_' + i),
+                    tool: tool,
+                    description: this._askStepDescription(s, tool),
+                    status: (s.success === false) ? 'failed' : 'done',
+                    ms: toNum(s.time_ms),
+                    rows: toNum(s.result_rows)
+                });
+            }
+            return out;
+        },
+
+        // Best-effort label for a step the /ask response did not describe
+        // (it carries the tool and the SQL, never the planner's wording).
+        _askStepDescription(s, tool) {
+            var desc = '';
+            if (s.description) {
+                desc = String(s.description);
+            } else if (tool === 'sql') {
+                var q = s.query ? String(s.query).replace(/\s+/g, ' ').trim() : '';
+                desc = q ? ('SQL: ' + (q.length > 72 ? q.slice(0, 72).trim() + '…' : q)) : 'SQL query';
+            } else {
+                var op = (s.metadata && s.metadata.operation) ? String(s.metadata.operation) : '';
+                if (tool === 'pandas') desc = op ? ('Data: ' + op) : 'Data step';
+                else if (tool === 'viz') desc = 'Chart';
+                else if (tool === 'task') {
+                    var taskLabels = {
+                        clean_table: 'Clean the data',
+                        build_dashboard: 'Build dashboard',
+                        forecast: 'Forecast',
+                        anomalies: 'Detect anomalies',
+                        quality_trend: 'Quality trend',
+                        quality_snapshot: 'Record quality snapshot',
+                        stats: 'Statistical test',
+                        compare_tables: 'Compare tables',
+                        compare_periods: 'Compare periods',
+                        lineage: 'Data lineage',
+                        merge_tables: 'Merge tables',
+                        notifications_list: 'List notifications',
+                        notifications_read: 'Mark notifications read',
+                        marketplace_products: 'Browse marketplace',
+                        marketplace_request: 'Request marketplace access',
+                        org_tree: 'Org structure',
+                        catalog_search: 'Search data catalog',
+                        catalog_sync: 'Sync data catalog',
+                        catalog_certify: 'Certify catalog asset',
+                        catalog_add_term: 'Add business term',
+                        catalog_add_metric: 'Add metric definition',
+                        pipeline_run: 'Run pipeline',
+                        workflow_pending: 'Pending workflows',
+                        workflow_approve: 'Approve workflow',
+                        export_table: 'Export table',
+                        connections_list: 'List connections'
+                    };
+                    desc = taskLabels[op] || 'Task';
+                }
+                else if (tool === 'llm') desc = 'Write the answer';
+                else desc = tool ? (tool.charAt(0).toUpperCase() + tool.slice(1)) : 'Step';
+            }
+            if (s.success === false && s.error) {
+                var e = String(s.error).replace(/\s+/g, ' ').trim();
+                if (e) desc += ' — ' + (e.length > 60 ? e.slice(0, 60).trim() + '…' : e);
+            }
+            return desc;
         },
 
         _renderStepsHtml(steps, collapsed) {
@@ -1104,6 +1207,41 @@
                   '</button>' +
                   '<ul class="cpx-steps-list">' + rows + '</ul>' +
                 '</div>';
+        },
+
+        // Rendered chips for side-effect results (saved dashboard / cleaned table).
+        _renderArtifactsHtml(artifacts) {
+            if (!artifacts || !artifacts.length) return '';
+            var chips = artifacts.map(function (a) {
+                if (!a) return '';
+                if (a.kind === 'dashboard' && a.id) {
+                    var href = '#blankdash/' + encodeURIComponent(a.id);
+                    return '<a class="cpx-artifact cpx-artifact-dashboard" href="' + href + '" data-cpx-artifact="dashboard">' +
+                        '<i class="fas fa-table-columns"></i>' +
+                        '<span class="cpx-artifact-body"><b>' + esc(a.name || 'Dashboard') + '</b>' +
+                        '<span class="cpx-artifact-sub">Open dashboard</span></span>' +
+                        '<i class="fas fa-arrow-right"></i></a>';
+                }
+                if (a.kind === 'table' && a.name) {
+                    return '<span class="cpx-artifact cpx-artifact-table" data-cpx-artifact="table">' +
+                        '<i class="fas fa-broom"></i>' +
+                        '<span class="cpx-artifact-body"><b>' + esc(a.name) + '</b>' +
+                        '<span class="cpx-artifact-sub">Saved cleaned table</span></span></span>';
+                }
+                return '';
+            }).join('');
+            return chips ? '<div class="cpx-artifacts" data-cpx-artifacts>' + chips + '</div>' : '';
+        },
+
+        _syncArtifactChips(rowEl, m) {
+            if (!rowEl) return;
+            var html = this._renderArtifactsHtml(m.artifacts);
+            if (!html) return;
+            var bubble = rowEl.querySelector('.cpx-bubble');
+            if (!bubble) return;
+            var zone = bubble.querySelector('[data-cpx-artifacts]');
+            if (zone) zone.outerHTML = html;
+            else bubble.insertAdjacentHTML('beforeend', html);
         },
 
         // Live-update the panel in the DOM without touching the answer text
@@ -1386,9 +1524,73 @@
             this._syncMessages(conv);
         },
 
+        /**
+         * Run the non-streaming /ask fallback, but let a Stop press end the
+         * wait immediately AND cancel the request. The AbortSignal is handed
+         * down to the API client, so fetch() is really aborted and the
+         * server stops working on the turn instead of running the whole
+         * LLM pipeline to completion for an answer nobody is waiting for.
+         */
+        _askWithAbort(question, tables) {
+            var ctrl = this._abortCtrl;
+            var sig = (ctrl && ctrl.signal) ? ctrl.signal : null;
+            // Already stopped (or the page was left): never even send it.
+            if (this._stopped || (sig && sig.aborted)) {
+                var stopErr = new Error('aborted');
+                stopErr.aborted = true;
+                return Promise.reject(stopErr);
+            }
+            // The signal travels into fetch() — the request is cancelled,
+            // not merely abandoned.
+            var ask = window.API.ask(question, {
+                tables: tables,
+                sessionId: this._sessionId,
+                signal: sig || undefined
+            });
+            if (!sig) return ask;
+            return new Promise(function (resolve, reject) {
+                var settled = false;
+                var onAbort = function () {
+                    if (settled) return;
+                    settled = true;
+                    sig.removeEventListener('abort', onAbort);
+                    var err = new Error('aborted');
+                    err.aborted = true;
+                    reject(err);
+                };
+                sig.addEventListener('abort', onAbort);
+                ask.then(function (r) {
+                    if (settled) return;
+                    settled = true;
+                    sig.removeEventListener('abort', onAbort);
+                    resolve(r);
+                }, function (e) {
+                    if (settled) return;
+                    settled = true;
+                    sig.removeEventListener('abort', onAbort);
+                    // fetch() rejects with an AbortError once the signal
+                    // fires — normalise it to the same shape the race uses
+                    // so a cancelled request is handled exactly like a
+                    // Stop press (and never surfaces as an error).
+                    if (e && (e.name === 'AbortError' || e.code === 20)) {
+                        var err = new Error('aborted');
+                        err.aborted = true;
+                        reject(err);
+                        return;
+                    }
+                    reject(e);
+                });
+            });
+        },
+
         async _answer(text, opts) {
             opts = opts || {};
             if (this._isWaiting) return;
+
+            // Identifies this turn. A page teardown (or a re-init) bumps the
+            // counter, so an aborted turn can tell "the user left" from
+            // "the stream died" and never start a second run.
+            var turnId = this._gen;
 
             var conv = this._activeConv();
             if (!conv) {
@@ -1466,6 +1668,7 @@
                         if (token && typeof token === 'object' && token.__step) {
                             this._applyStreamStep(token.__step, placeholder);
                             this._syncStepsPanel(rowEl, placeholder);
+                            this._syncArtifactChips(rowEl, placeholder);
                             this._scrollToBottom();
                             continue;
                         }
@@ -1503,25 +1706,61 @@
                     if (!streamed.trim()) throw new Error('Empty stream response');
                     usedStream = true;
                 } catch (streamErr) {
+                    if (turnId !== this._gen) {
+                        // The page was left while the stream was open. Never
+                        // mistake that teardown for a failed stream: a second
+                        // (non-streaming) run would keep the server busy for a
+                        // question nobody is watching any more.
+                        conv.messages.pop();
+                        this._messages = conv.messages;
+                        return;
+                    }
                     if (this._stopped && (streamed.trim() || vizSpecs.length)) {
                         usedStream = true; // keep the partial answer, never re-run
                     } else if (this._stopped) {
-                        usedStream = true; // user stopped before any token: discard placeholder
+                        usedStream = true; // user stopped before any token
                     } else {
                         usedStream = false;
                     }
                 }
 
                 if (!usedStream) {
-                    var result = await window.API.ask(question, { tables: tables, sessionId: this._sessionId });
-                    if (result && result.session_id) this._sessionId = result.session_id;
-                    var answer = (result && (result.answer || '')).trim();
-                    var built2 = this._buildViz((result && result.visualizations) || []);
-                    placeholder.content = answer || (result && result.error) || 'No results returned.';
-                    placeholder.vizHtml = built2.html;
-                    placeholder.vizSpecs = built2.specs;
-                    placeholder.streaming = false;
-                    placeholder.error = !answer && !!(result && result.error);
+                    var result = null;
+                    var askAborted = false;
+                    try {
+                        result = await this._askWithAbort(question, tables);
+                    } catch (askErr) {
+                        if (askErr && askErr.aborted) askAborted = true;
+                        else throw askErr;
+                    }
+                    if (askAborted) {
+                        if (turnId !== this._gen) {
+                            conv.messages.pop();
+                            this._messages = conv.messages;
+                            return;
+                        }
+                        // Stop was pressed while the fallback was in flight.
+                        placeholder.content = 'Generation stopped.';
+                        placeholder.streaming = false;
+                        placeholder.stopped = true;
+                    } else {
+                        if (result && result.session_id) this._sessionId = result.session_id;
+                        var answer = (result && (result.answer || '')).trim();
+                        var built2 = this._buildViz((result && result.visualizations) || []);
+                        placeholder.content = answer || (result && result.error) || 'No results returned.';
+                        placeholder.vizHtml = built2.html;
+                        placeholder.vizSpecs = built2.specs;
+                        placeholder.streaming = false;
+                        placeholder.error = !answer && !!(result && result.error);
+                        // The /ask response carries the same pipeline steps the
+                        // SSE path streams — map them so the steps panel shows
+                        // up on the fallback path too.
+                        var askSteps = this._mapAskSteps(result && result.steps);
+                        if (askSteps.length) {
+                            placeholder.steps = askSteps;
+                            placeholder.stepsCollapsed = true;
+                        }
+                    }
                 } else if (this._stopped) {
                     if (streamed.trim() || vizSpecs.length) {
                         placeholder.content = streamed;
@@ -1530,9 +1769,11 @@
                         placeholder.streaming = false;
                         placeholder.stopped = true;
                     } else {
-                        // Nothing arrived — drop the placeholder entirely.
-                        conv.messages.pop();
-                        this._messages = conv.messages;
+                        // Nothing arrived — keep the turn, but say it was
+                        // stopped, so the question is never left unanswered.
+                        placeholder.content = 'Generation stopped.';
+                        placeholder.streaming = false;
+                        placeholder.stopped = true;
                     }
                 } else {
                     placeholder.content = streamed;

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -132,7 +133,7 @@ class TestLLMConfigs:
         assert AnthropicConfig().model.startswith("claude")
         assert LMStudioConfig().base_url.endswith("/v1")
         assert OpenRouterConfig().base_url.startswith("https://")
-        assert OpencodeConfig().model == "big-pickle"
+        assert OpencodeConfig().model == "auto"
         assert OpencodeConfig().options["temperature"] == 0.1
         cfg = MultiProviderConfig()
         assert cfg.default_provider == ProviderType.OLLAMA
@@ -147,7 +148,7 @@ class TestLLMConfigs:
             opencode_warp_backoff_window=2.0, warp_auto_install=False, warp_auto_connect=False,
         ))
         c = opencode_config_from_settings(s)
-        assert c.model == "big-pickle"
+        assert c.model == "auto"
         assert c.proxies == ["http://p:1"]
         assert c.auto_proxy_pool is False
 
@@ -1244,7 +1245,13 @@ class TestPlannerBranching:
         p = _planner_ctx()
         plan = p.create_plan("total amount by region", ["sales"])
         queries = [s.params.get("query", "") for s in plan.steps if s.tool.value == "sql"]
-        assert queries and all("analytics." in q for q in queries)
+        assert queries
+        # Tables are referenced UNQUALIFIED: the query runs with the caller's
+        # tenant schema first on the search path, so a hard-coded schema
+        # prefix would point at the platform schema (another tenant's data)
+        # instead of the caller's own copy (ADR-009 D1).
+        assert all("analytics." not in q for q in queries)
+        assert all(re.search(r'\bFROM\s+"?sales"?', q) for q in queries)
 
     def test_select_table_preferred_and_mention(self):
         from agent.planner import Planner

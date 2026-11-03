@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 
 from api.audit import AuditResult
-from api.tenancy import tenant_search_path
 
 try:
     import sqlglot
@@ -53,6 +52,64 @@ _CATALOG_SCHEMAS = frozenset({
 })
 
 logger = logging.getLogger(__name__)
+
+
+def _blocked_schemas() -> frozenset:
+    """Schemas a user-supplied query may not reach, for the *current* tenant.
+
+    The platform schema (``analytics``) is added for every tenant except
+    ``default`` — whose own schema IS ``analytics``.  Without this a stale
+    hard-coded ``analytics.<table>`` reference would silently resolve to the
+    operator's table instead of failing closed (LAUNCH-TECHNICAL-REVIEW P0-3).
+    The tenant's own ``analytics_t_*`` schema stays unreachable by explicit
+    qualification: unqualified names are resolved through the search path,
+    which is set per request to the caller's tenant schema (ADR-009 D1).
+    """
+    try:
+        from api.tenancy import DEFAULT_TENANT_ID, PLATFORM_SCHEMA, current_tenant_id
+
+        if current_tenant_id() != DEFAULT_TENANT_ID:
+            return _BLOCKED_SCHEMAS | {PLATFORM_SCHEMA}
+    except Exception:  # noqa: BLE001 - never break a query
+        pass
+    return _BLOCKED_SCHEMAS
+
+
+def _own_tenant_schema() -> str:
+    """The schema that holds the CALLER's own tables ("" when unknown).
+
+    A qualified reference to the caller's OWN schema is safe - it is their
+    data, in their workspace - and the app itself used to hand such
+    references to the model (the SQL schema context named the tenant
+    schema). Every OTHER ``analytics_t_*`` schema stays blocked: that is
+    somebody else's data, and the whole point of the guard is that a query
+    may not reach it by naming it.
+    """
+    try:
+        from api.tenancy import current_tenant_id, tenant_schema
+
+        return (tenant_schema(current_tenant_id()) or "").strip().lower()
+    except Exception:  # noqa: BLE001 - never break a query
+        return ""
+
+
+def _schema_is_denied(db: str, blocked: frozenset) -> bool:
+    """True when a schema-qualified reference must be refused.
+
+    The system catalogs are never readable. The platform schema is blocked
+    for every tenant but the one that owns it. The caller's own tenant
+    schema is allowed; every other tenant's schema is not.
+    """
+    db_lower = (db or "").strip().lower()
+    if not db_lower:
+        return False
+    if db_lower in _CATALOG_SCHEMAS:
+        return True
+    if db_lower in blocked:
+        return True
+    if db_lower.startswith("analytics_t_"):
+        return db_lower != _own_tenant_schema()
+    return False
 
 
 def _sanitize_error(message: str) -> str:
@@ -205,10 +262,13 @@ class SQLTool:
         file ... used by another process`` 500s: DuckDB refuses a second
         connection to the same file with a different configuration.
 
-        The shared connection's ``search_path`` is left untouched, so the
-        caller's schema (and, in a hosted deployment, the request's tenant
-        schema) stays in force. Any other file is opened directly, because
-        it does not collide with the app's handle.
+        The shared connection is **process-wide**, so its ``search_path`` is
+        set to the caller's tenant schema for the duration of the block and
+        restored afterwards (``tenant_search_path_scope``).  Leaving the
+        tenant's schema on the shared connection would let the *next*
+        request resolve the previous tenant's tables — a cross-tenant read.
+        Any other file is opened directly, because it does not collide with
+        the app's handle.
 
         With the opt-in per-tenant database mode on, the tenant's data
         lives in the tenant's *own* file, so that file is opened instead
@@ -217,9 +277,11 @@ class SQLTool:
         """
         from api.tenancy import (
             apply_tenant_search_path,
+            apply_tenant_search_path_safe,
             current_tenant_id,
             tenant_database_path,
             tenant_owns_own_file,
+            tenant_search_path_scope,
         )
 
         tid = current_tenant_id()
@@ -240,14 +302,20 @@ class SQLTool:
             conn = get_connection()
             # The shared connection is not thread-safe: hold the lock for
             # the whole execute+fetch window so a concurrent request cannot
-            # step this query's pending result.
+            # step this query's pending result — or change the search path
+            # under it.
             with _bi_query_lock:
-                yield conn
+                with tenant_search_path_scope(conn, tid):
+                    yield conn
             return
 
         conn = duckdb.connect(str(self.db_path))
         try:
-            conn.execute(f"SET search_path = '{tenant_search_path()}'")
+            # The tenant's schema comes first, so an unqualified table name
+            # resolves to the caller's own copy.  The schema is created when
+            # it does not exist yet (a brand-new tenant, or a throwaway
+            # warehouse used by a test).
+            apply_tenant_search_path_safe(conn, tid)
             conn.execute("PRAGMA enable_progress_bar=false")
             yield conn
         finally:
@@ -255,9 +323,15 @@ class SQLTool:
 
     @staticmethod
     def _system_tables() -> set:
+        """The platform table namespace.
+
+        The registry object is returned as-is: its ``in`` check also matches
+        the derived-name conventions (``DateTable_*``, ``*__npk``) that a
+        plain set of literals would lose.
+        """
         try:
             from warehouse.system_tables import SYSTEM_TABLES
-            return {str(t).lower() for t in SYSTEM_TABLES}
+            return SYSTEM_TABLES
         except Exception:  # noqa: BLE001
             return {"api_keys"}
 
@@ -339,7 +413,8 @@ class SQLTool:
                 if db_lower in _CATALOG_SCHEMAS:
                     return False, f"Access denied to schema: {db}"
                 if not allow_system_tables:
-                    if db_lower in _BLOCKED_SCHEMAS or db_lower.startswith("analytics_t_"):
+                    blocked = _blocked_schemas()
+                    if _schema_is_denied(db, blocked):
                         return False, f"Access denied to schema: {db}"
             if name.lower() in system_tables:
                 return False, f"Access denied to platform table: {name}"
@@ -385,10 +460,10 @@ class SQLTool:
             db = match.group(1).lower()
             if db in _CATALOG_SCHEMAS:
                 return False, f"Access denied to schema: {match.group(1)}"
-            if not allow_system_tables and (
-                db in _BLOCKED_SCHEMAS or db.startswith("analytics_t_")
-            ):
-                return False, f"Access denied to schema: {match.group(1)}"
+            if not allow_system_tables:
+                blocked = _blocked_schemas()
+                if _schema_is_denied(match.group(1), blocked):
+                    return False, f"Access denied to schema: {match.group(1)}"
 
         if not allow_system_tables:
             for table in _referenced_tables(query):
@@ -538,16 +613,21 @@ class SQLTool:
         return [self.execute(q) for q in queries]
 
     def get_schema(self, table_name: Optional[str] = None) -> Dict[str, Any]:
-        """Get database schema information."""
+        """Get database schema information (the caller's tenant schema)."""
+        from api.tenancy import current_tenant_id, tenant_schema
+
         def _qi(v: object) -> str:
             return '"' + str(v).replace('"', '""') + '"'
 
+        schema = tenant_schema(current_tenant_id())
         with self.get_connection() as conn:
             if table_name:
-                # Single table
-                cols = conn.execute(f"DESCRIBE {self.schema}.{_qi(table_name)}").df()
+                # Single table. The name is resolved through the search path
+                # (the tenant's schema comes first), so the caller's own copy
+                # is the one that is described.
+                cols = conn.execute(f"DESCRIBE {_qi(table_name)}").df()
                 count = conn.execute(
-                    f"SELECT COUNT(*) FROM {self.schema}.{_qi(table_name)}"
+                    f"SELECT COUNT(*) FROM {_qi(table_name)}"
                 ).fetchone()[0]
                 return {
                     "table": table_name,
@@ -555,23 +635,24 @@ class SQLTool:
                     "row_count": count,
                 }
             else:
-                # All tables
+                # All tables — only the caller's own tenant schema.
                 tables = conn.execute(
-                    f"SELECT table_name FROM information_schema.tables "
-                    f"WHERE table_schema = '{self.schema}'"
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = ?",
+                    [schema],
                 ).fetchall()
 
-                schema = {}
+                schema_map = {}
                 for (table,) in tables:
-                    cols = conn.execute(f"DESCRIBE {self.schema}.{_qi(table)}").df()
+                    cols = conn.execute(f"DESCRIBE {_qi(table)}").df()
                     count = conn.execute(
-                        f"SELECT COUNT(*) FROM {self.schema}.{_qi(table)}"
+                        f"SELECT COUNT(*) FROM {_qi(table)}"
                     ).fetchone()[0]
-                    schema[table] = {
+                    schema_map[table] = {
                         "columns": cols.to_dict("records"),
                         "row_count": count,
                     }
-                return schema
+                return schema_map
 
     def explain_query(self, query: str) -> str:
         """Get query execution plan."""
@@ -580,14 +661,15 @@ class SQLTool:
             return "\n".join(str(r[0]) for r in result)
 
     def sample_table(self, table_name: str, n: int = 10) -> pd.DataFrame:
-        """Get sample rows from a table."""
+        """Get sample rows from a table (resolved in the caller's schema)."""
         n = max(1, min(int(n or 10), 1000))
         from api.security_paths import validate_table_name
         try:
             validate_table_name(table_name)
         except Exception:  # noqa: BLE001
             return pd.DataFrame()
-        query = f'SELECT * FROM {self.schema}."{str(table_name).replace(chr(34), chr(34)+chr(34))}" LIMIT {n}'
+        safe = str(table_name).replace('"', '""')
+        query = f'SELECT * FROM "{safe}" LIMIT {n}'
         result = self.execute(query)
         return result.data if result.success else pd.DataFrame()
 

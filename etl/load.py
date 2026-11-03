@@ -310,31 +310,34 @@ class WarehouseLoader:
                 return conn.execute(sql).df()
 
     def get_table_info(self, table_name: str) -> Dict[str, Any]:
-        """Get table schema information."""
+        """Get table schema information for the caller's tenant."""
         # Defense in depth: reject unsafe identifiers before interpolation.
         # Routes also call validate_table_name at the API boundary.
         from api.security_paths import validate_table_name
+        from api.tenancy import current_tenant_id
 
         validate_table_name(table_name)
-        with self.get_connection() as conn:
+        tid = current_tenant_id()
+        schema = self.schema_for(tid)
+        with self.get_connection(tid) as conn:
             # Column info
             cols = conn.execute(
-                f"DESCRIBE {self.schema}.{_qi(table_name)}"
+                f"DESCRIBE {schema}.{_qi(table_name)}"
             ).df()
 
             # Row count
             count = conn.execute(
-                f"SELECT COUNT(*) FROM {self.schema}.{_qi(table_name)}"
+                f"SELECT COUNT(*) FROM {schema}.{_qi(table_name)}"
             ).fetchone()[0]
 
             # Sample data
             sample = conn.execute(
-                f"SELECT * FROM {self.schema}.{_qi(table_name)} LIMIT 5"
+                f"SELECT * FROM {schema}.{_qi(table_name)} LIMIT 5"
             ).df()
 
             return {
                 "table_name": table_name,
-                "schema": self.schema,
+                "schema": schema,
                 "columns": cols.to_dict("records"),
                 "row_count": count,
                 "sample": sample.to_dict("records"),

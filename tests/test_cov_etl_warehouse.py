@@ -553,6 +553,16 @@ def test_cleaner_infer_plan_branches():
     assert "rows_removed" in rep and "cols_removed" in rep
 
 
+def test_cleaner_infer_plan_parses_nullable_string_dates():
+    from etl.clean import DataCleaner
+
+    df = pd.DataFrame(
+        {"d": pd.Series(["2024-01-01", None, "2024-01-03"], dtype="string")}
+    )
+    out = DataCleaner().clean(df)
+    assert str(out["d"].dtype).startswith("datetime64")
+
+
 def test_cleaner_rename_drop_category_transform():
     from etl.clean import CleaningPlan, CleaningStrategy, DataCleaner
 
@@ -770,6 +780,18 @@ def test_basic_clean_empty_strings_and_dates():
     # date parsing itself is covered directly (object-dtype path)
     parsed = DataExtractor()._try_parse_dates(pd.Series(["2024-01-01"], dtype=object))
     assert str(parsed.dtype).startswith("datetime64")
+
+
+def test_basic_clean_does_not_stringify_missing_values():
+    from etl.extract import DataExtractor
+
+    df = pd.DataFrame(
+        {"s": ["  hi  ", None, float("nan"), "   "], "n": [1.5, None, 3.0, 4.0]}
+    )
+    out = DataExtractor()._basic_clean(df)
+    assert out["s"].tolist()[0] == "hi"
+    assert out["s"].isnull().sum() == 3
+    assert "nan" not in [str(v).lower() for v in out["s"].tolist()]
 
 
 def test_try_parse_dates_branches():

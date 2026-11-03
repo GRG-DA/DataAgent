@@ -125,12 +125,17 @@ class DataExtractor:
         """Apply basic cleaning: strip whitespace, handle empty strings."""
         df = df.copy()
 
-        # Strip whitespace from string columns
+        # Strip whitespace from string columns without stringifying missing
+        # values: ``astype(str)`` turns NaN/None into the literal "nan"/"None"
+        # text, which then survives the empty-string replacement and lands in
+        # the warehouse as data.
         str_cols = df.select_dtypes(include=["object"]).columns
         for col in str_cols:
-            df[col] = df[col].astype(str).str.strip()
-            # Replace empty strings with NaN
-            df[col] = df[col].replace("", pd.NA)
+            df[col] = df[col].map(
+                lambda v: v.strip() if isinstance(v, str) else v
+            )
+            # Replace empty strings with NA and keep a nullable string dtype
+            df[col] = df[col].replace("", pd.NA).astype("string")
 
         # Try to infer datetime columns
         for col in df.columns:

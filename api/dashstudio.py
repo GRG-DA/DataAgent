@@ -35,7 +35,7 @@ from api.dashboard_store import (
     update_dashboard,
     delete_dashboard,
 )
-from api.tenancy import tenant_search_path
+from api.tenancy import tenant_search_path, tenant_search_path_scope
 
 logger = logging.getLogger(__name__)
 
@@ -754,9 +754,14 @@ async def get_visual_data(req: VisualDataRequest, request: Request = None):
     try:
         conn = get_connection()
         with _bi_query_lock:
-            with readonly_transaction(conn):
-                conn.execute(f"SET search_path = '{tenant_search_path()}'")
-                df = conn.execute(sql).df()
+            # The shared connection is process-wide: set the tenant search
+            # path for this query AND restore it afterwards. Leaving the
+            # caller's schema on it would let the *next* request (any
+            # tenant) resolve that tenant's tables — a cross-tenant read
+            # (docs/LAUNCH-READINESS.md §6 defect #6).
+            with tenant_search_path_scope(conn):
+                with readonly_transaction(conn):
+                    df = conn.execute(sql).df()
         return {
             "success": True,
             "sql": sql,

@@ -194,6 +194,84 @@ def test_sql_policy_blocks_another_tenants_schema():
         assert "Access denied" in (err or ""), err
 
 
+def test_sql_policy_allows_the_callers_own_schema():
+    """A qualified reference to the CALLER's own schema is safe.
+
+    The guard exists to stop a query reaching another tenant's data. The
+    caller's own schema is their own data, and the app itself used to
+    hand the model such references - which then came back rejected with
+    "Access denied to schema" and the user saw no rows at all.
+    """
+    from agent.tools_sql import SQLTool
+
+    tool = SQLTool()
+    with use_tenant("u_alice"):
+        own = tenant_schema("u_alice")
+        ok, err = tool.validate_query(f"SELECT amount FROM {own}.sales")
+        assert ok, f"the caller's own schema was refused: {err}"
+        # ... and another tenant's is still refused, from the same context.
+        bob = tenant_schema("u_bob")
+        ok2, err2 = tool.validate_query(f"SELECT amount FROM {bob}.sales")
+        assert not ok2, "another tenant's schema was allowed"
+        assert "Access denied" in (err2 or ""), err2
+
+
+def test_sql_schema_context_names_tables_without_a_schema_prefix():
+    """The SQL prompt must name tables the way the executor accepts them.
+
+    The system prompt tells the model to use BARE table names (the query
+    runs in the caller's workspace, where an unqualified name resolves to
+    their copy of the table). When the schema context qualified the table
+    with the tenant schema, the model followed the context and produced
+    ``FROM analytics_t_<tenant>.table`` - which the policy refuses, so
+    every AI-generated query failed with HTTP 400.
+    """
+    from agent import sqlgen
+
+    captured = {}
+
+    class _Rows:
+        def __init__(self, rows):
+            self._rows = rows
+
+        def fetchall(self):
+            return self._rows
+
+        def fetchone(self):
+            return self._rows[0] if self._rows else None
+
+    class _Db:
+        description = [("amount",), ("region",)]
+
+        def execute(self, q, *a, **k):
+            captured.setdefault("queries", []).append(q)
+            head = q.strip().upper()
+            if head.startswith("DESCRIBE"):
+                return _Rows([("amount", "DOUBLE"), ("region", "VARCHAR")])
+            if head.startswith("SELECT COUNT"):
+                return _Rows([(12,)])
+            if head.startswith("SELECT *"):
+                return _Rows([])
+            return _Rows([])
+
+        def close(self):
+            pass
+
+    monkey = sqlgen._connect
+    sqlgen._connect = lambda: _Db()
+    try:
+        ctx = sqlgen._sql_schema_context(["ai_probe_sales"])
+    finally:
+        sqlgen._connect = monkey
+
+    assert ctx, "the schema context must not be empty"
+    assert "ai_probe_sales" in ctx
+    assert "analytics_t_" not in ctx, (
+        "the schema context must not schema-qualify the table - the model "
+        "copies it and the executor refuses a qualified tenant schema:\n" + ctx
+    )
+
+
 def test_sql_policy_blocks_platform_tables():
     from agent.tools_sql import SQLTool
 

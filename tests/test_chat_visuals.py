@@ -137,7 +137,7 @@ def _chat_fallback_block() -> str:
     src = CHAT_JS.read_text(encoding="utf-8")
     start = src.find("if (!usedStream)")
     assert start != -1, "fallback block not found in web/js/pages/chat.js"
-    return src[start:start + 900]
+    return src[start:start + 2500]
 
 
 def test_ask_fallback_renders_visualizations():

@@ -23,6 +23,11 @@ import billing_server.config as cfg
 
 API_BASE = "https://famgateway.in"
 TIMEOUT = 20.0
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
 
 
 class FamGatewayError(RuntimeError):
@@ -35,6 +40,18 @@ def _base() -> str:
 
 def _api_key() -> str:
     return cfg.FAMGATEWAY_API_KEY
+
+
+def _headers() -> dict[str, str]:
+    return {"User-Agent": USER_AGENT, "Accept": "application/json"}
+
+
+def _payload(resp: httpx.Response) -> dict:
+    body = resp.json()
+    if not isinstance(body, dict):
+        return {}
+    data = body.get("data")
+    return data if isinstance(data, dict) else body
 
 
 def create_order(amount_rupees: int, customer_email: str, *,
@@ -54,12 +71,13 @@ def create_order(amount_rupees: int, customer_email: str, *,
     try:
         resp = httpx.post(
             f"{_base()}/api/create-order",
-            headers={"X-Api-Key": _api_key(), "Content-Type": "application/json"},
+            headers={**_headers(), "X-Api-Key": _api_key(),
+                     "Content-Type": "application/json"},
             json=body,
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
-        return resp.json()
+        return _payload(resp)
     except Exception as exc:  # noqa: BLE001
         detail = ""
         try:
@@ -81,12 +99,12 @@ def verify_order(order_id: str) -> dict:
     try:
         resp = httpx.get(
             f"{_base()}/api/verify-order.php",
-            headers={"X-Api-Key": _api_key()},
+            headers={**_headers(), "X-Api-Key": _api_key()},
             params={"order_id": order_id},
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
-        return resp.json()
+        return _payload(resp)
     except Exception as exc:  # noqa: BLE001
         raise FamGatewayError(f"Order verification failed: {exc}") from exc
 

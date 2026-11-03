@@ -12,7 +12,9 @@ SQLite deployment, so a mutex-guarded sliding window needs no extra infra.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
+import secrets
 import threading
 import time
 from collections import defaultdict, deque
@@ -28,6 +30,7 @@ from billing_server import keymint
 SESSION_TOKEN_PRODUCT = "dataagent-session"
 SESSION_TOKEN_VERSION = 1
 SESSION_TOKEN_DAYS = 30
+EMAIL_VERIFICATION_HOURS = 24
 
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
@@ -38,6 +41,21 @@ MAX_PASSWORD_BYTES = 72
 # endpoint bucket -> (max requests, window seconds), keyed by client IP
 LOGIN_LIMIT: Tuple[int, float] = (10, 60.0)
 REGISTER_LIMIT: Tuple[int, float] = (5, 60.0)
+#: Checkout opens a provider-side order (a 5-min UPI session + hosted page)
+#: per call — generous for real buyers sharing one NAT IP, still a real cap
+#: for a spammer hammering FamGateway's create-order API on our key.
+CREATE_ORDER_LIMIT: Tuple[int, float] = (60, 60.0)
+RESEND_VERIFICATION_LIMIT: Tuple[int, float] = (3, 300.0)
+VERIFY_EMAIL_LIMIT: Tuple[int, float] = (10, 60.0)
+
+_LIMITS: Dict[str, Tuple[int, float]] = {
+    "login": LOGIN_LIMIT,
+    "register": REGISTER_LIMIT,
+    # cancel and unknown buckets fall back to REGISTER_LIMIT below.
+    "create-order": CREATE_ORDER_LIMIT,
+    "resend-verification": RESEND_VERIFICATION_LIMIT,
+    "verify-email": VERIFY_EMAIL_LIMIT,
+}
 
 _rate_lock = threading.Lock()
 _hits: Dict[str, Deque[float]] = defaultdict(deque)
@@ -100,6 +118,44 @@ def mask_email(email: str) -> str:
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode().rstrip("=")
+
+
+def new_session_token() -> str:
+    """Opaque website session token (32 random bytes, URL-safe)."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_session_token(token: str) -> str:
+    """Only the SHA-256 digest is persisted; a DB leak cannot replay sessions."""
+    return hashlib.sha256((token or "").encode()).hexdigest()
+
+
+def session_expires_at(days: Optional[int] = None) -> str:
+    now = datetime.now(timezone.utc)
+    return (now + timedelta(days=days if days is not None else SESSION_TOKEN_DAYS)).isoformat()
+
+
+def new_email_verification_token() -> str:
+    """Single-use, opaque email-ownership token (32 random bytes)."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_email_verification_token(token: str) -> str:
+    """Persist only the digest; a database leak cannot replay a link."""
+    return hashlib.sha256((token or "").encode()).hexdigest()
+
+
+def email_verification_expires_at(hours: Optional[int] = None) -> str:
+    now = datetime.now(timezone.utc)
+    return (now + timedelta(hours=hours if hours is not None else EMAIL_VERIFICATION_HOURS)).isoformat()
+
+
+def email_verification_link(token: str) -> str:
+    """Fragment links keep the token out of HTTP logs and Referer headers."""
+    from billing_server import config as cfg
+
+    base = (getattr(cfg, "BILLING_SITE_URL", "") or "https://data-agent.me").rstrip("/")
+    return f"{base}/account.html#verify={token}"
 
 
 def mint_session_token(email: str, user_id: str, days: Optional[int] = None) -> str:
@@ -167,7 +223,7 @@ def reset_rate_limits() -> None:
 
 
 def check_rate_limit(request: Request, bucket: str) -> None:
-    limit, window = LOGIN_LIMIT if bucket == "login" else REGISTER_LIMIT
+    limit, window = _LIMITS.get(bucket, REGISTER_LIMIT)
     ip = request.client.host if request.client else "unknown"
     key = f"{bucket}:{ip}"
     now = time.monotonic()

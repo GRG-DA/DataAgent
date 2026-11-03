@@ -20,7 +20,7 @@ CHAT_PRO_CSS = ROOT / "web" / "css" / "chat-pro.css"
 
 def test_css_cache_buster_bumped():
     src = CHAT_PRO_JS.read_text(encoding="utf-8")
-    assert "css/chat-pro.css?v=6" in src, (
+    assert "css/chat-pro.css?v=7" in src, (
         "chat-pro.css changed in this release — bump CSS_HREF in chat-pro.js "
         "so browsers reload the stylesheet"
     )

@@ -135,8 +135,9 @@ footer.doc{border-top:1px solid var(--line);margin-top:48px;padding-top:20px;col
         the caller's role does not hold.</li>
     <li>Multi-factor authentication is available and required for administrator
         accounts in hosted deployments.</li>
-    <li>The first account created on an instance must present a bootstrap token, so
-        a fresh deployment cannot be taken over by whoever registers first.</li>
+    <li>The first account created on a network-reachable instance must present a
+        bootstrap token, so a fresh deployment cannot be taken over by whoever
+        registers first. A loopback-only desktop install is exempt.</li>
     <li>Administrative actions &mdash; role changes, account deletion, plan
         changes &mdash; are recorded in the audit trail.</li>
   </ul>

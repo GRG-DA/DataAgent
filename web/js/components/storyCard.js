@@ -31,7 +31,9 @@
       var cid = "story_chart_" + Math.random().toString(36).slice(2, 6);
       chartHtml = '<canvas id="' + cid + '" style="width:100%;height:60px;margin-top:6px;"></canvas>';
       setTimeout(function() {
-        Charts.sparkline(cid, story.chartData.values, { color: "#6366f1" });
+        // Canvas sparkline: a custom property cannot be a canvas stroke colour, so
+  // the brand hue stays a literal here.
+  Charts.sparkline(cid, story.chartData.values, { color: "#2563eb" });
       }, 100);
     }
 

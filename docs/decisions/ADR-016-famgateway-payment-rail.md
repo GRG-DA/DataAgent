@@ -112,9 +112,13 @@ boundary is the provider's HMAC.
    when `verify_order()` answers with a matching amount (HMAC +
    provider API are the trust anchors); unreachable-verify fallback
    granting is unchanged (rejected in review).
-2. **`order_id`-absent verify verdicts pass leniently** (documented inline;
-   seen → not). If FamGateway's live responses always carry `order_id`,
-   tighten to require it.
+2. **`order_id`-absent verify verdicts pass leniently** — now toggleable:
+   `FAMGATEWAY_STRICT_VERDICT=1` makes the webhook refuse them (rollback:
+   `verify missing order_id`). Default stays lenient (legacy provider
+   schemas omit the field); flag it on once live verify-order responses
+   are confirmed to carry `order_id`. With the reconcile sweep below, a
+   strict refusal can no longer silently lose a payment — the sweep still
+   settles orders through the same guards.
 3. **CLOSED — dev checkout redirect works.** `checkoutRedirect()` in
    `billing.js` accepts plain `http://` only for explicit
    `localhost`/`127.0.0.1` hosts (prod https gate unchanged), and the dev
@@ -122,3 +126,31 @@ boundary is the provider's HMAC.
    `_dev_base()` is read at call time so tests that import config before
    the dev server still see the dev defaults (rendered dead by the
    fail-closed verifiers from 65aa63a; now fixed at the source).
+
+## Ops recovery pass (2026-10-24) — the six ADR backlogs
+
+All implemented with web-UI-free, token-protected gates
+(`billing_server/recovery.py` hosts the shared grant path used by BOTH
+the webhook and the sweep, so they can never diverge):
+
+1. **Missed-webhook sweep.** FamGateway documents no webhook retry
+   guarantees; the sweep (`POST /admin/reconcile`) re-questions
+   `verify-order.php` for every fam order still `created` and runs the
+   verdict through the identical guards (allowlists, idempotency markers,
+   underpay, UTR ownership, verdict cross-check) — a webhook delivery
+   after a sweep grant is a plain duplicate.
+2. **Manual refunds are now revocable.** `POST /admin/orders/refund`
+   flips one order (fam refunds are manual in the provider dashboard);
+   refunded orders are skipped by the grant fold and key redemption.
+3. **`/create-order` is rate-limited** per IP (in-process, same sliding
+   window as register/login/cancel).
+4. **Email lifecycle.** `send_grant_email` fires once per paid order (Pro
+   includes the window end date); `POST /admin/expiry-nudge` sends one
+   reminder per expiring 31-day window (marker recorded only after a
+   successful send, so an unconfigured mailer retries next run).
+5. **Observability.** `GET /admin/webhook-failures` (rollback counts +
+   rows), the registry shows each order's rail, and a provider response
+   without `checkout_url` is logged server-side.
+6. **Shared grant path refactor.** The webhook decision moved from
+   `main.py` to `recovery.py`; behavior pinned identical by the existing
+   fail-closed suite plus the new ops suite.

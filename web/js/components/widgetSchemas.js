@@ -47,7 +47,7 @@
   ];
 
   var CHART_STYLE_PROPS = [
-    { key: "config.chartColors", type: "colorArray", label: "Series Colors", default: ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4"], group: "Chart Style", helpText: "Colors for each data series" },
+    { key: "config.chartColors", type: "colorArray", label: "Series Colors", default: ["#2563eb", "#0d9488", "#b45309", "#7c3aed", "#be123c", "#0369a1"], group: "Chart Style", helpText: "Colors for each data series" },
     { key: "config.legendShow", type: "toggle", label: "Show Legend", default: true, group: "Chart Style" },
     { key: "config.legendPosition", type: "select", label: "Legend Position", default: "top", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"]], group: "Chart Style" },
     { key: "config.legendFontFamily", type: "fontFamily", label: "Legend Font", default: "Inter, system-ui, sans-serif", group: "Chart Style" },
@@ -121,7 +121,7 @@
   var BACKGROUND_PROPS = [
     { key: "config.bgType", type: "select", label: "Background Type", default: "solid", options: [["solid", "Solid Color"], ["transparent", "Transparent"], ["linear-gradient", "Linear Gradient"], ["radial-gradient", "Radial Gradient"], ["image", "Image"]], group: "Background" },
     { key: "config.bgColor", type: "color", label: "Background Color", default: "#ffffff", group: "Background", condition: { key: "config.bgType", equals: "solid" } },
-    { key: "config.bgColor2", type: "color", label: "Gradient End Color", default: "#3b82f6", group: "Background", condition: { key: "config.bgType", in: ["linear-gradient", "radial-gradient"] } },
+    { key: "config.bgColor2", type: "color", label: "Gradient End Color", default: "#2563eb", group: "Background", condition: { key: "config.bgType", in: ["linear-gradient", "radial-gradient"] } },
     { key: "config.bgAngle", type: "number", label: "Gradient Angle", default: 135, min: 0, max: 360, step: 1, group: "Background", suffix: "deg", condition: { key: "config.bgType", equals: "linear-gradient" } },
     { key: "config.bgImageUrl", type: "text", label: "Image URL", default: "", group: "Background", placeholder: "https://...", condition: { key: "config.bgType", equals: "image" } },
     { key: "config.bgOpacity", type: "range", label: "Background Opacity", default: 1, min: 0, max: 1, step: 0.05, group: "Background" },
@@ -149,7 +149,7 @@
     { key: "config.shadowX", type: "number", label: "Shadow Offset X", default: 0, min: -40, max: 40, step: 1, group: "Effects", suffix: "px" },
     { key: "config.shadowY", type: "number", label: "Shadow Offset Y", default: 4, min: -40, max: 40, step: 1, group: "Effects", suffix: "px" },
     { key: "config.hoverShadow", type: "toggle", label: "Hover Shadow", default: false, group: "Effects" },
-    { key: "config.hoverShadowColor", type: "color", label: "Hover Shadow Color", default: "#3b82f6", group: "Effects", condition: { key: "config.hoverShadow", equals: true } },
+    { key: "config.hoverShadowColor", type: "color", label: "Hover Shadow Color", default: "#2563eb", group: "Effects", condition: { key: "config.hoverShadow", equals: true } },
     { key: "config.hoverShadowBlur", type: "number", label: "Hover Shadow Blur", default: 20, min: 0, max: 100, step: 1, group: "Effects", suffix: "px", condition: { key: "config.hoverShadow", equals: true } },
     { key: "config.hoverTransform", type: "select", label: "Hover Transform", default: "none", options: [["none", "None"], ["scale(1.02)", "Scale Up 2%"], ["scale(1.05)", "Scale Up 5%"], ["translateY(-2px)", "Lift 2px"], ["translateY(-4px)", "Lift 4px"]], group: "Effects" },
     { key: "config.hoverOpacity", type: "range", label: "Hover Opacity", default: 1, min: 0.5, max: 1, step: 0.05, group: "Effects" },
@@ -158,7 +158,7 @@
     { key: "config.glassOpacity", type: "range", label: "Glass Opacity", default: 0.6, min: 0.1, max: 1, step: 0.05, group: "Effects", condition: { key: "config.glassmorphism", equals: true } },
     { key: "config.glassBorder", type: "toggle", label: "Glass Border", default: true, group: "Effects", condition: { key: "config.glassmorphism", equals: true } },
     { key: "config.glow", type: "toggle", label: "Glow Effect", default: false, group: "Effects" },
-    { key: "config.glowColor", type: "color", label: "Glow Color", default: "#3b82f6", group: "Effects", condition: { key: "config.glow", equals: true } },
+    { key: "config.glowColor", type: "color", label: "Glow Color", default: "#2563eb", group: "Effects", condition: { key: "config.glow", equals: true } },
     { key: "config.glowSize", type: "number", label: "Glow Size", default: 8, min: 1, max: 30, step: 1, group: "Effects", suffix: "px", condition: { key: "config.glow", equals: true } },
   ];
 
@@ -174,15 +174,15 @@
   ];
 
   var COLOR_SYSTEM_PROPS = [
-    { key: "config.themePrimary", type: "color", label: "Primary", default: "#3b82f6", group: "Color System" },
-    { key: "config.themeSecondary", type: "color", label: "Secondary", default: "#8b5cf6", group: "Color System" },
+    { key: "config.themePrimary", type: "color", label: "Primary", default: "#2563eb", group: "Color System" },
+    { key: "config.themeSecondary", type: "color", label: "Secondary", default: "#7c3aed", group: "Color System" },
     { key: "config.themeText", type: "color", label: "Text", default: "#1f2937", group: "Color System" },
     { key: "config.themeMutedText", type: "color", label: "Muted Text", default: "#6b7280", group: "Color System" },
     { key: "config.themeBackground", type: "color", label: "Background", default: "#ffffff", group: "Color System" },
     { key: "config.themeBorder", type: "color", label: "Border", default: "#e5e7eb", group: "Color System" },
     { key: "config.themePositive", type: "color", label: "Positive", default: "#10b981", group: "Color System", helpText: "Used for positive trends and success states" },
-    { key: "config.themeNegative", type: "color", label: "Negative", default: "#ef4444", group: "Color System", helpText: "Used for negative trends and error states" },
-    { key: "config.themeWarning", type: "color", label: "Warning", default: "#f59e0b", group: "Color System" },
+    { key: "config.themeNegative", type: "color", label: "Negative", default: "#b91c1c", group: "Color System", helpText: "Used for negative trends and error states" },
+    { key: "config.themeWarning", type: "color", label: "Warning", default: "#b45309", group: "Color System" },
     { key: "config.themeHover", type: "color", label: "Hover", default: "#f3f4f6", group: "Color System" },
     { key: "config.themeSelected", type: "color", label: "Selected", default: "#dbeafe", group: "Color System" },
   ];
@@ -273,8 +273,8 @@
     { key: "config.gaugeMin", type: "number", label: "Min Value", default: 0, min: -100000, max: 100000, step: 1, group: "Gauge Options" },
     { key: "config.gaugeMax", type: "number", label: "Max Value", default: 100, min: -100000, max: 100000, step: 1, group: "Gauge Options" },
     { key: "config.gaugeTarget", type: "number", label: "Target Value", default: 75, min: -100000, max: 100000, step: 1, group: "Gauge Options" },
-    { key: "config.gaugeStartColor", type: "color", label: "Start Color", default: "#ef4444", group: "Gauge Options" },
-    { key: "config.gaugeMidColor", type: "color", label: "Mid Color", default: "#f59e0b", group: "Gauge Options" },
+    { key: "config.gaugeStartColor", type: "color", label: "Start Color", default: "#b91c1c", group: "Gauge Options" },
+    { key: "config.gaugeMidColor", type: "color", label: "Mid Color", default: "#b45309", group: "Gauge Options" },
     { key: "config.gaugeEndColor", type: "color", label: "End Color", default: "#10b981", group: "Gauge Options" },
     { key: "config.gaugeThickness", type: "range", label: "Arc Thickness", default: 20, min: 5, max: 60, step: 1, group: "Gauge Options", suffix: "px" },
   ];
@@ -300,13 +300,13 @@
 
   var CHART_WATERFALL_PROPS = [
     { key: "config.waterfallPositiveColor", type: "color", label: "Positive Color", default: "#10b981", group: "Waterfall Options" },
-    { key: "config.waterfallNegativeColor", type: "color", label: "Negative Color", default: "#ef4444", group: "Waterfall Options" },
+    { key: "config.waterfallNegativeColor", type: "color", label: "Negative Color", default: "#b91c1c", group: "Waterfall Options" },
     { key: "config.waterfallConnectorLine", type: "toggle", label: "Connector Line", default: true, group: "Waterfall Options" },
   ];
 
   var CHART_SPARKLINE_PROPS = [
     { key: "config.sparklineData", type: "text", label: "Sparkline Values", default: "", group: "Sparkline Options", placeholder: "1,2,3,4,5", helpText: "Comma-separated values (used when no SQL)" },
-    { key: "config.sparklineColor", type: "color", label: "Line Color", default: "#3b82f6", group: "Sparkline Options" },
+    { key: "config.sparklineColor", type: "color", label: "Line Color", default: "#2563eb", group: "Sparkline Options" },
     { key: "config.sparklineFill", type: "toggle", label: "Fill Area", default: true, group: "Sparkline Options" },
     { key: "config.sparklineLineWidth", type: "number", label: "Line Width", default: 2, min: 1, max: 5, step: 1, group: "Sparkline Options", suffix: "px" },
   ];
@@ -324,19 +324,19 @@
 
   var CHART_BOX_PLOT_PROPS = [
     { key: "config.boxPlotShowOutliers", type: "toggle", label: "Show Outliers", default: true, group: "Box Plot Options" },
-    { key: "config.boxPlotMedianColor", type: "color", label: "Median Color", default: "#ef4444", group: "Box Plot Options" },
-    { key: "config.boxPlotBoxColor", type: "color", label: "Box Color", default: "#3b82f680", group: "Box Plot Options" },
+    { key: "config.boxPlotMedianColor", type: "color", label: "Median Color", default: "#b91c1c", group: "Box Plot Options" },
+    { key: "config.boxPlotBoxColor", type: "color", label: "Box Color", default: "#2563eb80", group: "Box Plot Options" },
   ];
 
   var CHART_HISTOGRAM_PROPS = [
     { key: "config.histogramBins", type: "number", label: "Number of Bins", default: 10, min: 2, max: 100, step: 1, group: "Histogram Options" },
-    { key: "config.histogramColor", type: "color", label: "Bar Color", default: "#3b82f6", group: "Histogram Options" },
+    { key: "config.histogramColor", type: "color", label: "Bar Color", default: "#2563eb", group: "Histogram Options" },
     { key: "config.histogramBorderColor", type: "color", label: "Bar Border Color", default: "#1d4ed8", group: "Histogram Options" },
   ];
 
   var CHART_BULLET_PROPS = [
     { key: "config.bulletRanges", type: "text", label: "Range Values", default: "30,60,100", group: "Bullet Options", placeholder: "e.g. 30,60,100" },
-    { key: "config.bulletColors", type: "colorArray", label: "Range Colors", default: ["#e5e7eb", "#93c5fd", "#3b82f6"], group: "Bullet Options" },
+    { key: "config.bulletColors", type: "colorArray", label: "Range Colors", default: ["#e2e8f0", "#bfdbfe", "#2563eb"], group: "Bullet Options" },
     { key: "config.bulletMarkerColor", type: "color", label: "Marker Color", default: "#111827", group: "Bullet Options" },
   ];
 
@@ -426,7 +426,7 @@
     { key: "config.comparisonValue", type: "text", label: "Comparison Value", default: "", group: "Trend", placeholder: "e.g. 15000", condition: { key: "config.showTrend", equals: true } },
     { key: "config.comparisonLabel", type: "text", label: "Comparison Label", default: "Previous Period", group: "Trend", condition: { key: "config.showTrend", equals: true } },
     { key: "config.positiveColor", type: "color", label: "Positive Color", default: "#10b981", group: "Trend", condition: { key: "config.showTrend", equals: true } },
-    { key: "config.negativeColor", type: "color", label: "Negative Color", default: "#ef4444", group: "Trend", condition: { key: "config.showTrend", equals: true } },
+    { key: "config.negativeColor", type: "color", label: "Negative Color", default: "#b91c1c", group: "Trend", condition: { key: "config.showTrend", equals: true } },
 
     // Sparkline
     { key: "config.showSparkline", type: "toggle", label: "Show Sparkline", default: false, group: "Sparkline" },
@@ -443,13 +443,13 @@
     // Progress
     { key: "config.progressValue", type: "range", label: "Progress Value", default: 50, min: 0, max: 100, step: 1, group: "Progress", condition: { key: "config.kpiStyle", equals: "progress" } },
     { key: "config.progressMax", type: "number", label: "Progress Max", default: 100, min: 1, max: 10000, step: 1, group: "Progress", condition: { key: "config.kpiStyle", equals: "progress" } },
-    { key: "config.progressColor", type: "color", label: "Progress Bar Color", default: "#3b82f6", group: "Progress", condition: { key: "config.kpiStyle", equals: "progress" } },
+    { key: "config.progressColor", type: "color", label: "Progress Bar Color", default: "#2563eb", group: "Progress", condition: { key: "config.kpiStyle", equals: "progress" } },
     { key: "config.progressTrackColor", type: "color", label: "Track Color", default: "#e5e7eb", group: "Progress", condition: { key: "config.kpiStyle", equals: "progress" } },
 
     // Radial gauge
     { key: "config.radialMin", type: "number", label: "Radial Min", default: 0, min: -100000, max: 100000, step: 1, group: "Radial", condition: { key: "config.kpiStyle", equals: "radial" } },
     { key: "config.radialMax", type: "number", label: "Radial Max", default: 100, min: -100000, max: 100000, step: 1, group: "Radial", condition: { key: "config.kpiStyle", equals: "radial" } },
-    { key: "config.radialColor", type: "color", label: "Radial Color", default: "#3b82f6", group: "Radial", condition: { key: "config.kpiStyle", equals: "radial" } },
+    { key: "config.radialColor", type: "color", label: "Radial Color", default: "#2563eb", group: "Radial", condition: { key: "config.kpiStyle", equals: "radial" } },
     { key: "config.radialTrackColor", type: "color", label: "Radial Track", default: "#e5e7eb", group: "Radial", condition: { key: "config.kpiStyle", equals: "radial" } },
 
     // Donut KPI
@@ -466,8 +466,8 @@
     { key: "config.multiValues", type: "text", label: "Additional Values", default: "", group: "Multi-Value", placeholder: "Revenue:12000|Users:5400|Orders:320", helpText: "Pipe-delimited, colon-separated key:value pairs", condition: { key: "config.kpiStyle", equals: "multiValue" } },
 
     // Color / gradient
-    { key: "config.color", type: "color", label: "Accent Color", default: "#3b82f6", group: "Appearance" },
-    { key: "config.colorEnd", type: "color", label: "Gradient End", default: "#8b5cf6", group: "Appearance" },
+    { key: "config.color", type: "color", label: "Accent Color", default: "#2563eb", group: "Appearance" },
+    { key: "config.colorEnd", type: "color", label: "Gradient End", default: "#7c3aed", group: "Appearance" },
     { key: "config.kpiIndex", type: "number", label: "Gradient Preset Index", default: 0, min: 0, max: 7, step: 1, group: "Appearance", helpText: "Auto-cycle through preset gradient palettes" },
     { key: "config.cf", type: "select", label: "Conditional Format", default: "auto", options: [["auto", "Auto (tint by delta)"], ["none", "Off"], ["icon", "Delta icon + tint"], ["bg", "Background tint only"]], group: "Appearance", helpText: "Measure-backed KPIs tint the card by up/down delta; 'icon' adds a round arrow badge" },
   ];
@@ -644,7 +644,7 @@
     [
       { key: "config.progressValue", type: "range", label: "Value", default: 50, min: 0, max: 100, step: 1, group: "Progress" },
       { key: "config.progressMax", type: "number", label: "Max", default: 100, min: 1, max: 100000, step: 1, group: "Progress" },
-      { key: "config.progressColor", type: "color", label: "Bar Color", default: "#3b82f6", group: "Progress" },
+      { key: "config.progressColor", type: "color", label: "Bar Color", default: "#2563eb", group: "Progress" },
       { key: "config.progressTrackColor", type: "color", label: "Track Color", default: "#e5e7eb", group: "Progress" },
       { key: "config.progressBorderRadius", type: "number", label: "Bar Radius", default: 6, min: 0, max: 20, step: 1, group: "Progress", suffix: "px" },
       { key: "config.progressHeight", type: "number", label: "Bar Height", default: 8, min: 2, max: 40, step: 1, group: "Progress", suffix: "px" },
@@ -804,7 +804,7 @@
   // ── Custom HTML ──────────────────────────────────────────────────────
   _schemas.custom = _merge(
     [
-      { key: "config.html", type: "textarea", label: "HTML Content", default: '<div style="padding:16px;color:#374151;">Custom content</div>', rows: 10, group: "Custom", helpText: "Raw HTML rendered in the widget" },
+      { key: "config.html", type: "textarea", label: "HTML Content", default: '<div style="padding:16px;color:var(--color-text-secondary);">Custom content</div>', rows: 10, group: "Custom", helpText: "Raw HTML rendered in the widget" },
       { key: "config.sandbox", type: "toggle", label: "Sandboxed", default: false, group: "Custom", helpText: "Run HTML in a shadow DOM" },
     ],
     BORDER_PROPS, BACKGROUND_PROPS, SPACING_PROPS, EFFECTS_PROPS, INTERACTION_PROPS,
@@ -842,7 +842,7 @@
         ["triangle", "Triangle"], ["diamond", "Diamond"], ["pentagon", "Pentagon"],
         ["hexagon", "Hexagon"], ["arrow", "Arrow"], ["chevron", "Chevron"]
       ], group: "Shape" },
-      { key: "config.shapeFill", type: "color", label: "Fill Color", default: "#6366f1", group: "Shape" },
+      { key: "config.shapeFill", type: "color", label: "Fill Color", default: "#2563eb", group: "Shape" },
       { key: "config.shapeFillOpacity", type: "number", label: "Fill Opacity", default: 100, min: 0, max: 100, step: 5, group: "Shape", suffix: "%" },
       { key: "config.shapeRadius", type: "number", label: "Corner Radius", default: 16, min: 0, max: 100, step: 1, group: "Shape", suffix: "px", helpText: "Rounded rectangle corner radius" },
       { key: "config.shapeBorderColor", type: "color", label: "Border Color", default: "", group: "Shape" },

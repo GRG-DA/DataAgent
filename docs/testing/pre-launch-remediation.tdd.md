@@ -191,10 +191,10 @@ site loads no subresource from a third party — and it is hidden under `?fx=off
    with an address-space rlimit.
 5. **`config/legal.yaml` still carries 13 "fill this in before you publish" values.** The
    startup gate and the release checklist count them; they need the operator's real details.
-6. **The release repository does not exist yet**, so the download links on the marketing site
-   resolve to a placeholder. One constant to flip: `website/js/main.js` →
+6. **The release repository is `java22113344/data-agent`.** The download links on the
+   marketing site resolve from one constant: `website/js/main.js` →
    `window.DATAAGENT_REPO_URL`.
-7. **The deployed domain does not exist yet.** The placeholder `dataagent.example` is in
+7. **The deployed domain is `data-agent.me`.** The old placeholder `dataagent.example` was in
    eighteen files; `docs/WEBSITE-CHECKLIST.md` §4 gives the one command that replaces them,
    and a test asserts the `og:url` hosts, the sitemap and `robots.txt` all name the same host.
 8. **The social card is generated, not hand-drawn.** `scripts/site_og_card.html` holds the

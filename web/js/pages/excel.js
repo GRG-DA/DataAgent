@@ -2767,7 +2767,7 @@ this._bindShell();
         '<div class="xl-ctx-item" id="xl-ctx-copy"><i class="fas fa-copy"></i> Copy <kbd>Ctrl+C</kbd></div>' +
         '<div class="xl-ctx-item" id="xl-ctx-paste"><i class="fas fa-paste"></i> Paste <kbd>Ctrl+V</kbd></div>' +
         '<div class="xl-ctx-sep"></div>' +
-        '<div class="xl-ctx-item" id="xl-ctx-insert-row"><i class="fas fa-arrow-down-to-bracket"></i> Insert Row</div>' +
+        '<div class="xl-ctx-item" id="xl-ctx-insert-row"><i class="fas fa-download"></i> Insert Row</div>' +
         '<div class="xl-ctx-item" id="xl-ctx-delete-row"><i class="fas fa-arrow-up-from-bracket"></i> Delete Row</div>' +
         '<div class="xl-ctx-item" id="xl-ctx-insert-col"><i class="fas fa-arrow-right-to-bracket"></i> Insert Column</div>' +
         '<div class="xl-ctx-item" id="xl-ctx-delete-col"><i class="fas fa-arrow-right-from-bracket"></i> Delete Column</div>' +
@@ -5072,7 +5072,7 @@ this._hideXSBuiltIn();
         '<option value="SUM">SUM</option><option value="AVG">AVG</option><option value="COUNT">COUNT</option>' +
         '<option value="MIN">MIN</option><option value="MAX">MAX</option></select></div></div>' +
         '<div class="flex flex-wrap gap-2">' +
-        '<button class="btn btn-sm btn-primary" onclick="ExcelPage.buildPivot()"><i class="fas fa-table-pivot mr-1"></i>Build Pivot</button>' +
+        '<button class="btn btn-sm btn-primary" onclick="ExcelPage.buildPivot()"><i class="fas fa-table mr-1"></i>Build Pivot</button>' +
         '<button class="btn btn-sm btn-secondary" onclick="ExcelPage.buildPivot(true)"><i class="fas fa-chart-bar mr-1"></i>Pivot + Chart</button></div>' +
         '<div class="xl-tool-result hidden" id="xl-pivot-result"></div></div></div>';
     },
@@ -5251,10 +5251,10 @@ this._hideXSBuiltIn();
 
     _scoreBand(score) {
       var s = Number(score);
-      if (!isFinite(s)) return { color: "#6b7280", label: "n/a" };
-      if (s >= 80) return { color: "#10b981", label: "Good" };
-      if (s >= 60) return { color: "#f59e0b", label: "Needs attention" };
-      return { color: "#ef4444", label: "Poor" };
+      if (!isFinite(s)) return { color: "var(--color-text-muted)", label: "n/a" };
+      if (s >= 80) return { color: "var(--color-success)", label: "Good" };
+      if (s >= 60) return { color: "var(--color-warning)", label: "Needs attention" };
+      return { color: "var(--color-danger)", label: "Poor" };
     },
 
     _fmtNum(v, maxDec) {
@@ -5318,7 +5318,9 @@ this._hideXSBuiltIn();
           if (pv && pv.pii_scan) {
             var pii = pv.pii_scan;
             var risk = String(pii.risk_level || "unknown").toLowerCase();
-            var riskColor = risk === "high" ? "#ef4444" : (risk === "medium" ? "#f59e0b" : "#10b981");
+            // Hex, not var(): the risk colour gets an alpha suffix appended
+            // ("+ '22'") further down, which only works on a literal hex.
+            var riskColor = risk === "high" ? "#b91c1c" : (risk === "medium" ? "#b45309" : "#15803d");
             html += "<h4>PII Scan</h4>" +
               '<p class="text-sm my-1">Risk level: <b style="color:' + riskColor + ';">' + self._escape(pii.risk_level || "unknown").toUpperCase() + "</b> \u2014 " +
               self._escape(pii.total_detected != null ? pii.total_detected : "?") + " of " + self._escape(pii.total_columns != null ? pii.total_columns : "?") + " columns flagged</p>";
@@ -5382,6 +5384,25 @@ this._hideXSBuiltIn();
         if (!res.success) { box.innerHTML = '<p class="text-danger text-sm">' + self._escape(res.error || "Pivot failed") + "</p>"; return; }
         var data = res.data || [];
         var columns, matrix;
+        // Totals are aggregates over the source rows, not sums of the displayed
+        // cells: AVG must weight by row count, MIN/MAX must not add.
+        var combineTotals = function (vals) {
+          if (!vals.length) return 0;
+          if (agg === "MIN") return vals.reduce(function (a, b) { return Math.min(a, b); });
+          if (agg === "MAX") return vals.reduce(function (a, b) { return Math.max(a, b); });
+          return vals.reduce(function (a, b) { return a + b; }, 0);
+        };
+        var sqlTotal = async function (sql) {
+          try {
+            var r = await API.sql(sql);
+            if (r.success && r.data && r.data.length) {
+              var v = r.data[0].__val;
+              if (v != null && !isNaN(Number(v))) return Number(v);
+            }
+          } catch (e) { /* fall back to combining cells */ }
+          return null;
+        };
+        var grandTotal = await sqlTotal("SELECT " + agg + "(" + q(valF) + ") AS __val FROM " + q(table) + " LIMIT 1");
         if (colF) {
           var rowSet = [], rowSeen = new Set(), colSet = [], colSeen = new Set();
           data.forEach(function (d) {
@@ -5390,24 +5411,34 @@ this._hideXSBuiltIn();
           });
           var grid = {};
           data.forEach(function (d) { grid[String(d.__row) + "|||" + String(d.__col)] = d.__val; });
+          var rowTotals = {}, colTotals = {};
+          if (agg === "AVG") {
+            var rres = await API.sql("SELECT " + q(rowF) + " AS __row, AVG(" + q(valF) + ") AS __val FROM " + q(table) + " GROUP BY " + q(rowF) + " LIMIT " + MAX_ROWS);
+            if (rres.success) (rres.data || []).forEach(function (d) { rowTotals[String(d.__row)] = Number(d.__val); });
+            var cres = await API.sql("SELECT " + q(colF) + " AS __col, AVG(" + q(valF) + ") AS __val FROM " + q(table) + " GROUP BY " + q(colF) + " LIMIT " + MAX_ROWS);
+            if (cres.success) (cres.data || []).forEach(function (d) { colTotals[String(d.__col)] = Number(d.__val); });
+          }
           columns = ["Row Labels"].concat(colSet.map(String), ["Grand Total"]);
           matrix = rowSet.map(function (rv) {
             var rvs = colSet.map(function (cv) {
               var v = grid[String(rv) + "|||" + String(cv)];
               return v != null ? Number(v) || 0 : 0;
             });
-            var rt = rvs.reduce(function (a, b) { return a + b; }, 0);
+            var rt = rowTotals[String(rv)];
+            if (rt == null) rt = combineTotals(rvs);
             return [rv].concat(rvs, [rt]);
           });
-          var gt = colSet.map(function (_, ci) {
-            return matrix.reduce(function (s, row) { return s + (Number(row[ci + 1]) || 0); }, 0);
+          var gt = colSet.map(function (cv, ci) {
+            var cvv = colTotals[String(cv)];
+            if (cvv != null) return cvv;
+            return combineTotals(matrix.map(function (row) { return Number(row[ci + 1]) || 0; }));
           });
-          var gta = gt.reduce(function (a, b) { return a + b; }, 0);
+          var gta = grandTotal != null ? grandTotal : combineTotals(gt);
           matrix.push(["Grand Total"].concat(gt, [gta]));
         } else {
           columns = ["Row Labels", agg + "(" + valF + ")"];
           matrix = data.map(function (d) { return [d.__row, d.__val]; });
-          var total = matrix.reduce(function (s, r) { return s + (Number(r[1]) || 0); }, 0);
+          var total = grandTotal != null ? grandTotal : combineTotals(matrix.map(function (r) { return Number(r[1]) || 0; }));
           matrix.push(["Grand Total", total]);
         }
         self._pivotColumns = columns;
@@ -5496,6 +5527,9 @@ this._hideXSBuiltIn();
       var labels = matrix.map(function (r) { return String(r[0]); });
       var valCol = document.getElementById("xl-chart-val").value || columns[1] || "";
       var valIdx = columns.indexOf(valCol);
+      // Pivot columns (e.g. "AVG(resolution_hours)") are not in the table-column
+      // dropdown, so fall back to the first numeric column and label it correctly.
+      if (valIdx < 0) { valIdx = 1; valCol = String(columns[1] || "value"); }
       var values = matrix.map(function (r) {
         var v = valIdx >= 0 ? r[valIdx] : r[1];
         var n = Number(v);
@@ -5520,7 +5554,7 @@ this._hideXSBuiltIn();
       } else if (type === "pie") {
         window.Charts.pie(canvasId, labels, values, { title: title });
       } else {
-        window.Charts.bar(canvasId, labels, values, { title: title });
+        window.Charts.bar(canvasId, labels, [{ label: valCol, data: values }], { title: title });
       }
       if (!this._chartIds.includes(canvasId)) this._chartIds.push(canvasId);
       App.success("Chart rendered");
@@ -5763,10 +5797,10 @@ this._hideXSBuiltIn();
         wrap.classList.remove("hidden");
         try { window.Charts.destroy("xl-chart-canvas"); } catch (e) { /* noop */ }
         window.Charts.line("xl-chart-canvas", allLabels, [
-          { label: valCol + " (actual)", data: histSeries, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)" },
-          { label: "Upper bound", data: upSeries, borderColor: "rgba(245,158,11,0.35)", borderDash: [2, 3] },
-          { label: "Lower bound", data: loSeries, borderColor: "rgba(245,158,11,0.35)", borderDash: [2, 3] },
-          { label: "Forecast", data: fcSeries, borderColor: "#f59e0b", borderDash: [5, 5] }
+          { label: valCol + " (actual)", data: histSeries, borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.08)" },
+          { label: "Upper bound", data: upSeries, borderColor: "rgba(180,83,9,0.35)", borderDash: [2, 3] },
+          { label: "Lower bound", data: loSeries, borderColor: "rgba(180,83,9,0.35)", borderDash: [2, 3] },
+          { label: "Forecast", data: fcSeries, borderColor: "#b45309", borderDash: [5, 5] }
         ], { title: "Forecast: " + valCol });
         if (!self._chartIds.includes("xl-chart-canvas")) self._chartIds.push("xl-chart-canvas");
 
@@ -5777,13 +5811,13 @@ this._hideXSBuiltIn();
         var avgActual = lastActuals.reduce(function (s, v) { return s + v; }, 0) / (lastActuals.length || 1);
         var avgFc = fcVals.map(Number).reduce(function (s, v) { return s + v; }, 0) / fcVals.length;
         var pct = avgActual ? ((avgFc - avgActual) / Math.abs(avgActual)) * 100 : null;
-        var dirColor = dir === "increasing" ? "#10b981" : (dir === "decreasing" ? "#ef4444" : "#6b7280");
+        var dirColor = dir === "increasing" ? "var(--color-success)" : (dir === "decreasing" ? "var(--color-danger)" : "var(--color-text-muted)");
         var arrow = dir === "increasing" ? "\u2197" : (dir === "decreasing" ? "\u2198" : "\u2192");
         html += '<div class="text-sm space-y-0.5 my-2">' +
           '<p>Trend: <b style="color:' + dirColor + ';">' + arrow + " " + self._escape(dir || "flat") + "</b>" +
           (slope != null && isFinite(slope) ? ' <span class="text-secondary">(slope \u2248 ' + self._fmtNum(slope) + " per period)</span>" : "") + "</p>" +
           "<p>Avg forecast <b>" + self._fmtNum(avgFc) + "</b> vs recent actual avg <b>" + self._fmtNum(avgActual) + "</b>" +
-          (pct != null ? ' (<span style="color:' + (pct >= 0 ? "#10b981" : "#ef4444") + ';">' + (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%</span>)" : "") + "</p>" +
+          (pct != null ? ' (<span style="color:' + (pct >= 0 ? "var(--color-success)" : "var(--color-danger)") + ';">' + (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%</span>)" : "") + "</p>" +
           '<p class="text-xs text-secondary">Total next ' + fcVals.length + " periods: <b>" + self._fmtNum(fcVals.reduce(function (s, v) { return s + Number(v); }, 0)) + "</b>" +
           (loVals.length && upVals.length ? " \u00b7 95% band on final period: " + self._fmtNum(loVals[loVals.length - 1]) + " \u2013 " + self._fmtNum(upVals[upVals.length - 1]) : "") + "</p></div>";
 
@@ -5837,7 +5871,7 @@ this._hideXSBuiltIn();
           wrap.classList.remove("hidden");
           try { window.Charts.destroy("xl-chart-canvas"); } catch (e) { /* noop */ }
           window.Charts.line("xl-chart-canvas", labels, [
-            { label: valCol + " (trend)", data: trendV, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)" },
+            { label: valCol + " (trend)", data: trendV, borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,0.08)" },
             { label: "Seasonal", data: seasV, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.08)" }
           ], { title: "Decomposition: " + valCol + " by " + dateCol });
           if (!self._chartIds.includes("xl-chart-canvas")) self._chartIds.push("xl-chart-canvas");
@@ -5852,12 +5886,15 @@ this._hideXSBuiltIn();
     exportBackend(format) {
       var table = this._currentTable;
       if (!table) return App.error("Load a table first");
-      var base = window.__API_BASE__ || window.location.origin;
-      var url = format === "zip"
-        ? base + "/export/zip"
-        : base + "/export/" + format + "/" + encodeURIComponent(table);
-      window.open(url, "_blank");
-      App.success("Export started: " + format.toUpperCase());
+      var path = format === "zip"
+        ? "/export/zip"
+        : "/export/" + format + "/" + encodeURIComponent(table);
+      var filename = format === "zip" ? "dataagent-export.zip" : table + "." + format;
+      return API.download(path, filename).then(function () {
+        App.success("Export downloaded: " + format.toUpperCase());
+      }).catch(function (e) {
+        App.error("Export failed: " + (e.message || e));
+      });
     },
 
     _refreshExportSheets() {
@@ -6289,7 +6326,7 @@ this._hideXSBuiltIn();
       var parts = [];
       if (ins.confidence) {
         var conf = String(ins.confidence).toLowerCase();
-        var cc = conf === "high" ? "#10b981" : (conf === "low" ? "#ef4444" : "#f59e0b");
+        var cc = conf === "high" ? "var(--color-success)" : (conf === "low" ? "var(--color-danger)" : "var(--color-warning)");
         parts.push('<p class="text-xs mb-1">Confidence: <b style="color:' + cc + ';">' + self._escape(String(ins.confidence).toUpperCase()) + "</b></p>");
       }
       if (ins.summary) parts.push('<div class="text-sm mb-2">' + self._renderMarkdown(String(ins.summary)) + "</div>");

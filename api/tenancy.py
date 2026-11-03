@@ -379,6 +379,69 @@ def apply_tenant_search_path(
     return path
 
 
+def current_search_path(conn) -> str:
+    """Return the connection's current ``search_path`` ("" when unset).
+
+    Used to restore a shared connection's search path after a tenant-scoped
+    block, so a process-wide connection never keeps a tenant's schema in
+    scope once the request that needed it is done.
+    """
+    try:
+        row = conn.execute("SELECT current_setting('search_path')").fetchone()
+    except Exception:  # noqa: BLE001 - never break the data plane
+        return ""
+    return str(row[0]) if row and row[0] is not None else ""
+
+
+def apply_tenant_search_path_safe(conn, tenant_id: Optional[str] = None) -> str:
+    """Point *conn* at the tenant's schema, creating it when it is missing.
+
+    ``SET search_path`` fails on a schema that does not exist, so a brand-new
+    tenant (whose schema has not been created yet) would otherwise make every
+    query fail instead of simply returning no rows.
+    """
+    schema = tenant_schema(tenant_id)
+    try:
+        return apply_tenant_search_path(conn, tenant_id)
+    except Exception:  # noqa: BLE001
+        pass
+    # A schema on the path does not exist yet — create it (and the platform
+    # schema, which every tenant's path carries) and try again.
+    for name in (schema, PLATFORM_SCHEMA):
+        try:
+            conn.execute(f'CREATE SCHEMA IF NOT EXISTS "{name}"')
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("could not create the schema %s: %s", name, exc)
+    return apply_tenant_search_path(conn, tenant_id)
+
+
+@contextmanager
+def tenant_search_path_scope(conn, tenant_id: Optional[str] = None) -> Iterator[str]:
+    """Point *conn* at the tenant's schema for the duration of the block.
+
+    The previous search path is **restored on exit**.  This matters for the
+    process-wide shared connection: without the restore, the schema of
+    whichever tenant hit the path last would stay in scope and the *next*
+    request would resolve that tenant's tables (a cross-tenant read).
+
+    Yields the search path that was applied.
+    """
+    previous = current_search_path(conn)
+    path = apply_tenant_search_path_safe(conn, tenant_id)
+    try:
+        yield path
+    finally:
+        try:
+            if previous:
+                conn.execute(f"SET search_path = '{previous}'")
+            else:
+                # No schema in scope = fail-closed (unqualified names resolve
+                # to nothing), which is the state a fresh connection is in.
+                conn.execute("SET search_path = ''")
+        except Exception:  # noqa: BLE001
+            logger.warning("could not restore the search path", exc_info=True)
+
+
 def ensure_search_path(conn, schema: str) -> str:
     """Point *conn* at *schema*, creating it first if it is missing.
 

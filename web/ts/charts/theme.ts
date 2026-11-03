@@ -21,40 +21,58 @@ export interface ChartTheme {
   backgroundGradient?: [string, string];
 }
 
+// The default light/dark themes are driven by the CSS custom properties in
+// `web/css/styles.css` (--chart-1..8, --color-primary, ...). Keeping the
+// series ORDER identical in both themes means a chart series keeps its colour
+// identity when the user flips the theme, instead of silently re-sorting.
+//
+// The named presets below (Midnight, Ocean, Sunset, ...) are opt-in chart
+// palettes and intentionally keep their own colours.
+
+const _cssVar = (name: string, fallback: string): string => {
+  try {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+    return v && v.trim() ? v.trim() : fallback;
+  } catch (e) {
+    return fallback;
+  }
+};
+
 const LIGHT_THEME: ChartTheme = {
   name: 'Light',
-  primary: '#7B61FF',
-  secondary: '#00D4AA',
-  accent: '#FF6B6B',
+  primary: '#2563eb',
+  secondary: '#0d9488',
+  accent: '#b45309',
   palette: [
-    '#7B61FF', '#00D4AA', '#FF6B6B', '#FFB347', '#4FC3F7',
-    '#AB47BC', '#26A69A', '#EF5350', '#FFA726', '#42A5F5',
+    '#2563eb', '#0d9488', '#b45309', '#7c3aed',
+    '#be123c', '#0369a1', '#4d7c0f', '#64748b',
   ],
-  gradient: ['#7B61FF', '#00D4AA'],
-  background: '#F5F5F5',
-  cardBg: '#FFFFFF',
-  text: '#333333',
-  textSecondary: '#666666',
-  gridLine: '#E8E8E8',
-  axisColor: '#CCCCCC',
+  gradient: ['#2563eb', '#0d9488'],
+  background: '#f1f5f9',
+  cardBg: '#ffffff',
+  text: '#0f172a',
+  textSecondary: '#475569',
+  gridLine: '#e2e8f0',
+  axisColor: '#cbd5e1',
 };
 
 const DARK_THEME: ChartTheme = {
   name: 'Dark',
-  primary: '#9B8AFF',
-  secondary: '#33E0BB',
-  accent: '#FF8A8A',
+  primary: '#60a5fa',
+  secondary: '#2dd4bf',
+  accent: '#fbbf24',
+  // SAME series order as LIGHT_THEME — only the lightness changes.
   palette: [
-    '#9B8AFF', '#33E0BB', '#FF8A8A', '#FFC56B', '#6DD4FF',
-    '#C06AE0', '#3DB8A9', '#FF6B6B', '#FFB84D', '#5EB8FF',
+    '#60a5fa', '#2dd4bf', '#fbbf24', '#a78bfa',
+    '#fb7185', '#38bdf8', '#a3e635', '#94a3b8',
   ],
-  gradient: ['#9B8AFF', '#33E0BB'],
-  background: '#1A1A2E',
-  cardBg: '#252540',
-  text: '#E0E0E0',
-  textSecondary: '#999999',
-  gridLine: '#3A3A5C',
-  axisColor: '#555577',
+  gradient: ['#60a5fa', '#2dd4bf'],
+  background: '#0b1220',
+  cardBg: '#131c2e',
+  text: '#e8eef7',
+  textSecondary: '#a3b1c6',
+  gridLine: '#24304a',
+  axisColor: '#334155',
 };
 
 const MIDNIGHT_THEME: ChartTheme = {
@@ -518,7 +536,20 @@ export const THEMES: Record<string, ChartTheme> = {
 export function getTheme(): ChartTheme {
   const o = (window as any).BIDashboardTheme as ChartTheme | undefined;
   if (o) return o;
-  return _isDark() ? DARK_THEME : LIGHT_THEME;
+  if (!_isDark()) return LIGHT_THEME;
+
+  // Dark theme: take the surface/axis colours from the live CSS tokens so
+  // the chart always matches the app chrome, but keep the series palette
+  // order identical to the light theme (see DARK_THEME above).
+  return {
+    ...DARK_THEME,
+    background: _cssVar('--color-bg', DARK_THEME.background),
+    cardBg: _cssVar('--color-surface', DARK_THEME.cardBg),
+    text: _cssVar('--color-text', DARK_THEME.text),
+    textSecondary: _cssVar('--color-text-secondary', DARK_THEME.textSecondary),
+    gridLine: _cssVar('--color-border', DARK_THEME.gridLine),
+    axisColor: _cssVar('--color-border-strong', DARK_THEME.axisColor),
+  };
 }
 
 export function themeIsLight(t: ChartTheme): boolean {

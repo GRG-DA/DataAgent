@@ -27,9 +27,11 @@ import pandas as pd
 
 from .llm_client import Message
 from .tools_sql import SQLTool, SQLResult
+from .tools_sql import _referenced_tables
 from .tools_pandas import PandasTool, PandasResult
 from .tools_viz import VizTool, VizResult
 from .planner import Planner, ExecutionPlan, PlanStep, ToolType
+from .tools_tasks import TaskResult
 from api.tenancy import tenant_search_path
 
 logger = logging.getLogger(__name__)
@@ -150,6 +152,7 @@ class AgentResponse:
     final_answer: str
     visualizations: List[VizResult] = field(default_factory=list)
     dataframes: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    artifacts: List[Dict[str, Any]] = field(default_factory=list)
     total_time_ms: float = 0
     success: bool = True
     error: Optional[str] = None
@@ -177,6 +180,19 @@ def _strip_think_leak(text: str) -> str:
     if "<think" in cleaned:
         return ""
     return cleaned.strip()
+
+
+def _bare_table_name(name: str) -> str:
+    """Return a table name without its schema qualifier.
+
+    ``analytics.sales`` -> ``sales``.  The user-facing answer must never
+    name a schema: for a tenant the schema *is* the tenant's workspace, and
+    the qualified name is what let a platform table reach the answer.
+    """
+    raw = str(name or "").strip().strip('"').strip("'")
+    if not raw:
+        return ""
+    return raw.split(".")[-1].strip().strip('"').strip("'")
 
 
 class Orchestrator:
@@ -396,6 +412,12 @@ class Orchestrator:
                         response.dataframes[f"step_{sr.step_id}"] = sr.result.data
                     elif isinstance(sr.result, VizResult) and sr.result.success:
                         response.visualizations.append(sr.result)
+                    elif isinstance(sr.result, TaskResult) and sr.result.success:
+                        artifact = (sr.result.data or {}).get("artifact")
+                        if artifact:
+                            response.artifacts.append(artifact)
+                        for viz in sr.result.visualizations or []:
+                            response.visualizations.append(viz)
 
             # ── 3. Explain (data-driven, LLM optional) ──
             self.state = AgentState.EXPLAINING
@@ -624,12 +646,23 @@ class Orchestrator:
             rows = getattr(result.result, "row_count", None) if result else None
             if isinstance(rows, int):
                 event["rows"] = rows
+            if isinstance(result.result, TaskResult) and result.result.success:
+                artifact = (result.result.data or {}).get("artifact")
+                if artifact:
+                    event["artifact"] = artifact
             self._emit_progress(progress, event)
             if (result and result.success
                     and isinstance(result.result, VizResult) and result.result.success):
                 self._emit_progress(progress, {
                     "kind": "viz", "step_id": step.step_id, "result": result.result,
                 })
+            if (result and result.success
+                    and isinstance(result.result, TaskResult)
+                    and result.result.success):
+                for viz in result.result.visualizations or []:
+                    self._emit_progress(progress, {
+                        "kind": "viz", "step_id": step.step_id, "result": viz,
+                    })
 
             # Stop only if the very first step hard-fails even after fallback.
             if result and not result.success and step.step_id == 1:
@@ -700,7 +733,7 @@ class Orchestrator:
             if not query or "{{step_" in query:
                 continue  # templated queries stay on the rules
             tables = list(dict.fromkeys(
-                t.strip('"') for t in re.findall(r'analytics\.\"?([\w]+)\"?', query)))
+                t.strip('"') for t in _referenced_tables(query)))
             if not tables:
                 continue
             logger.info("_upgrade_sql_steps: step=%s question=%s tables=%s rule_query=%s",
@@ -731,16 +764,19 @@ class Orchestrator:
         """Retry a failed SQL step with a safe, column-free query."""
         table_hint = None
         query = (step.params or {}).get("query", "")
-        # Try to reuse the table the planner selected.
-        m = __import__("re").search(r'FROM\s+analytics\.([\w"]+)', query)
-        if m:
-            table_hint = m.group(1).strip('"')
+        # Try to reuse the table the planner selected. The table name is
+        # referenced UNQUALIFIED: it is resolved through the caller's tenant
+        # search path, so the fallback can never reach another tenant's
+        # copy of a same-named table.
+        tables = _referenced_tables(query)
+        if tables:
+            table_hint = tables[0]
         if table_hint:
-            fallback = f'SELECT * FROM analytics."{table_hint}" LIMIT 100'
+            fallback = f'SELECT * FROM "{table_hint}" LIMIT 100'
         else:
             tables = self._available_tables or []
             if tables:
-                fallback = f'SELECT * FROM analytics."{tables[0]}" LIMIT 100'
+                fallback = f'SELECT * FROM "{tables[0]}" LIMIT 100'
             else:
                 return original
 
@@ -766,6 +802,8 @@ class Orchestrator:
                 raw = await self._execute_viz_step(step, step_outputs)
             elif step.tool == ToolType.LLM:
                 raw = await self._execute_llm_step(step, step_outputs)
+            elif step.tool == ToolType.TASK:
+                raw = await self._execute_task_step(step, step_outputs, user)
             else:
                 raise ValueError(f"Unknown tool type: {step.tool}")
             return StepResult(
@@ -782,6 +820,77 @@ class Orchestrator:
             return StepResult(step_id=step.step_id, tool=step.tool, success=False,
                               error=str(e), execution_time_ms=(time.perf_counter() - start) * 1000,
                               metadata=step.metadata)
+
+    async def _execute_task_step(self, step, step_outputs, user) -> TaskResult:
+        """Run a side-effect task (clean / dashboard / forecast / feature)."""
+        from . import tools_features, tools_tasks
+
+        params = dict(step.params or {})
+        operation = str(params.pop("operation", "") or "")
+        table = str(params.pop("table", "") or "")
+        source_step = params.pop("source_step", None)
+        if source_step is not None:
+            prev = step_outputs.get(source_step)
+            if isinstance(prev, TaskResult) and prev.success:
+                table = (prev.data or {}).get("output_table") or table
+        owner_id = tools_tasks._user_identifier(user)
+        owner = str(getattr(user, "username", "") or "")
+        if operation == "clean_table":
+            return await asyncio.to_thread(
+                tools_tasks.clean_table, table, user=user, **params
+            )
+        if operation == "build_dashboard":
+            return await asyncio.to_thread(
+                tools_tasks.build_dashboard, table,
+                user=user, owner_id=owner_id, owner=owner, **params,
+            )
+        if operation == "forecast":
+            return await asyncio.to_thread(
+                tools_tasks.forecast_table, table, user=user, **params
+            )
+        feature_ops = {
+            "anomalies": (tools_features.detect_anomalies, "table_name"),
+            "quality_trend": (tools_features.quality_trend, "table_name"),
+            "quality_snapshot": (
+                tools_features.record_quality_snapshot, "table_name",
+            ),
+            "stats": (tools_features.run_stats, "table_name"),
+            "compare_tables": (tools_features.compare_tables, None),
+            "compare_periods": (tools_features.compare_periods, "table_name"),
+            "lineage": (tools_features.lineage_lookup, "table_name"),
+            "merge_tables": (tools_features.merge_tables, None),
+            "notifications_list": (tools_features.notifications_list, None),
+            "notifications_read": (
+                tools_features.notifications_mark_read, None,
+            ),
+            "marketplace_products": (
+                tools_features.marketplace_products, None,
+            ),
+            "marketplace_request": (
+                tools_features.marketplace_request, None,
+            ),
+            "org_tree": (tools_features.org_tree, None),
+            "catalog_search": (tools_features.catalog_search, None),
+            "catalog_sync": (tools_features.catalog_sync, None),
+            "catalog_certify": (tools_features.catalog_certify, None),
+            "catalog_add_term": (tools_features.catalog_add_term, None),
+            "catalog_add_metric": (tools_features.catalog_add_metric, None),
+            "pipeline_run": (tools_features.pipeline_run, None),
+            "workflow_pending": (tools_features.workflow_pending, None),
+            "workflow_approve": (tools_features.workflow_approve, None),
+            "export_table": (tools_features.export_table, "table_name"),
+            "connections_list": (tools_features.connections_list, None),
+        }
+        entry = feature_ops.get(operation)
+        if entry is not None:
+            fn, table_arg = entry
+            kwargs = dict(params)
+            if table_arg:
+                kwargs[table_arg] = table
+            return await asyncio.to_thread(fn, user=user, **kwargs)
+        return TaskResult(
+            success=False, error=f"Unknown task operation: {operation or '(none)'}"
+        )
 
     async def _execute_sql_step(self, step, step_outputs, user) -> SQLResult:
         params = (step.params or {}).copy()
@@ -936,6 +1045,10 @@ class Orchestrator:
         answer = self._rule_answer(response)
         if not answer.strip():
             return "Analysis complete. No data was returned — try uploading and loading data first."
+        # Task results carry their own message (and dashboard links). Polishing
+        # would paraphrase away the artifact URL, so keep it verbatim.
+        if any(isinstance(sr.result, TaskResult) for sr in response.step_results if sr):
+            return answer
         # Table-based answers already carry the exact numbers; local models tend
         # to paraphrase them into vague prose and lose the figures. Polish only
         # scalar / narrative answers, keep tables as-is.
@@ -961,6 +1074,10 @@ class Orchestrator:
             elif isinstance(res, PandasResult) and res.data is not None and not res.data.empty:
                 had_data = True
                 parts.append(self._describe_dataframe(res.data, response.plan, sr.step_id))
+            elif isinstance(res, TaskResult):
+                if res.success and res.message:
+                    had_data = True
+                    parts.append(res.message)
 
         if not had_data:
             errors = [sr.error for sr in response.step_results if sr and sr.error][:2]
@@ -977,21 +1094,44 @@ class Orchestrator:
         # then a small line naming the table(s) that were actually queried.
         source_tables = self._plan_source_tables(response.plan)
         if source_tables:
-            src = ", ".join(f"analytics.{t}" for t in source_tables)
+            src = ", ".join(source_tables)
             parts.append(f"*Source: {src}*")
 
         return "\n\n".join(parts)
 
     @staticmethod
     def _plan_source_tables(plan: ExecutionPlan) -> List[str]:
-        """Extract the distinct table names referenced by the plan's SQL."""
+        """Return the distinct USER tables the plan's SQL actually queried.
+
+        The footer is a transparency signal for the person who asked the
+        question, so it may only ever name their own data:
+
+        * a platform table is dropped — naming one tells the user a table
+          exists that they are not allowed to see (the redemption table holds
+          ``user_id`` and key material), and the name itself is information
+          they must not get.  This is the defence-in-depth guard: even a
+          plan that reached a platform table cannot make the answer cite it.
+        * the schema qualifier is stripped — the schema names a workspace
+          (for a tenant, the tenant's own schema), not the user's table.
+
+        An empty list means "no user table was queried", and the caller
+        omits the footer entirely so the user can tell that apart from
+        "a source was named".
+        """
+        from warehouse.system_tables import is_system_table
+
         tables: List[str] = []
+        seen: set = set()
         for step in plan.steps or []:
             query = (step.params or {}).get("query", "") if step.params else ""
-            for m in re.finditer(r'FROM\s+(?:analytics\.)?"?([\w]+)"?', str(query), re.IGNORECASE):
-                t = m.group(1)
-                if t.lower() not in {x.lower() for x in tables}:
-                    tables.append(t)
+            for raw in _referenced_tables(str(query)):
+                name = _bare_table_name(raw)
+                if not name or name.lower() in seen:
+                    continue
+                if is_system_table(name):
+                    continue
+                seen.add(name.lower())
+                tables.append(name)
         return tables
 
     def _describe_dataframe(self, df: pd.DataFrame, plan: ExecutionPlan, step_id: int) -> str:
@@ -1160,8 +1300,18 @@ class Orchestrator:
                               question))
 
     @staticmethod
+    def _is_period_comparison(plan: Optional[ExecutionPlan]) -> bool:
+        """True when the plan already compares two periods explicitly."""
+        for step in (getattr(plan, "steps", None) or []):
+            if (getattr(step, "metadata", None) or {}).get("period_comparison"):
+                return True
+        return False
+
+    @staticmethod
     def _single_period_note(df: pd.DataFrame, plan: Optional[ExecutionPlan]) -> str:
         """Note when a trend question's result covers only one period of data."""
+        if Orchestrator._is_period_comparison(plan):
+            return ""
         cols = " ".join(str(c).lower() for c in df.columns)
         if not re.search(r"(period|date|month|week|year|quarter|timestamp|time)", cols):
             return ""
@@ -1177,6 +1327,8 @@ class Orchestrator:
         E.g. "Show me the key trends" against a table with no date column —
         the summary table alone would otherwise look like a trend answer.
         """
+        if Orchestrator._is_period_comparison(plan):
+            return ""
         cols = " ".join(str(c).lower() for c in df.columns)
         if re.search(r"(period|date|month|week|year|quarter|timestamp|time)", cols):
             return ""
@@ -1476,23 +1628,36 @@ def create_orchestrator(
             llm_client = LLMClient(cfg)
 
     # Build schema context from actual database (scoped to user tables).
+    # The schema is the *tenant* schema of the current context, never the
+    # platform schema: the planner's per-table maps must describe the
+    # caller's own tables (ADR-009 D1).
     schema_context = ""
+    parts: List[str] = []
     try:
         from warehouse.system_tables import is_system_table
+        from api.tenancy import current_tenant_id, tenant_schema as _tenant_schema
+
+        tenant_schema_name = _tenant_schema(current_tenant_id())
         db = _duckdb.connect(str(_Path(db_path)))
-        db.execute(f"SET search_path = '{tenant_search_path()}'")
-        tables = db.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = ?", [schema]
-        ).fetchall()
-        parts = []
-        for (t,) in tables:
-            if is_system_table(t):
-                continue
-            cols = db.execute(f'DESCRIBE "{schema}"."{t}"').df()
-            col_list = [f"  - {row['column_name']}: {row['column_type']}" for _, row in cols.iterrows()]
-            count = db.execute(f'SELECT COUNT(*) FROM "{schema}"."{t}"').fetchone()[0]
-            parts.append(f"TABLE {schema}.{t} ({count} rows):\n" + "\n".join(col_list))
-        db.close()
+        try:
+            db.execute(f"SET search_path = '{tenant_search_path()}'")
+            tables = db.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = ?",
+                [tenant_schema_name],
+            ).fetchall()
+            for (t,) in tables:
+                if is_system_table(t):
+                    continue
+                cols = db.execute(f'DESCRIBE "{tenant_schema_name}"."{t}"').df()
+                col_list = [f"  - {row['column_name']}: {row['column_type']}" for _, row in cols.iterrows()]
+                count = db.execute(f'SELECT COUNT(*) FROM "{tenant_schema_name}"."{t}"').fetchone()[0]
+                # BARE table name: the planner emits unqualified SQL and the
+                # executor resolves it through the request's tenant search
+                # path.  A schema qualifier here would put the workspace (and
+                # the platform tables that live in it) in front of the model.
+                parts.append(f"TABLE {t} ({count} rows):\n" + "\n".join(col_list))
+        finally:
+            db.close()
         if parts:
             schema_context = "\n\n".join(parts)
     except Exception:  # noqa: BLE001

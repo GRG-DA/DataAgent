@@ -63,6 +63,38 @@ _CHART_TREND_RE = re.compile(
     r"\btime\s+series\b|\bper\s+quarter\b|\bper\s+year\b|\bby\s+quarter\b|\bby\s+year\b"
 )
 
+# Period-over-period phrasing ("month-over-month", "year over year", ...).
+# These need a two-period comparison, not a monthly series.
+_PERIOD_OVER_PERIOD_RE = re.compile(
+    r"\b(month[\s-]+over[\s-]+month|month[\s-]+on[\s-]+month|"
+    r"period[\s-]+over[\s-]+period|week[\s-]+over[\s-]+week|"
+    r"quarter[\s-]+over[\s-]+quarter|year[\s-]+over[\s-]+year)\b"
+)
+
+
+def _period_granularity(phrase: str) -> str:
+    """Calendar grain named by a period-over-period phrase."""
+    p = phrase.lower()
+    if "week" in p:
+        return "week"
+    if "quarter" in p:
+        return "quarter"
+    if "year" in p:
+        return "year"
+    return "month"
+
+
+def _period_label_sql(granularity: str, expr: str) -> str:
+    """Readable label expression for a DATE_TRUNC period."""
+    if granularity == "year":
+        return f"STRFTIME({expr}, '%Y')"
+    if granularity == "quarter":
+        return (f"STRFTIME({expr}, '%Y') || '-Q' || "
+                f"CAST(DATE_PART('quarter', {expr}) AS VARCHAR)")
+    if granularity == "week":
+        return f"STRFTIME({expr}, '%Y-%m-%d')"
+    return f"STRFTIME({expr}, '%Y-%m')"
+
 # Month names used by the date-range filter ("in January 2024", "in Q1").
 _MONTH_NAMES = {
     "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
@@ -108,12 +140,91 @@ def _table_name_mentioned(table: str, q: str) -> bool:
     )
 
 
+_TASK_DASHBOARD_RE = re.compile(
+    r"\b(?:build|create|make|generate|save|set\s+up|give\s+me|put\s+together)\b"
+    r"[^?.!]{0,60}\bdashboard\b"
+)
+_TASK_CLEAN_RE = re.compile(r"\b(?:clean|dedupe|deduplicate|tidy)\b")
+_TASK_INTERROGATIVE_RE = re.compile(
+    r"^\s*(?:how|what|which|who|when|where|why|are|is|does|do|did|list|check)\b"
+)
+_TASK_FORECAST_RE = re.compile(
+    r"\b(?:forecast|predict|projection|project\s+(?:the\s+)?next|"
+    r"next\s+\d+\s+(?:months?|quarters?|weeks?|days?|years?|periods?))\b"
+)
+_TASK_HORIZON_RE = re.compile(
+    r"\b(?:next|for)\s+(\d{1,2})\s+(?:months?|quarters?|weeks?|days?|years?|periods?)\b"
+)
+
+_FEATURE_ANOMALY_RE = re.compile(r"\banomal(?:y|ies)\b", re.IGNORECASE)
+_FEATURE_QUALITY_TREND_RE = re.compile(
+    r"\bquality\b[^?.!]{0,40}\b(?:trend|history)\b|"
+    r"\b(?:trend|history)\b[^?.!]{0,40}\bquality\b",
+    re.IGNORECASE,
+)
+_FEATURE_QUALITY_SNAPSHOT_RE = re.compile(
+    r"\b(?:record|save|take|capture|create)\b[^?.!]{0,60}\bquality\b|"
+    r"\bquality\s+snapshot\b",
+    re.IGNORECASE,
+)
+_FEATURE_STATS_RE = re.compile(
+    r"\b(?:t[\s-]?test|ttest|anova|chi[\s-]?square|chi2|"
+    r"mann[\s-]?whitney|hypothesis\s+test|correlation\s+test|"
+    r"significance\s+test)\b",
+    re.IGNORECASE,
+)
+_FEATURE_COMPARE_RE = re.compile(r"\b(?:compare|diff|difference)\b", re.IGNORECASE)
+_FEATURE_PERIODS_RE = re.compile(
+    r"\bcompare\b[^?.!]{0,40}\bperiods?\b|\bperiod[\s-]over[\s-]period\b",
+    re.IGNORECASE,
+)
+_FEATURE_MERGE_RE = re.compile(r"\b(?:merge|join)\b", re.IGNORECASE)
+_FEATURE_LINEAGE_RE = re.compile(r"\blineage\b", re.IGNORECASE)
+_FEATURE_NOTIFICATION_RE = re.compile(r"\bnotifications?\b", re.IGNORECASE)
+_FEATURE_MARKETPLACE_RE = re.compile(
+    r"\bmarketplace\b|\bdata\s+products?\b", re.IGNORECASE
+)
+_FEATURE_ORG_RE = re.compile(
+    r"\borg(?:anization|anisation)?\s+(?:tree|structure|chart)\b|"
+    r"\bshow\s+(?:the\s+)?org\b",
+    re.IGNORECASE,
+)
+_FEATURE_CATALOG_RE = re.compile(
+    r"\b(?:data\s+)?catalog\b|\bbusiness\s+glossary\b", re.IGNORECASE
+)
+_FEATURE_PIPELINE_RE = re.compile(
+    r"\b(?:run|execute|start|trigger)\b[^?.!]{0,40}\bpipeline\b",
+    re.IGNORECASE,
+)
+_FEATURE_WORKFLOW_RE = re.compile(r"\bworkflows?\b", re.IGNORECASE)
+_FEATURE_EXPORT_RE = re.compile(r"\bexport\b", re.IGNORECASE)
+_FEATURE_CONNECTIONS_RE = re.compile(
+    r"\b(?:data\s+)?connections?\b", re.IGNORECASE
+)
+
+
+def _tables_mentioned(question: str, tables: List[str]) -> List[str]:
+    """Return table names mentioned in *question*, in order of appearance."""
+    text = (question or "").lower()
+    found: List[tuple[int, str]] = []
+    for table in tables:
+        match = re.search(
+            rf"(?<![\w]){re.escape(str(table).lower())}(?![\w])", text
+        )
+        if match:
+            found.append((match.start(), str(table)))
+    found.sort(key=lambda item: item[0])
+    return [table for _pos, table in found]
+
+
+
 class ToolType(Enum):
     """Available tool types."""
     SQL = "sql"
     PANDAS = "pandas"
     VIZ = "viz"
     LLM = "llm"  # For explanation generation
+    TASK = "task"  # Server-side side effects (clean table, save dashboard, forecast)
 
 
 @dataclass
@@ -203,6 +314,30 @@ def _quote_literal(value: str) -> str:
     an apostrophe (O'Brien) or a hostile cell must never break out.
     """
     return "'" + str(value).replace("'", "''") + "'"
+
+
+def _tenant_schema() -> str:
+    """Return the schema that owns the *current request's* tenant data.
+
+    Resolved from the request-scoped contextvar at USE time — never captured
+    at construction and never taken from ``settings.duckdb.schema``: the
+    planner is a process-wide singleton, so a schema baked into it at import
+    time would be the wrong tenant's schema for every other tenant.
+
+    The value is an internally derived slug (``analytics_t_<hash>``), never
+    user input, so interpolating it into SQL is safe.
+    """
+    try:
+        from api.tenancy import current_tenant_id, tenant_schema as _ts
+
+        return _ts(current_tenant_id())
+    except Exception:  # noqa: BLE001 - never break planning
+        try:
+            from config import settings
+
+            return str(settings.duckdb.schema)
+        except Exception:  # noqa: BLE001
+            return "analytics"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -395,13 +530,18 @@ class Planner:
     # ── Schema parsing ───────────────────────────────────────
 
     def _parse_schema_context(self):
-        """Parse 'TABLE analytics.name (N rows):' sections into per-table maps."""
+        """Parse 'TABLE name (N rows):' sections into per-table maps.
+
+        The header may carry a schema prefix ('TABLE analytics_t_x.name
+        (12 rows):' or 'TABLE analytics.name (12 rows):'); only the bare
+        table name is used as the key.
+        """
         tables: Dict[str, Dict[str, str]] = {}
         types: Dict[str, Dict[str, str]] = {}
         rows: Dict[str, int] = {}
         current = None
         for line in (self._schema_context or "").splitlines():
-            m = re.match(r'TABLE\s+\S+\.(\w+)\s+\((\d+)\s+rows\):?', line.strip())
+            m = re.match(r'TABLE\s+(?:\S+\.)?(\w+)\s+\((\d+)\s+rows\):?', line.strip())
             if m:
                 current = m.group(1)
                 tables[current] = {}
@@ -1055,8 +1195,14 @@ class Planner:
         return None
 
     def _table_date_column(self, table_name: str) -> Optional[str]:
-        """Find the date/time column for a specific table."""
-        return self._date_from_cols(self._table_cols(table_name))
+        """Find the date/time column for a specific table.
+
+        Name heuristics first (a column called `order_date` wins), then a
+        type-based fallback so columns like `event_ts TIMESTAMP_NS` are
+        still recognized when the name carries no date keyword.
+        """
+        return (self._date_from_cols(self._table_cols(table_name))
+                or self._best_date_column(table_name))
 
     def _date_expr(self, table_name: str, date_col: str) -> str:
         """SQL expression for a date column, casting string-typed columns to
@@ -1131,7 +1277,7 @@ class Planner:
         ta, tb = _quote_ident(table_a), _quote_ident(table_b)
         ka = _quote_ident(self._tables.get(table_a, {}).get(join_key, join_key))
         kb = _quote_ident(self._tables.get(table_b, {}).get(join_key, join_key))
-        frm = f"FROM analytics.{ta} a LEFT JOIN analytics.{tb} b ON a.{ka} = b.{kb}"
+        frm = f"FROM {ta} a LEFT JOIN {tb} b ON a.{ka} = b.{kb}"
 
         scope = self._joined_scope(table_a, table_b)
         # Prefer the metric on the primary (left) table, then fall back to the
@@ -1354,7 +1500,12 @@ class Planner:
         trend_patterns = ["over time", "monthly", "quarterly", "yearly", "time series",
                           "growth", "over the", "period over period", "trend",
                           "each month", "per month", "month by month", "by month",
-                          "each quarter", "per quarter", "each year", "per year"]
+                          "each quarter", "per quarter", "each year", "per year",
+                          "month-over-month", "month over month", "month-on-month",
+                          "month on month", "period-over-period",
+                          "week-over-week", "week over week",
+                          "quarter-over-quarter", "quarter over quarter",
+                          "year-over-year", "year over year"]
         if any(kw in q for kw in trend_patterns):
             return "trend"
 
@@ -1382,6 +1533,279 @@ class Planner:
             return "summary"
 
         return "general"
+
+    def _task_plan(self, question: str, table: str) -> Optional[ExecutionPlan]:
+        """Plan explicit side-effect tasks: clean, save dashboard, forecast.
+
+        Interrogative data-quality asks ("how clean is this table?") stay on
+        the read-only SQL path; only actionable requests run a TASK step.
+        """
+        q = (question or "").lower().replace("-", " ")
+        interrogative = bool(_TASK_INTERROGATIVE_RE.match(q))
+        clean_action = bool(_TASK_CLEAN_RE.search(q)) and not interrogative
+        if "data quality" in q and not _TASK_CLEAN_RE.search(q):
+            clean_action = False
+        wants_dashboard = bool(_TASK_DASHBOARD_RE.search(q))
+        wants_forecast = bool(_TASK_FORECAST_RE.search(q))
+        if not (clean_action or wants_dashboard or wants_forecast):
+            return None
+
+        steps: List[PlanStep] = []
+        clean_id: Optional[int] = None
+        if clean_action:
+            clean_id = len(steps) + 1
+            steps.append(PlanStep(
+                clean_id, ToolType.TASK,
+                f"Clean {table} into a new table",
+                {"operation": "clean_table", "table": table,
+                 "dedup": True, "null_strategy": "drop"},
+            ))
+        if wants_dashboard:
+            params = {"operation": "build_dashboard", "table": table}
+            deps: List[int] = []
+            if clean_id is not None:
+                params["source_step"] = clean_id
+                deps = [clean_id]
+            steps.append(PlanStep(
+                len(steps) + 1, ToolType.TASK,
+                "Build and save a dashboard", params, depends_on=deps,
+            ))
+        if wants_forecast:
+            match = _TASK_HORIZON_RE.search(q)
+            periods = int(match.group(1)) if match else 6
+            params = {"operation": "forecast", "table": table, "periods": periods}
+            deps = []
+            if clean_id is not None:
+                params["source_step"] = clean_id
+                deps = [clean_id]
+            steps.append(PlanStep(
+                len(steps) + 1, ToolType.TASK,
+                f"Forecast {table} for the next {periods} periods",
+                params, depends_on=deps,
+            ))
+        for step in steps:
+            step.metadata["skip_llm_upgrade"] = True
+        operations = ", ".join(s.params["operation"] for s in steps)
+        return ExecutionPlan(
+            question=question, steps=steps, estimated_steps=len(steps),
+            reasoning=f"Task plan: {operations} on {table}",
+        )
+
+    def _feature_task_plan(
+        self, question: str, available_tables: Optional[List[str]]
+    ) -> Optional[ExecutionPlan]:
+        """Plan the sidebar-feature tasks (anomalies, quality, catalog, ...).
+
+        Runs before the meaningfulness/table-selection path because several of
+        these asks (notifications, marketplace, org tree) have no data table.
+        """
+        q = self._guard_text(question).lower()
+        tables = self._known_tables(available_tables)
+        named = _tables_mentioned(q, tables)
+        single = named[0] if named else (tables[0] if len(tables) == 1 else "")
+
+        def step(operation: str, description: str, **params: Any) -> ExecutionPlan:
+            plan_step = PlanStep(
+                1, ToolType.TASK, description,
+                {"operation": operation, **params},
+            )
+            plan_step.metadata["skip_llm_upgrade"] = True
+            plan_step.metadata["operation"] = operation
+            return ExecutionPlan(
+                question=question, steps=[plan_step], estimated_steps=1,
+                reasoning=f"Feature task: {operation}",
+            )
+
+        if _FEATURE_QUALITY_SNAPSHOT_RE.search(q) and single:
+            return step(
+                "quality_snapshot", f"Record a quality snapshot for {single}",
+                table=single,
+            )
+        if _FEATURE_QUALITY_TREND_RE.search(q) and single:
+            days_match = re.search(r"\b(?:last|past)\s+(\d{1,3})\s+days?\b", q)
+            return step(
+                "quality_trend", f"Show the quality trend for {single}",
+                table=single, days=int(days_match.group(1)) if days_match else 30,
+            )
+        if _FEATURE_ANOMALY_RE.search(q) and single:
+            method = "zscore" if "z" in q and "score" in q else "iqr"
+            threshold_match = re.search(
+                r"\b(?:threshold|z[\s-]?score)\s*(?:of|=|is)?\s*(\d+(?:\.\d+)?)",
+                q,
+            )
+            return step(
+                "anomalies", f"Scan {single} for anomalies",
+                table=single, method=method,
+                threshold=float(threshold_match.group(1)) if threshold_match else 1.5,
+            )
+        if _FEATURE_STATS_RE.search(q) and single:
+            test_type = "ttest"
+            if "paired" in q:
+                test_type = "paired_ttest"
+            elif "anova" in q:
+                test_type = "anova"
+            elif "chi" in q:
+                test_type = "chi2"
+            elif "mann" in q:
+                test_type = "mannwhitney"
+            elif "pearson" in q or "correlation" in q:
+                test_type = "pearsonr"
+            columns = re.search(
+                r"\bcomparing\s+([A-Za-z_]\w*)\s+by\s+([A-Za-z_]\w*)", q
+            )
+            if not columns:
+                columns = re.search(
+                    r"\b(?:test|testing)\s+([A-Za-z_]\w*)\s+by\s+"
+                    r"([A-Za-z_]\w*)",
+                    q,
+                )
+            if not columns:
+                columns = re.search(r"\bcomparing\s+([A-Za-z_]\w*)", q)
+            return step(
+                "stats", f"Run a {test_type} test on {single}",
+                table=single, test_type=test_type,
+                column_a=columns.group(1) if columns else "",
+                group_col=(columns.group(2) or "") if columns else "",
+            )
+        if _FEATURE_COMPARE_RE.search(q) and len(named) >= 2:
+            if not _FEATURE_PERIODS_RE.search(q):
+                key_match = re.search(r"\bon\s+([A-Za-z_]\w*)", q)
+                return step(
+                    "compare_tables",
+                    f"Compare {named[0]} with {named[1]}",
+                    table_before=named[0], table_after=named[1],
+                    key_column=key_match.group(1) if key_match else "",
+                )
+        if _FEATURE_PERIODS_RE.search(q) and single:
+            period_match = re.search(
+                r"\bby\s+(day|week|month|quarter|year)\b", q
+            )
+            return step(
+                "compare_periods", f"Compare periods of {single}",
+                table=single,
+                period_type=period_match.group(1) if period_match else "month",
+            )
+        if _FEATURE_MERGE_RE.search(q) and len(named) >= 2:
+            key_match = re.search(r"\bon\s+([A-Za-z_]\w*)", q)
+            join_type = "inner"
+            for candidate in ("outer", "left", "right"):
+                if re.search(rf"\b{candidate}\s+(?:join|merge)\b", q):
+                    join_type = candidate
+            output_match = re.search(r"\b(?:into|as)\s+([A-Za-z_]\w*)", q)
+            return step(
+                "merge_tables",
+                f"Merge {named[0]} and {named[1]}",
+                left_table=named[0], right_table=named[1],
+                left_key=key_match.group(1) if key_match else "",
+                join_type=join_type,
+                output_table=output_match.group(1) if output_match else "",
+            )
+        if _FEATURE_LINEAGE_RE.search(q) and single:
+            return step(
+                "lineage", f"Show lineage for {single}", table=single
+            )
+        if _FEATURE_EXPORT_RE.search(q) and single:
+            fmt = "csv"
+            for candidate in (
+                "parquet", "excel", "xlsx", "markdown", "html", "pdf", "bi",
+            ):
+                if candidate in q:
+                    fmt = candidate
+                    break
+            return step(
+                "export_table", f"Export {single} as {fmt.upper()}",
+                table=single, fmt=fmt,
+            )
+        if _FEATURE_NOTIFICATION_RE.search(q):
+            if "mark" in q:
+                notif_match = re.search(
+                    r"\bnotification\s+([A-Za-z0-9_-]+)", q
+                )
+                return step(
+                    "notifications_read", "Mark notifications read",
+                    notification_id=notif_match.group(1) if notif_match else "",
+                    all=not notif_match,
+                )
+            return step(
+                "notifications_list", "List notifications",
+                unread_only="unread" in q,
+            )
+        if _FEATURE_MARKETPLACE_RE.search(q):
+            if "request" in q or "access" in q:
+                product_match = re.search(
+                    r"\bproduct\s+([A-Za-z0-9_-]+)", q
+                )
+                return step(
+                    "marketplace_request", "Request marketplace access",
+                    product_id=product_match.group(1) if product_match else "",
+                )
+            return step("marketplace_products", "List marketplace products")
+        if _FEATURE_ORG_RE.search(q):
+            return step("org_tree", "Show the organization tree")
+        if _FEATURE_CATALOG_RE.search(q):
+            if "sync" in q:
+                return step("catalog_sync", "Sync the data catalog")
+            if "certify" in q:
+                asset_match = re.search(r"\basset\s+([A-Za-z0-9_-]+)", q)
+                return step(
+                    "catalog_certify", "Certify a catalog asset",
+                    asset_id=asset_match.group(1) if asset_match else "",
+                )
+            if "term" in q:
+                term_match = re.search(r"\bterm\s+([A-Za-z0-9_-]+)", q)
+                term = term_match.group(1) if term_match else ""
+                definition = re.search(r"\bdefined\s+as\s+(.+)", q)
+                return step(
+                    "catalog_add_term", f"Add business term {term}",
+                    term=term,
+                    definition=(
+                        definition.group(1) if definition
+                        else f"{term} (added from chat)"
+                    ),
+                )
+            if "metric" in q:
+                metric_match = re.search(r"\bmetric\s+([A-Za-z0-9_-]+)", q)
+                formula = re.search(r"\bformula\s+(.+)", q)
+                return step(
+                    "catalog_add_metric", "Add a metric definition",
+                    name=metric_match.group(1) if metric_match else "",
+                    formula=formula.group(1) if formula else "",
+                )
+            query_match = re.search(r"catalog\s+for\s+(.+)", q)
+            if not query_match:
+                query_match = re.search(
+                    r"search\s+(?:the\s+)?catalog\s+(?:for\s+)?(.+)", q
+                )
+            return step(
+                "catalog_search", "Search the data catalog",
+                query=(query_match.group(1) if query_match else "").strip(),
+            )
+        if _FEATURE_PIPELINE_RE.search(q):
+            name_match = re.search(r"\bpipeline\s+([A-Za-z0-9_-]+)", q)
+            return step(
+                "pipeline_run", "Run an ETL pipeline",
+                name=name_match.group(1) if name_match else "",
+            )
+        if _FEATURE_WORKFLOW_RE.search(q):
+            if "approve" in q:
+                instance_match = re.search(
+                    r"\binstance\s+([A-Za-z0-9_-]+)", q
+                )
+                if not instance_match:
+                    instance_match = re.search(
+                        r"\bapprove\s+(?:workflow\s+)?([A-Za-z0-9_-]+)", q
+                    )
+                return step(
+                    "workflow_approve", "Approve a workflow",
+                    instance_id=(
+                        instance_match.group(1) if instance_match else ""
+                    ),
+                )
+            return step("workflow_pending", "Show pending workflow approvals")
+        if _FEATURE_CONNECTIONS_RE.search(q):
+            return step("connections_list", "List data connections")
+        return None
+
 
     @staticmethod
     def _per_word_is_dimension(q: str) -> bool:
@@ -1475,6 +1899,7 @@ class Planner:
                       "describe", "explain", "compare", "comparison", "rank",
                       "ranking", "count", "average", "mean", "median", "total",
                       "sum", "maximum", "minimum", "data", "dataset", "table",
+                      "clean", "dedupe", "deduplicate", "dashboard", "widget",
                       "roas", "ctr", "cpa", "conversion", "conversions",
                       "impressions", "clicks", "spend", "spent", "revenue"})
         return vocab
@@ -1591,7 +2016,7 @@ class Planner:
             if t:
                 return plan_one(
                     f"Count rows in {t}",
-                    f"SELECT COUNT(*) AS row_count FROM analytics.{_quote_ident(t)}",
+                    f"SELECT COUNT(*) AS row_count FROM {_quote_ident(t)}",
                 )
 
         # Column listing for a named table. Guarded against analytical
@@ -1605,7 +2030,7 @@ class Planner:
                 return plan_one(
                     f"List columns of {t}",
                     "SELECT column_name AS column_name, data_type AS data_type "
-                    f"FROM information_schema.columns WHERE table_schema = 'analytics' "
+                    f"FROM information_schema.columns WHERE table_schema = '{_tenant_schema()}' "
                     f"AND table_name = '{tq}' ORDER BY ordinal_position",
                 )
 
@@ -1628,7 +2053,7 @@ class Planner:
                         tq = str(t).replace("'", "''")
                         parts.append(
                             f"SELECT '{tq}' AS table_name, "
-                            f"(SELECT COUNT(*) FROM analytics.{_quote_ident(t)}) AS row_count"
+                            f"(SELECT COUNT(*) FROM {_quote_ident(t)}) AS row_count"
                         )
                     union = " UNION ALL ".join(parts)
                     return plan_one(
@@ -1638,7 +2063,7 @@ class Planner:
             return plan_one(
                 "List tables in the warehouse",
                 "SELECT table_name AS table_name FROM information_schema.tables "
-                "WHERE table_schema = 'analytics' AND table_type = 'BASE TABLE' "
+                f"WHERE table_schema = '{_tenant_schema()}' AND table_type = 'BASE TABLE' "
                 "ORDER BY table_name",
             )
 
@@ -1681,6 +2106,10 @@ class Planner:
         if intro is not None:
             return intro
 
+        feature_plan = self._feature_task_plan(question, available_tables)
+        if feature_plan is not None:
+            return feature_plan
+
         # Nonsense / unrecognizable question → no steps; the orchestrator will
         # tell the user it couldn't understand instead of inventing an answer.
         if self._is_meaningless_question(question):
@@ -1714,7 +2143,7 @@ class Planner:
             plan.steps.append(PlanStep(
                 step_id=1, tool=ToolType.SQL,
                 description=f"Query data from {table}",
-                params={"query": f"SELECT * FROM analytics.{_quote_ident(table)} LIMIT 100"},
+                params={"query": f"SELECT * FROM {_quote_ident(table)} LIMIT 100"},
             ))
             plan.estimated_steps = 1
         return plan
@@ -1844,6 +2273,12 @@ class Planner:
 
         intent = self.classify_intent(question)
 
+        # Explicit task asks (clean / dashboard / forecast) are side effects,
+        # not chart requests — route them before chart and intent planning.
+        task_plan = self._task_plan(question, table)
+        if task_plan is not None:
+            return task_plan
+
         # Explicit chart request ("show me a bar chart of X by Y", "... and a
         # line chart of Z over time") → dedicated SQL + VIZ steps for every
         # requested chart, so a compound ask renders ALL the charts the user
@@ -1894,7 +2329,7 @@ class Planner:
         if status_filter and wants_count:
             add(PlanStep(sid, ToolType.SQL, f"Count matching rows in {table}",
                          {"query": (f"SELECT COUNT(*) AS matching_count "
-                                    f"FROM analytics.{_quote_ident(table)} WHERE {status_filter}")}))
+                                    f"FROM {_quote_ident(table)} WHERE {status_filter}")}))
             plan = ExecutionPlan(question=question, steps=steps, estimated_steps=len(steps),
                                  reasoning=f"Filtered-count plan: {status_filter} on {table}")
             return plan
@@ -1911,7 +2346,7 @@ class Planner:
             if date_where:
                 where = f"{where} AND {date_where}"
             add(PlanStep(sid, ToolType.SQL, f"Count rows where {col_ref} = '{v_raw}'",
-                         {"query": (f"SELECT COUNT(*) AS count FROM analytics.{_quote_ident(table)} "
+                         {"query": (f"SELECT COUNT(*) AS count FROM {_quote_ident(table)} "
                                     f"WHERE {where}")}))
             plan = ExecutionPlan(question=question, steps=steps, estimated_steps=len(steps),
                                  reasoning=f"Value-filtered-count plan: {col_ref} = '{v_raw}' on {table}")
@@ -1951,6 +2386,26 @@ class Planner:
                          depends_on=[sid - 1]))
             plan = ExecutionPlan(question=question, steps=steps, estimated_steps=len(steps),
                                  reasoning=f"Year-comparison plan: {question} on {table}")
+            return plan
+
+        # Period-over-period ("month-over-month", "year over year", ...):
+        # compare the last two periods (or two named months) per dimension so
+        # "which region drove the change" is answered with deltas, not totals.
+        period_comp = self._generate_period_over_period_query(question, table)
+        if period_comp:
+            step = PlanStep(sid, ToolType.SQL, f"Compare periods in {table}",
+                            {"query": period_comp})
+            step.metadata["period_comparison"] = True
+            step.metadata["skip_llm_upgrade"] = True
+            add(step)
+            if "GROUP BY" in period_comp.upper():
+                add(PlanStep(sid, ToolType.VIZ, "Bar chart of period change",
+                             {"chart_type": "bar", "orientation": "h",
+                              "x": "change", "y": "group_name"},
+                             depends_on=[sid - 1]))
+            plan = ExecutionPlan(question=question, steps=steps,
+                                 estimated_steps=len(steps),
+                                 reasoning=f"Period-over-period plan: {question} on {table}")
             return plan
 
         if intent == "aggregate":
@@ -2026,14 +2481,14 @@ class Planner:
                                  depends_on=[sid - 1]))
         elif intent == "correlation":
             add(PlanStep(sid, ToolType.SQL, "Get data for correlation",
-                         {"query": f"SELECT * FROM analytics.{_quote_ident(table)} LIMIT 1000"}))
+                         {"query": f"SELECT * FROM {_quote_ident(table)} LIMIT 1000"}))
             add(PlanStep(sid, ToolType.PANDAS, "Compute correlation matrix",
                          {"operation": "correlation"}, depends_on=[sid - 1]))
             add(PlanStep(sid, ToolType.VIZ, "Correlation heatmap",
                          {"chart_type": "heatmap"}, depends_on=[sid - 1]))
         elif intent == "anomaly":
             add(PlanStep(sid, ToolType.SQL, "Get data for anomaly detection",
-                         {"query": f"SELECT * FROM analytics.{_quote_ident(table)} LIMIT 1000"}))
+                         {"query": f"SELECT * FROM {_quote_ident(table)} LIMIT 1000"}))
             add(PlanStep(sid, ToolType.PANDAS, "Profile columns and detect outliers",
                          {"operation": "profile_column"}, depends_on=[sid - 1]))
         elif intent == "root_cause":
@@ -2057,7 +2512,7 @@ class Planner:
 
         if not steps:
             add(PlanStep(sid, ToolType.SQL, f"Query data from {table}",
-                         {"query": f"SELECT * FROM analytics.{_quote_ident(table)} LIMIT 100"}))
+                         {"query": f"SELECT * FROM {_quote_ident(table)} LIMIT 100"}))
 
         return ExecutionPlan(question=question, steps=steps, estimated_steps=len(steps),
                              reasoning=f"Rule-based plan: intent={intent}, table={table}")
@@ -2209,7 +2664,7 @@ class Planner:
             # Fallback: raw sample with a numeric axis.
             if value:
                 vq = _quote_ident(value)
-                query = f"SELECT {vq} AS value FROM analytics.{tq} WHERE {vq} IS NOT NULL LIMIT 2000"
+                query = f"SELECT {vq} AS value FROM {tq} WHERE {vq} IS NOT NULL LIMIT 2000"
                 sql = sel(sql_step(query, f"Get {value} for {ctype} chart"))
                 params = {"chart_type": ctype, "x": "value", **extra}
                 sel(viz_step(sql.step_id, ctype, f"{ctype.title()} chart", params))
@@ -2239,7 +2694,7 @@ class Planner:
                 a, b = num_cols[0], num_cols[1]
             if a and b:
                 aq, bq = _quote_ident(a), _quote_ident(b)
-                query = (f"SELECT {aq} AS x_val, {bq} AS y_val FROM analytics.{tq} "
+                query = (f"SELECT {aq} AS x_val, {bq} AS y_val FROM {tq} "
                          f"WHERE {aq} IS NOT NULL AND {bq} IS NOT NULL LIMIT 1000")
                 sql = sel(sql_step(query, f"Get {a} vs {b} for scatter chart"))
                 sel(viz_step(sql.step_id, "scatter", "Scatter chart",
@@ -2250,14 +2705,14 @@ class Planner:
             v = value or self._numeric_value_column(table, "")
             if v:
                 vq = _quote_ident(v)
-                query = f"SELECT {vq} AS _cval FROM analytics.{tq} WHERE {vq} IS NOT NULL LIMIT 2000"
+                query = f"SELECT {vq} AS _cval FROM {tq} WHERE {vq} IS NOT NULL LIMIT 2000"
                 sql = sel(sql_step(query, f"Get {v} for {ctype} chart"))
                 sel(viz_step(sql.step_id, ctype, f"{ctype.title()} chart",
                              {"chart_type": ctype, "x": "_cval", **extra}))
                 return steps
 
         if ctype in ("heatmap",):
-            sql = sel(sql_step(f"SELECT * FROM analytics.{tq} LIMIT 1000", "Get data for correlation heatmap"))
+            sql = sel(sql_step(f"SELECT * FROM {tq} LIMIT 1000", "Get data for correlation heatmap"))
             pd = sel(PlanStep(0, ToolType.PANDAS, "Compute correlation matrix",
                               {"operation": "correlation"}, depends_on=[sql.step_id]))
             sel(viz_step(pd.step_id, "heatmap", "Correlation heatmap",
@@ -2351,14 +2806,14 @@ class Planner:
         date_where = self._date_range_filter(question, table)
         if not vq:
             where = f" WHERE {date_where}" if date_where else ""
-            return f"SELECT COUNT(*) AS total_count FROM analytics.{_quote_ident(table)}{where}"
+            return f"SELECT COUNT(*) AS total_count FROM {_quote_ident(table)}{where}"
 
         # Column-vs-column comparisons: "how many products have stock below
         # their reorder point".
         comp_filter = self._column_comparison_filter(question, table)
         if comp_filter and any(kw in q for kw in ["how many", "number of", "count "]):
             return (f"SELECT COUNT(*) AS matching_count "
-                    f"FROM analytics.{_quote_ident(table)} WHERE {comp_filter}")
+                    f"FROM {_quote_ident(table)} WHERE {comp_filter}")
 
         # Status filters ("average charge of churned customers") scope every
         # simple aggregate below to the matching rows only.
@@ -2399,9 +2854,9 @@ class Planner:
         # Average / mean / median must beat the SUM branch: "average amount
         # spent" is AVG(amount), not SUM(amount).
         if "median" in q:
-            return f"SELECT ROUND(MEDIAN({vq}), 2) AS median_value FROM analytics.{_quote_ident(table)}{where}"
+            return f"SELECT ROUND(MEDIAN({vq}), 2) AS median_value FROM {_quote_ident(table)}{where}"
         if re.search(r'(average|mean)\b', q):
-            return f"SELECT ROUND(AVG({vq}), 4) AS average_value FROM analytics.{_quote_ident(table)}{where}"
+            return f"SELECT ROUND(AVG({vq}), 4) AS average_value FROM {_quote_ident(table)}{where}"
 
         # Total/sum.
         if any(kw in q for kw in ["total amount", "total revenue", "total spending",
@@ -2414,7 +2869,7 @@ class Planner:
                              r'impressions|conversions|views|visits|cost|profit|salary|'
                              r'margin|charge|ltv|downtime|hours|minutes|days|boxes|'
                              r'quantity|stock|units)\b', q):
-            return f"SELECT SUM({vq}) AS total_value FROM analytics.{_quote_ident(table)}{where}"
+            return f"SELECT SUM({vq}) AS total_value FROM {_quote_ident(table)}{where}"
 
         # Percentage of a boolean-ish column.
         if "percentage" in q or "percent" in q:
@@ -2422,7 +2877,7 @@ class Planner:
                 if cl == "isactive" or "active" in cl or cl.startswith("is_"):
                     cq = _quote_ident(ca)
                     return (f"SELECT ROUND(100.0 * SUM(CASE WHEN {cq} THEN 1 ELSE 0 END) / COUNT(*), 1) "
-                            f"AS percentage FROM analytics.{_quote_ident(table)}")
+                            f"AS percentage FROM {_quote_ident(table)}")
 
         # Conditional count: "how many X are <category>" (e.g. "tickets are High priority").
         cat_count = re.search(r'how many\s+(\w+)\s+(?:are|is)\s+(.+?)\s*[?.]?$', q)
@@ -2459,10 +2914,10 @@ class Planner:
             if col and value_phrase:
                 vv = value_phrase.strip().strip('"').strip("'")
                 # Case-insensitive match (question words are lowercased, data may be mixed-case).
-                return (f"SELECT COUNT(*) AS count FROM analytics.{_quote_ident(table)} "
+                return (f"SELECT COUNT(*) AS count FROM {_quote_ident(table)} "
                         f"WHERE LOWER({_quote_ident(col)}) = LOWER({_quote_literal(vv)})")
             if not value_phrase:
-                return f"SELECT COUNT(*) AS count FROM analytics.{_quote_ident(table)}"
+                return f"SELECT COUNT(*) AS count FROM {_quote_ident(table)}"
 
         # Conditional count: "how many X have more than N ...".
         cond = re.search(r'how many (.{0,80})(more than|greater than|above|exceed|over|>)\s*(\d+)', q)
@@ -2475,17 +2930,17 @@ class Planner:
                     col = ca
                     break
             if col:
-                return (f"SELECT COUNT(*) AS count FROM analytics.{_quote_ident(table)} "
+                return (f"SELECT COUNT(*) AS count FROM {_quote_ident(table)} "
                         f"WHERE {_quote_ident(col)} > {val}")
-            return f"SELECT COUNT(*) AS count FROM analytics.{_quote_ident(table)}"
+            return f"SELECT COUNT(*) AS count FROM {_quote_ident(table)}"
 
         # Plain count.
         if re.search(r'how many\s+(total\s+)?[a-z]+', q) or \
            re.search(r'total (customers|records|accounts)', q):
-            return f"SELECT COUNT(*) AS total_count FROM analytics.{_quote_ident(table)}{where}"
+            return f"SELECT COUNT(*) AS total_count FROM {_quote_ident(table)}{where}"
 
         return (f"SELECT COUNT(*) AS total_count, SUM({vq}) AS total_value, "
-                f"AVG({vq}) AS avg_value FROM analytics.{_quote_ident(table)}{where}")
+                f"AVG({vq}) AS avg_value FROM {_quote_ident(table)}{where}")
 
     def _generate_distinct_query(self, question: str, table: str,
                                  wants_count: bool = False) -> Optional[str]:
@@ -2602,9 +3057,9 @@ class Planner:
         tq_col = _quote_ident(target)
         if wants_count:
             return (f"SELECT COUNT(DISTINCT {tq_col}) AS distinct_{target} "
-                    f"FROM analytics.{tq} WHERE {tq_col} IS NOT NULL")
+                    f"FROM {tq} WHERE {tq_col} IS NOT NULL")
         return (f"SELECT {tq_col} AS value, COUNT(*) AS count "
-                f"FROM analytics.{tq} WHERE {tq_col} IS NOT NULL "
+                f"FROM {tq} WHERE {tq_col} IS NOT NULL "
                 f"GROUP BY 1 ORDER BY count DESC")
 
     def _generate_time_series_query(self, question: str, table: str) -> str:
@@ -2622,10 +3077,10 @@ class Planner:
                     if measure_range:
                         avg_val = measure_range.get('avg', 0)
                         return (f"SELECT COUNT(*) AS count, SUM({val_q}) AS total_value, "
-                                f"AVG({val_q}) AS avg_value FROM analytics.{tq}")
+                                f"AVG({val_q}) AS avg_value FROM {tq}")
                     return (f"SELECT COUNT(*) AS count, SUM({val_q}) AS total_value "
-                            f"FROM analytics.{tq}")
-            return f"SELECT * FROM analytics.{tq} LIMIT 100"
+                            f"FROM {tq}")
+            return f"SELECT * FROM {tq} LIMIT 100"
         dq = _quote_ident(date_col)
         dexpr = self._date_expr(table, date_col)
         vq = _quote_ident(value)
@@ -2668,7 +3123,7 @@ class Planner:
                 year_filter = f" AND STRFTIME({dexpr}, '%Y') = '{yq}'"
 
         return (f"SELECT {group_col} AS period, SUM({vq}) AS value, COUNT(*) AS count, "
-                f"AVG({vq}) AS avg_value FROM analytics.{tq} "
+                f"AVG({vq}) AS avg_value FROM {tq} "
                 f"WHERE {dq} IS NOT NULL{year_filter} GROUP BY 1 ORDER BY 1")
 
     def _generate_distribution_query(self, question: str, table: str) -> str:
@@ -2687,7 +3142,7 @@ class Planner:
             dim = self._table_dimension_column(table, "")
         tq = _quote_ident(table)
         if not dim:
-            return f"SELECT COUNT(*) AS total_count FROM analytics.{tq}"
+            return f"SELECT COUNT(*) AS total_count FROM {tq}"
         dq = _quote_ident(dim)
         # "total <measure> by <dim>" (e.g. "total monthly charge by plan")
         # sums the measure per group rather than counting rows. "total number
@@ -2701,7 +3156,7 @@ class Planner:
             if value:
                 vq = _quote_ident(value)
                 return (f"SELECT {dq} AS group_name, SUM({vq}) AS value, COUNT(*) AS count "
-                        f"FROM analytics.{tq} WHERE {dq} IS NOT NULL "
+                        f"FROM {tq} WHERE {dq} IS NOT NULL "
                         f"GROUP BY 1 ORDER BY value DESC")
         if re.search(r'\b(average|mean|avg)\b', q) \
                 and not re.search(r'\b(number of|count of|how many)\b', q):
@@ -2709,10 +3164,10 @@ class Planner:
             if value:
                 vq = _quote_ident(value)
                 return (f"SELECT {dq} AS group_name, ROUND(AVG({vq}), 2) AS value, COUNT(*) AS count "
-                        f"FROM analytics.{tq} WHERE {dq} IS NOT NULL "
+                        f"FROM {tq} WHERE {dq} IS NOT NULL "
                         f"GROUP BY 1 ORDER BY value DESC")
         return (f"SELECT {dq} AS group_name, COUNT(*) AS count "
-                f"FROM analytics.{tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY count DESC")
+                f"FROM {tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY count DESC")
 
     def _generate_top_n_query(self, question: str, table: str, n: int) -> str:
         # "top N rows / records / entries" is a raw-row request, not a grouped
@@ -2726,9 +3181,9 @@ class Planner:
             value = self._numeric_value_column(table, question)
             tq = _quote_ident(table)
             if not value:
-                return f"SELECT * FROM analytics.{tq} LIMIT {n}"
+                return f"SELECT * FROM {tq} LIMIT {n}"
             is_bottom = bool(re.search(r'\b(bottom|last)\b', question.lower()))
-            return (f"SELECT * FROM analytics.{tq} "
+            return (f"SELECT * FROM {tq} "
                     f"ORDER BY {_quote_ident(value)} {'ASC' if is_bottom else 'DESC'} LIMIT {n}")
 
         q = question.lower()
@@ -2756,7 +3211,7 @@ class Planner:
                 is_min = bool(re.search(r'\b(lowest|smallest|minimum|min)\b', q))
                 agg = "MIN" if is_min else "MAX"
                 return (f"SELECT {agg}({vq}) AS {agg.lower()}_value "
-                        f"FROM analytics.{tq}")
+                        f"FROM {tq}")
 
         # Time-period ranking: "which month/quarter/year had the highest
         # revenue" groups by the date bucket, not by a categorical column.
@@ -2787,7 +3242,7 @@ class Planner:
                         label = f"CAST(STRFTIME({dexpr}, '%Y') AS VARCHAR)"
                     return (f"SELECT {label} AS {period}, "
                             f"{metric} AS value, COUNT(*) AS count "
-                            f"FROM analytics.{tq} WHERE {_quote_ident(date_col)} IS NOT NULL "
+                            f"FROM {tq} WHERE {_quote_ident(date_col)} IS NOT NULL "
                             f"GROUP BY 1 ORDER BY value {order_dir} LIMIT {n}")
 
         # "Which role completes the most projects on average?" — the metric
@@ -2797,7 +3252,7 @@ class Planner:
                  or self._numeric_value_column(table, question))
         dim = self._table_dimension_column(table, question)
         if not value or not dim:
-            return f"SELECT * FROM analytics.{tq} LIMIT {n}"
+            return f"SELECT * FROM {tq} LIMIT {n}"
         vq = _quote_ident(value)
         dq = _quote_ident(dim)
         is_bottom = any(w in q for w in ["bottom", "lowest", "least", "smallest", "fewest"])
@@ -2808,14 +3263,14 @@ class Planner:
             and not re.search(r'\b(revenue|sales|spent|spending|amount|value|income|profit)\b', q)
         if count_metric:
             return (f"SELECT {dq} AS group_name, COUNT(*) AS value, COUNT(*) AS count "
-                    f"FROM analytics.{tq} WHERE {dq} IS NOT NULL "
+                    f"FROM {tq} WHERE {dq} IS NOT NULL "
                     f"GROUP BY 1 ORDER BY value {order_dir} LIMIT {n}")
         metric = f"SUM({vq})"
         if "average" in q or "avg" in q or "mean" in q:
             metric = f"AVG({vq})"
         return (f"SELECT {dq} AS group_name, {metric} AS value, COUNT(*) AS count, "
                 f"ROUND(100.0 * {metric} / SUM({metric}) OVER (), 2) AS pct_of_total "
-                f"FROM analytics.{tq} GROUP BY 1 ORDER BY value {order_dir} LIMIT {n}")
+                f"FROM {tq} GROUP BY 1 ORDER BY value {order_dir} LIMIT {n}")
 
     def _generate_comparison_query(self, question: str, table: str) -> str:
         q = question.lower()
@@ -2834,7 +3289,7 @@ class Planner:
                 return (f"SELECT DATE_PART('year', {dexpr}) AS group_name, "
                         f"COUNT(*) AS count, SUM({vq}) AS total_value, "
                         f"AVG({vq}) AS avg_value "
-                        f"FROM analytics.{tq} WHERE {dq} IS NOT NULL "
+                        f"FROM {tq} WHERE {dq} IS NOT NULL "
                         f"GROUP BY 1 ORDER BY group_name")
         # "which X has more Y, A or B?" → count rows by the dimension, scoped
         # to the two named values. e.g. "which region has more orders, South
@@ -2853,17 +3308,17 @@ class Planner:
                     esc = [v.replace("'", "''") for v in vals]
                     in_clause = ", ".join(f"LOWER('{v}')" for v in esc)
                     return (f"SELECT {dq} AS group_name, COUNT(*) AS count "
-                            f"FROM analytics.{tq} WHERE LOWER({dq}) IN ({in_clause}) "
+                            f"FROM {tq} WHERE LOWER({dq}) IN ({in_clause}) "
                             f"GROUP BY 1 ORDER BY count DESC")
         dim = self._table_dimension_column(table, question)
         value = self._numeric_value_column(table, question)
         if not dim or not value:
-            return f"SELECT * FROM analytics.{tq} LIMIT 100"
+            return f"SELECT * FROM {tq} LIMIT 100"
         dq = _quote_ident(dim)
         vq = _quote_ident(value)
         return (f"SELECT {dq} AS group_name, COUNT(*) AS count, SUM({vq}) AS total_value, "
                 f"AVG({vq}) AS avg_value, ROUND(100.0 * SUM({vq}) / SUM(SUM({vq})) OVER (), 2) AS pct "
-                f"FROM analytics.{tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY total_value DESC")
+                f"FROM {tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY total_value DESC")
 
     def _generate_breakdown_query(self, question: str, table: str) -> str:
         date_col = self._table_date_column(table)
@@ -2884,22 +3339,22 @@ class Planner:
                         # Create a filter for the most common values
                         val_list = ", ".join(_quote_literal(v) for v in distinct_vals[:10])
                         return (f"SELECT {dim_q} AS group_name, COUNT(*) AS count, SUM({val_q}) AS total_value "
-                                f"FROM analytics.{tq} WHERE {dim_q} IN ({val_list}) "
+                                f"FROM {tq} WHERE {dim_q} IN ({val_list}) "
                                 f"GROUP BY 1 ORDER BY total_value DESC LIMIT 25")
                     return (f"SELECT {dim_q} AS group_name, COUNT(*) AS count, SUM({val_q}) AS total_value "
-                            f"FROM analytics.{tq} WHERE {dim_q} IS NOT NULL "
+                            f"FROM {tq} WHERE {dim_q} IS NOT NULL "
                             f"GROUP BY 1 ORDER BY total_value DESC LIMIT 25")
-            return f"SELECT * FROM analytics.{tq} LIMIT 100"
+            return f"SELECT * FROM {tq} LIMIT 100"
         dq = _quote_ident(date_col)
         dexpr = self._date_expr(table, date_col)
         vq = _quote_ident(value)
         if dim:
             dmq = _quote_ident(dim)
             return (f"SELECT DATE_TRUNC('month', {dexpr}) AS month, {dmq} AS group_name, "
-                    f"SUM({vq}) AS value, COUNT(*) AS count FROM analytics.{tq} "
+                    f"SUM({vq}) AS value, COUNT(*) AS count FROM {tq} "
                     f"WHERE {dq} IS NOT NULL GROUP BY 1, 2 ORDER BY month DESC, value DESC")
         return (f"SELECT DATE_TRUNC('month', {dexpr}) AS month, SUM({vq}) AS value, COUNT(*) AS count "
-                f"FROM analytics.{tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY month DESC")
+                f"FROM {tq} WHERE {dq} IS NOT NULL GROUP BY 1 ORDER BY month DESC")
 
     def _singularize_word(self, word: str) -> str:
         """Crude English singular form for column matching ('cities'→'city')."""
@@ -3188,15 +3643,15 @@ class Planner:
         tq = _quote_ident(table)
         # "how many ... in total" is a COUNT ask, never a SUM.
         if re.search(r'\bhow many\b', q):
-            return f"SELECT COUNT(*) AS grand_total FROM analytics.{tq}"
+            return f"SELECT COUNT(*) AS grand_total FROM {tq}"
         value = self._numeric_value_column(table, question)
         if value:
             vq = _quote_ident(value)
             if wants_avg:
                 return (f"SELECT ROUND(AVG({vq}), 2) AS average_value "
-                        f"FROM analytics.{tq}")
-            return f"SELECT ROUND(SUM({vq}), 2) AS grand_total FROM analytics.{tq}"
-        return f"SELECT COUNT(*) AS grand_total FROM analytics.{tq}"
+                        f"FROM {tq}")
+            return f"SELECT ROUND(SUM({vq}), 2) AS grand_total FROM {tq}"
+        return f"SELECT COUNT(*) AS grand_total FROM {tq}"
 
     def _percentage_status_query(self, question: str, table: str) -> Optional[str]:
         """Share SQL for 'what percentage of X are <value>' questions against a
@@ -3260,17 +3715,17 @@ class Planner:
             if is_bool:
                 return (f"SELECT ROUND(100.0 * SUM(CASE WHEN {cq} THEN {vq} ELSE 0 END) / "
                         f"NULLIF(SUM({vq}), 0), 2) AS pct, SUM({vq}) AS total "
-                        f"FROM analytics.{tq}")
+                        f"FROM {tq}")
             return (f"SELECT ROUND(100.0 * SUM(CASE WHEN LOWER({cq}) = "
                     f"LOWER('{val_esc}') THEN {vq} ELSE 0 END) / "
                     f"NULLIF(SUM({vq}), 0), 2) AS pct, SUM({vq}) AS total "
-                    f"FROM analytics.{tq}")
+                    f"FROM {tq}")
         if is_bool:
             return (f"SELECT ROUND(100.0 * SUM(CASE WHEN {cq} THEN 1 ELSE 0 END) / "
-                    f"COUNT(*), 2) AS pct, COUNT(*) AS total FROM analytics.{tq}")
+                    f"COUNT(*), 2) AS pct, COUNT(*) AS total FROM {tq}")
         return (f"SELECT ROUND(100.0 * SUM(CASE WHEN LOWER({cq}) = "
                 f"LOWER('{val_esc}') THEN 1 ELSE 0 END) / COUNT(*), 2) AS pct, "
-                f"COUNT(*) AS total FROM analytics.{tq}")
+                f"COUNT(*) AS total FROM {tq}")
 
     def _generate_clean_query(self, question: str, table: str) -> str:
         """Data-quality check: duplicate rows (on the key column) and missing
@@ -3287,7 +3742,7 @@ class Planner:
             cq = _quote_ident(ref)
             alias = re.sub(r'[^a-z0-9]+', '_', cl.lower()).strip('_') or 'col'
             parts.append(f"COUNT(*) - COUNT({cq}) AS missing_{alias}")
-        return f"SELECT {', '.join(parts)} FROM analytics.{tq}"
+        return f"SELECT {', '.join(parts)} FROM {tq}"
 
     def _generate_ratio_query(self, question: str, table: str) -> Optional[Tuple[str, str, bool]]:
         """SQL for derived ratio metrics (ROAS, CTR, conversion rate, CPA).
@@ -3320,10 +3775,10 @@ class Planner:
                 dmq = _quote_ident(dim)
                 order = "ASC" if re.search(r"\b(lowest|least|worst|bottom)\b", q) else "DESC"
                 return (f"SELECT {dmq} AS group_name, {expr} AS {alias}, "
-                        f"COUNT(*) AS count FROM analytics.{tq} "
+                        f"COUNT(*) AS count FROM {tq} "
                         f"WHERE {dmq} IS NOT NULL GROUP BY 1 ORDER BY {alias} {order}",
                         alias, True)
-            return (f"SELECT {expr} AS {alias} FROM analytics.{tq}", alias, False)
+            return (f"SELECT {expr} AS {alias} FROM {tq}", alias, False)
         return None
 
     def _year_comparison_query(self, question: str, table: str) -> Optional[str]:
@@ -3351,8 +3806,104 @@ class Planner:
         return (f"SELECT DATE_PART('year', {dexpr}) AS group_name, "
                 f"COUNT(*) AS count, SUM({vq}) AS total_value, "
                 f"AVG({vq}) AS avg_value "
-                f"FROM analytics.{tq} WHERE {dq} IS NOT NULL "
+                f"FROM {tq} WHERE {dq} IS NOT NULL "
                 f"GROUP BY 1 ORDER BY group_name")
+
+    def _generate_period_over_period_query(self, question: str,
+                                           table: str) -> Optional[str]:
+        """Two-period comparison ("month-over-month", "year over year", ...).
+
+        Answers "which <dimension> drove the change" by comparing the two
+        most recent periods (or two months named in the question) per
+        dimension value: previous value, current value, and the change.
+        Returns None when the question is not period-over-period or the
+        table lacks a usable date column / numeric measure.
+        """
+        q = (question or "").lower()
+        m = _PERIOD_OVER_PERIOD_RE.search(q)
+
+        # Explicit month pair ("between August and September 2026") is a
+        # two-period comparison too, even without the "month-over-month"
+        # phrase — but only when the question asks to compare/explain change.
+        months = []
+        seen_months = set()
+        month_re = re.compile(
+            r"\b(" + "|".join(sorted(_MONTH_NAMES, key=len, reverse=True)) + r")\b")
+        for hit in month_re.finditer(q):
+            num = _MONTH_NAMES[hit.group(1)]
+            if num not in seen_months:
+                seen_months.add(num)
+                months.append((hit.start(), num, hit.group(1).capitalize()))
+
+        compare_cue = re.search(
+            r"\b(change[d]?|drove|driver|compare|compared|comparison|versus|vs|"
+            r"difference|between)\b", q)
+        if not m and not (len(months) >= 2 and compare_cue):
+            return None
+        granularity = _period_granularity(m.group(1)) if m else "month"
+        date_col = self._table_date_column(table)
+        value = self._numeric_value_column(table, question)
+        if not date_col or not value:
+            return None
+        tq = _quote_ident(table)
+        dq = _quote_ident(date_col)
+        dexpr = self._date_expr(table, date_col)
+        vq = _quote_ident(value)
+        dim = self._table_dimension_column(table, question)
+        dq_dim = _quote_ident(dim) if dim else None
+
+        if len(months) >= 2:
+            years = [int(y) for y in re.findall(r"\b((?:19|20)\d{2})\b", q)]
+            if len(years) >= 2:
+                prev_year, cur_year = years[0], years[1]
+            elif len(years) == 1:
+                prev_year = cur_year = years[0]
+            else:
+                prev_year = cur_year = None
+            (_, prev_num, prev_name), (_, cur_num, cur_name) = months[0], months[1]
+            prev_label = f"{prev_year}-{prev_num:02d}" if prev_year else prev_name
+            cur_label = f"{cur_year}-{cur_num:02d}" if cur_year else cur_name
+
+            def month_cond(year, num):
+                cond = f"DATE_PART('month', {dexpr}) = {num}"
+                if year:
+                    cond = f"DATE_PART('year', {dexpr}) = {year} AND {cond}"
+                return cond
+
+            cond_prev = month_cond(prev_year, prev_num)
+            cond_cur = month_cond(cur_year, cur_num)
+            select = [f"'{prev_label}' AS prev_period",
+                      f"'{cur_label}' AS cur_period"]
+            source = tq
+            where = f"({cond_prev}) OR ({cond_cur})"
+            group = "GROUP BY 1" if dq_dim else ""
+        else:
+            trunc = f"DATE_TRUNC('{granularity}', {dexpr})"
+            select = [
+                f"{_period_label_sql(granularity, 'bounds.prev_period')} AS prev_period",
+                f"{_period_label_sql(granularity, 'bounds.cur_period')} AS cur_period",
+            ]
+            cond_prev = f"{trunc} = bounds.prev_period"
+            cond_cur = f"{trunc} = bounds.cur_period"
+            source = (f"{tq}, (SELECT MIN(period) AS prev_period, "
+                      f"MAX(period) AS cur_period FROM "
+                      f"(SELECT DISTINCT {trunc} AS period FROM {tq} "
+                      f"WHERE {dq} IS NOT NULL ORDER BY period DESC LIMIT 2)) bounds")
+            where = f"({cond_prev}) OR ({cond_cur})"
+            group = ("GROUP BY 1, bounds.prev_period, bounds.cur_period"
+                     if dq_dim else "")
+
+        prev_sum = f"SUM(CASE WHEN {cond_prev} THEN {vq} ELSE 0 END)"
+        cur_sum = f"SUM(CASE WHEN {cond_cur} THEN {vq} ELSE 0 END)"
+        change = f"{cur_sum} - {prev_sum}"
+        cols = [f"{dq_dim} AS group_name"] if dq_dim else []
+        cols += select
+        cols += [f"{prev_sum} AS prev_value", f"{cur_sum} AS cur_value",
+                 f"{change} AS change"]
+        sql = f"SELECT {', '.join(cols)} FROM {source} WHERE {where}"
+        if group:
+            sql += f" {group} ORDER BY ABS({change}) DESC"
+        return sql
 
     def _generate_summary_query(self, question: str, table: str) -> str:
         value = self._numeric_value_column(table, question)
@@ -3373,7 +3924,7 @@ class Planner:
                 pq, rq = _quote_ident(profit), _quote_ident(revenue)
                 return (f"SELECT ROUND(100.0 * SUM({pq}) / NULLIF(SUM({rq}), 0), 2) AS margin_pct, "
                         f"SUM({pq}) AS total_profit, SUM({rq}) AS total_revenue "
-                        f"FROM analytics.{tq}")
+                        f"FROM {tq}")
         needs_group = any(kw in q for kw in ["by ", "per ", "for each", "across",
                                              "between", "breakdown", "split", "compare", "group"])
         # Rate semantics over a boolean column: "what is the churn rate for
@@ -3386,8 +3937,8 @@ class Planner:
                 if dim and needs_group:
                     dq = _quote_ident(dim)
                     return (f"SELECT {dq} AS group_name, {expr} AS rate_pct, COUNT(*) AS total "
-                            f"FROM analytics.{tq} GROUP BY 1 ORDER BY rate_pct DESC")
-                return f"SELECT {expr} AS rate_pct, COUNT(*) AS total FROM analytics.{tq}"
+                            f"FROM {tq} GROUP BY 1 ORDER BY rate_pct DESC")
+                return f"SELECT {expr} AS rate_pct, COUNT(*) AS total FROM {tq}"
         # Percentage of a categorical status: "what percentage of customers
         # have churned?" → share of rows whose status column equals the value.
         pct_q = self._percentage_status_query(question, table)
@@ -3410,11 +3961,11 @@ class Planner:
             dq = _quote_ident(dim)
             return (f"SELECT {dq} AS category, COUNT(*) AS count, SUM({vq}) AS total, "
                     f"AVG({vq}) AS avg_value, ROUND(100.0 * SUM({vq}) / SUM(SUM({vq})) OVER (), 2) AS pct "
-                    f"FROM analytics.{tq}{where} GROUP BY 1 ORDER BY total DESC LIMIT 25")
+                    f"FROM {tq}{where} GROUP BY 1 ORDER BY total DESC LIMIT 25")
         if vq:
             return (f"SELECT COUNT(*) AS total_count, SUM({vq}) AS total_value, AVG({vq}) AS avg_value, "
-                    f"MIN({vq}) AS min_value, MAX({vq}) AS max_value FROM analytics.{tq}{where}")
-        return f"SELECT COUNT(*) AS total_count FROM analytics.{tq}{where}"
+                    f"MIN({vq}) AS min_value, MAX({vq}) AS max_value FROM {tq}{where}")
+        return f"SELECT COUNT(*) AS total_count FROM {tq}{where}"
 
     def _best_date_column(self, table: str) -> Optional[str]:
         """First DATE/TIMESTAMP column, preferring names that contain 'date'."""
@@ -3475,23 +4026,23 @@ class Planner:
                         if date_where:
                             where = f"{where} AND {date_where}"
                         return (f"SELECT COUNT(*) AS matching_count "
-                                f"FROM analytics.{tq} WHERE {where}")
+                                f"FROM {tq} WHERE {where}")
         grand = self._grand_total_query(question, table)
         if grand:
             return grand
         # Boolean status filters: "how many customers are currently active".
         status_filter = self._boolean_status_filter(question, table)
         if status_filter and any(kw in q for kw in ["how many", "number of", "count "]):
-            return f"SELECT COUNT(*) AS matching_count FROM analytics.{tq} WHERE {status_filter}"
+            return f"SELECT COUNT(*) AS matching_count FROM {tq} WHERE {status_filter}"
         # Column-vs-column comparisons: "how many products have stock below
         # their reorder point".
         comp_filter = self._column_comparison_filter(question, table)
         if comp_filter and any(kw in q for kw in ["how many", "number of", "count "]):
             return (f"SELECT COUNT(*) AS matching_count "
-                    f"FROM analytics.{tq} WHERE {comp_filter}")
+                    f"FROM {tq} WHERE {comp_filter}")
         # Filtered lists: "list products with unit_price above 100".
         if comp_filter and re.match(r'^\s*(list|show|give|find|select|display)\b', q):
-            return f"SELECT * FROM analytics.{tq} WHERE {comp_filter} LIMIT 200"
+            return f"SELECT * FROM {tq} WHERE {comp_filter} LIMIT 200"
         dim = self._table_dimension_column(table, question)
         value = self._numeric_value_column(table, question)
         # Date coverage: "what date range do the sales records cover".
@@ -3501,7 +4052,7 @@ class Planner:
             if dcol:
                 dq = _quote_ident(dcol)
                 return (f"SELECT MIN({dq}) AS min_date, MAX({dq}) AS max_date "
-                        f"FROM analytics.{tq}")
+                        f"FROM {tq}")
         needs_group = any(kw in q for kw in ["by ", "per ", "for each", "across", "between",
                                              "breakdown", "split", "compare", "group"])
         # Superlative-of-an-average without explicit "by": "which ticket
@@ -3520,20 +4071,20 @@ class Planner:
                                        "lowest", "least", "worst"}
                 order = "ASC" if asc else "DESC"
                 return (f"SELECT {dq} AS group_name, COUNT(*) AS count, "
-                        f"ROUND(AVG({sq}), 2) AS value FROM analytics.{tq} "
+                        f"ROUND(AVG({sq}), 2) AS value FROM {tq} "
                         f"GROUP BY 1 ORDER BY value {order}")
         if comp_filter and dim and value and needs_group:
             return (f"SELECT {_quote_ident(dim)} AS group_name, COUNT(*) AS count, "
                     f"SUM({_quote_ident(value)}) AS total_value, AVG({_quote_ident(value)}) AS avg_value "
-                    f"FROM analytics.{tq} WHERE {comp_filter} GROUP BY 1 ORDER BY total_value DESC")
+                    f"FROM {tq} WHERE {comp_filter} GROUP BY 1 ORDER BY total_value DESC")
         if dim and value and needs_group:
             return (f"SELECT {_quote_ident(dim)} AS group_name, COUNT(*) AS count, "
                     f"SUM({_quote_ident(value)}) AS total_value, AVG({_quote_ident(value)}) AS avg_value "
-                    f"FROM analytics.{tq} GROUP BY 1 ORDER BY total_value DESC")
+                    f"FROM {tq} GROUP BY 1 ORDER BY total_value DESC")
         # Count questions must never degrade to a raw row dump.
         if any(kw in q for kw in ["how many", "number of"]):
-            return f"SELECT COUNT(*) AS total_count FROM analytics.{tq}"
-        return f"SELECT * FROM analytics.{tq} LIMIT 100"
+            return f"SELECT COUNT(*) AS total_count FROM {tq}"
+        return f"SELECT * FROM {tq} LIMIT 100"
 
     # ── LLM planning (optional, fallback-protected) ──────────
 
@@ -3559,7 +4110,9 @@ class Planner:
 
 === RULES ===
 - Use EXACT column names from the schema.
-- Prefix tables with "analytics." (e.g. analytics.sales_data).
+- Reference tables by their BARE name (e.g. sales_data) — never prefix them
+  with a schema. The query runs inside the caller's own workspace, where an
+  unqualified name resolves to that workspace's copy of the table.
 - Quote column names with spaces or special characters.
 - First step = SQL. Keep 2-6 steps. JSON only, no markdown fences.
 - To show a chart, add a "viz" step AFTER the SQL step it charts.

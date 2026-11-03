@@ -26,6 +26,7 @@ import uvicorn
 import json
 from datetime import datetime, timezone
 import numpy as np
+import numpy.core.multiarray
 import duckdb
 import pandas as pd
 
@@ -69,6 +70,7 @@ from etl.watcher import DataWatcher
 # {"success": false, ...}.
 from etl.readonly import readonly_transaction
 from api.auth import user_manager, create_jwt_token, verify_jwt_token
+from api.bootstrap_gate import bootstrap_gate_required as _bootstrap_gate_required
 from api.rbac import role_manager, get_role_manager, Permission
 from api.audit import audit_logger, get_audit_logger
 from api.rls import RLSManager, get_rls_manager
@@ -358,7 +360,9 @@ async def lifespan(app: FastAPI):
             "billing.sync_url is empty — cloud entitlement sync is disabled; "
             "paid plans must be granted by an admin (POST /subscriptions/{user_id})."
         )
-    if not (os.getenv("DATAAGENT_BOOTSTRAP_TOKEN") or "").strip() and not user_manager.has_users():
+    if (_bootstrap_gate_required()
+            and not (os.getenv("DATAAGENT_BOOTSTRAP_TOKEN") or "").strip()
+            and not user_manager.has_users()):
         logger.warning(
             "DATAAGENT_BOOTSTRAP_TOKEN is not set and no account exists — the "
             "first registrant cannot create the bootstrap admin over HTTP."
@@ -490,7 +494,15 @@ app.include_router(enterprise_router)
 
 # OpenCode proxy pool (extracted from the main monolith: api/routes/proxies.py).
 from api.routes.proxies import router as proxies_router
-from api.tenancy import current_tenant_id, tenant_connection, tenant_search_path
+from api.tenancy import (
+    DEFAULT_TENANT_ID,
+    current_tenant_id,
+    tenant_connection,
+    tenant_search_path,
+    tenant_search_path_scope,
+    tenant_slug,
+    use_tenant,
+)
 
 app.include_router(proxies_router)
 
@@ -949,6 +961,7 @@ def _refresh_planner_schema(table_names):
         return
     try:
         from api.tenancy import tenant_schema as _tenant_schema
+        from warehouse.system_tables import is_system_table
 
         tenant = current_tenant_id()
         schema = _tenant_schema(tenant)
@@ -957,13 +970,21 @@ def _refresh_planner_schema(table_names):
             # No hard 40-table cap here: /ask already scopes the list, and slicing
             # again would silently drop user-named tables appended past the cap.
             for table_name in (table_names or []):
+                # A platform table is never user data: it must not reach the
+                # planner's context, or the model could be pointed at it.
+                if is_system_table(table_name):
+                    continue
                 safe_table = str(table_name).replace('"', '""')
                 try:
                     cols = db.execute(f'DESCRIBE "{schema}"."{safe_table}"').df()
                     col_list = [f"  - {row['column_name']}: {row['column_type']}" for _, row in cols.iterrows()]
                     count = db.execute(f'SELECT COUNT(*) FROM "{schema}"."{safe_table}"').fetchone()[0]
+                    # The BARE table name: the query runs in the caller's own
+                    # workspace, where an unqualified name resolves to their
+                    # copy of the table. A qualified name would point at a
+                    # schema the SQL policy refuses.
                     schema_parts.append(
-                        f"TABLE {schema}.{table_name} ({count} rows):\n" + "\n".join(col_list)
+                        f"TABLE {table_name} ({count} rows):\n" + "\n".join(col_list)
                     )
                     # Known categorical values per column lets the planner answer
                     # "how many <value> X" with a real filter (e.g. "choco loco"
@@ -993,6 +1014,11 @@ def _refresh_planner_schema(table_names):
                     continue
         if schema_parts:
             orchestrator.planner.set_schema_context("\n\n".join(schema_parts))
+        else:
+            # Nothing is in scope: clear the context, so the planner cannot
+            # answer from the tables of a previous request (or of another
+            # tenant) that happened to be in scope before.
+            orchestrator.planner.set_schema_context("")
     except Exception:
         pass
 
@@ -1124,12 +1150,27 @@ def _llm_available(force: bool = False) -> bool:
                 # calls). GET /config is the same probe the server bootstrap
                 # uses, so the label can never disagree with it.
                 if server_url:
-                    import urllib.request as _urlreq
-
+                    # HTTP-level truth for server mode: a wedged port-holder can
+                    # accept TCP while never answering HTTP, which a raw connect
+                    # would mislabel as healthy (llm_used=True with zero LLM
+                    # calls). GET /config is the same probe the server bootstrap
+                    # uses, so the label can never disagree with it.
+                    #
+                    # The probe MUST send the same credentials the provider
+                    # uses: an opencode server can require HTTP Basic auth
+                    # (the app generates a password for the server it starts),
+                    # and without it a healthy server answers 401 - which
+                    # mislabels every answer as "rule-based fallback" even
+                    # though the model answered.
                     try:
-                        with _urlreq.urlopen(server_url.rstrip("/") + "/config",
-                                             timeout=2.0) as _resp:
-                            ok = _resp.status == 200
+                        import httpx as _httpx
+
+                        from agent.opencode_bootstrap import server_auth_headers
+
+                        _headers = server_auth_headers(server_url) or None
+                        with _httpx.Client(timeout=2.0, headers=_headers) as _client:
+                            _resp = _client.get(server_url.rstrip("/") + "/config")
+                        ok = _resp.status_code == 200
                     except Exception:
                         ok = False
                     _llm_probe_cache["ts"] = now
@@ -1170,6 +1211,13 @@ def _build_ask_response(request: QuestionRequest, response, session_id: str) -> 
     # Prepare visualizations for response
     viz_list = []
     for viz in response.visualizations:
+        if isinstance(viz, dict):
+            item = _viz_event_item(viz)
+            if item:
+                item["config"] = viz.get("config") or {}
+                item["chart_config"] = {"type": item["chart_type"]}
+                viz_list.append(item)
+            continue
         if viz.success:
             chart_type = (viz.config or {}).get("chart_type", "unknown")
             item = {
@@ -1196,8 +1244,8 @@ def _build_ask_response(request: QuestionRequest, response, session_id: str) -> 
     data_preview = None
     for sr in reversed(response.step_results):
         if sr and sr.success and sr.result is not None:
-            if hasattr(sr.result, 'data') and sr.result.data is not None:
-                df = sr.result.data
+            df = getattr(sr.result, "data", None)
+            if isinstance(df, pd.DataFrame):
                 data_preview = {
                     "shape": list(df.shape),
                     "columns": list(df.columns),
@@ -1229,9 +1277,10 @@ def _build_ask_response(request: QuestionRequest, response, session_id: str) -> 
                     _seen_sql_norm.add(norm)
                 step_info["query"] = raw_query
         if sr.success and sr.result is not None:
-            if hasattr(sr.result, 'data') and sr.result.data is not None:
-                step_info["result_rows"] = sr.result.data.shape[0]
-                step_info["result_cols"] = list(sr.result.data.columns)[:10]
+            df = getattr(sr.result, "data", None)
+            if isinstance(df, pd.DataFrame):
+                step_info["result_rows"] = df.shape[0]
+                step_info["result_cols"] = list(df.columns)[:10]
             elif hasattr(sr.result, 'row_count'):
                 step_info["result_rows"] = sr.result.row_count
         steps_info.append(step_info)
@@ -1257,34 +1306,36 @@ def _build_ask_response(request: QuestionRequest, response, session_id: str) -> 
 
 def _scope_tables_for_question(tables, question: str, cap: int = 40,
                                preferred: Optional[List[str]] = None) -> list:
-    """Schema scope for a question: capped list of user tables, ranked by
-    relevance to the question instead of sliced alphabetically.
+    """Schema scope for a question.
+
+    * When the request **names** tables (``table`` / ``tables``), the scope is
+      those tables and nothing else: an explicit choice is a *restriction*,
+      not a hint.  The scope used to only pin the named tables to the front
+      of a relevance-ranked list, so the planner could still answer from a
+      table the user never named.
+    * Otherwise the scope is the tenant's tables, ranked by relevance to the
+      question instead of sliced alphabetically, and capped.
 
     The old alphabetical slice silently dropped real fact tables (sales_data,
     support_tickets, ...) whenever enough rand_/test_ uploads sorted earlier,
     forcing the planner onto wrong tables. Now: tables named in the question
     rank first (+100), keyword overlap ranks next, and scratch-looking tables
     sink when nothing else matches. The cap still bounds schema context size.
-
-    Explicitly requested tables (request.table / request.tables) are ALWAYS
-    kept in scope, ahead of the relevance ranking, so the planner can honor
-    the user's table override even when the question text doesn't name it.
     """
     all_tables = [t for t in (tables or []) if not is_system_table(t)]
     if not all_tables:
         return list(tables or [])
+
+    # Explicitly requested tables are a HARD scope: only they stay in scope.
+    if preferred:
+        wanted = {str(t).lower() for t in _normalize_table_names(preferred)}
+        pinned = [t for t in all_tables if str(t).lower() in wanted]
+        # A named table that does not exist in this workspace yields an empty
+        # scope (fail closed) rather than silently analysing another table.
+        return pinned[:cap]
+
     ql = str(question or "").lower()
     words = re.findall(r"[a-z]{3,}", ql)
-
-    # Explicitly requested tables always stay in scope (deduped, case-insensitive).
-    pinned = []
-    if preferred:
-        wanted = {str(t).lower() for t in preferred if t}
-        for t in all_tables:
-            if str(t).lower() in wanted:
-                pinned.append(t)
-        if pinned:
-            all_tables = [t for t in all_tables if t not in pinned]
 
     def _relevance(t: str) -> float:
         tl = str(t).lower()
@@ -1302,7 +1353,57 @@ def _scope_tables_for_question(tables, question: str, cap: int = 40,
         return s
 
     ranked = sorted(all_tables, key=lambda t: (-_relevance(t), str(t).lower()))
-    return (pinned + ranked)[:cap]
+    return ranked[:cap]
+
+
+async def _client_disconnected(req: Request) -> bool:
+    """Whether the browser has hung up (defensive: fake requests have no API)."""
+    is_disconnected = getattr(req, "is_disconnected", None)
+    if not callable(is_disconnected):
+        return False
+    try:
+        return bool(await is_disconnected())
+    except Exception:  # noqa: BLE001 — a probe must never fail the request
+        return False
+
+
+async def _await_agent_or_disconnect(req: Request, awaitable, timeout: float):
+    """Run the agent, but stop it when the client goes away.
+
+    ``asyncio.wait_for`` only bounds the total runtime; it does not notice
+    that the browser stopped waiting. Without this watcher the orchestrator
+    kept running the whole pipeline — including a billed LLM turn — for a
+    reply nobody would receive. Cancelling the task also lets the provider
+    abort its opencode server session (see
+    ``OpencodeProvider._abort_server_session``).
+
+    The 0.5 s poll is intentionally coarse: it only costs a cheap
+    ``http.disconnect`` check and adds no work while the agent runs.
+    """
+    task = asyncio.ensure_future(awaitable)
+
+    async def _watch():
+        while True:
+            done, _ = await asyncio.wait({task}, timeout=0.5)
+            if done:
+                return task.result()
+            if await _client_disconnected(req):
+                logger.info("Client disconnected during /ask — cancelling the agent turn")
+                task.cancel()
+                raise asyncio.CancelledError()
+
+    try:
+        return await asyncio.wait_for(_watch(), timeout=timeout)
+    finally:
+        # On timeout/disconnect/cancellation the inner coroutine must not keep
+        # running; awaiting it gives the provider's abort handler a chance to
+        # release the server-side session.
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):  # noqa: BLE001
+            pass
 
 
 @app.post("/ask", response_model=QuestionResponse)
@@ -1350,9 +1451,17 @@ async def ask_question(request: QuestionRequest, req: Request):
     _introspection = bool(
         re.search(r'\b(?:list|show|name|enumerate)\b[^?.!]{0,40}\btables?\b', _ql)
         or re.search(r'\bhow many (?:rows|records|tables)\b', _ql))
+    # An explicitly named table (request.table / request.tables) is a HARD
+    # scope: the planner may only see that table.  Falling back to "every
+    # table" here would let it answer from a table the user never named.
+    _named_tables = request.resolved_tables or []
     filtered_tables = tables if _introspection else _scope_tables_for_question(
-        tables, request.question, preferred=request.resolved_tables)
+        tables, request.question, preferred=_named_tables)
     table_override = request.resolved_table
+    # The agent's table list follows the same scope — and never widens it.
+    _available_tables = (
+        filtered_tables if _named_tables else (filtered_tables or tables)
+    )
 
     # Refresh planner schema context with current tables
     _refresh_planner_schema(filtered_tables)
@@ -1373,10 +1482,11 @@ async def ask_question(request: QuestionRequest, req: Request):
     # RLS was enabled.
     _ask_user = getattr(req.state, "user", None)
     try:
-        response = await asyncio.wait_for(
+        response = await _await_agent_or_disconnect(
+            req,
             orchestrator.answer_question(
                 question=request.question,
-                available_tables=filtered_tables or tables,
+                available_tables=_available_tables,
                 context=request.context,
                 preferred_table=table_override,
                 preferred_tables=request.resolved_tables,
@@ -1454,9 +1564,18 @@ async def ask_sql(request: QuestionRequest, req: Request):
         if settings.features.enable_llm_agent and orchestrator:
             # Use the orchestrator's planner (table-scoped, deterministic).
             from agent.planner import ToolType
-            _refresh_planner_schema(user_table_list)
+            # An explicitly named table is a hard scope here too: the planner
+            # only ever sees the table(s) the request named.
+            _named_tables = request.resolved_tables or []
+            _scoped_tables = (
+                _scope_tables_for_question(
+                    user_table_list, request.question, preferred=_named_tables
+                )
+                if _named_tables else user_table_list
+            )
+            _refresh_planner_schema(_scoped_tables)
             plan = orchestrator.planner.create_plan(
-                request.question, user_table_list,
+                request.question, _scoped_tables,
                 preferred_table=table_override,
                 preferred_tables=request.resolved_tables,
             )
@@ -1465,10 +1584,13 @@ async def ask_sql(request: QuestionRequest, req: Request):
                 query = sql_steps[0].params.get("query", "")
             else:
                 target = table_override or user_table_list[0]
-                query = f"SELECT * FROM \"{settings.duckdb.schema}\".\"{target}\" LIMIT 100"
+                # Unqualified: the table is resolved in the caller's own
+                # tenant schema (ADR-009 D1). A schema-qualified name would
+                # point at the platform schema instead.
+                query = f"SELECT * FROM \"{target}\" LIMIT 100"
         else:
             target = table_override or user_table_list[0]
-            query = f"SELECT * FROM \"{settings.duckdb.schema}\".\"{target}\" LIMIT 100"
+            query = f"SELECT * FROM \"{target}\" LIMIT 100"
 
         # Execute via the safe SQL tool (validates + limits rows).
         if not orchestrator:
@@ -4376,26 +4498,86 @@ async def llm_insights_endpoint(request: LLMInsightsRequest, req: Request):
 # real async HTTP I/O). Poll GET /analysis/storytelling/status/{job_id}.
 # Finished results are cached per table (keyed by a cheap content signature),
 # so regenerating stories for unchanged data hits the cache instantly.
+#
+# The cache is TENANT-SCOPED (ADR-009 D1): the key carries the tenant id and
+# every tenant owns its own file.  It used to be keyed by the table name only
+# and persisted in ONE shared file, so two tenants that each own a table
+# called ``sales`` shared a cache slot and could be served each other's
+# stories.
 _STORYTELLING_JOBS: Dict[str, Dict[str, Any]] = {}
 _STORYTELLING_JOBS_MAX = 50
-_STORYTELLING_CACHE: Dict[str, Dict[str, Any]] = {}
 _STORYTELLING_CACHE_MAX = 100
 
 
+class _StorytellingCache(dict):
+    """The per-tenant storytelling cache.
+
+    Storage layout: ``cache[tenant_id][table_name] = entry``.
+
+    A legacy flat lookup (``cache["sales"]``) still resolves, but **only**
+    against the default tenant: a caller that forgot to scope by tenant can
+    therefore never reach another tenant's entry.
+    """
+
+    def __missing__(self, key):
+        default = dict.get(self, DEFAULT_TENANT_ID)
+        if isinstance(default, dict) and key in default:
+            return default[key]
+        raise KeyError(key)
+
+    def __contains__(self, key):
+        if dict.__contains__(self, key):
+            return True
+        default = dict.get(self, DEFAULT_TENANT_ID)
+        return isinstance(default, dict) and key in default
+
+
+#: ``_STORYTELLING_CACHE[tenant_id][table_name] = entry``
+_STORYTELLING_CACHE: Dict[str, Dict[str, Any]] = _StorytellingCache()
+
+
+def _storytelling_cache_tenant(tenant_id: Optional[str] = None) -> str:
+    """The tenant whose storytelling cache is addressed."""
+    if tenant_id is None:
+        tenant_id = current_tenant_id()
+    return str(tenant_id or DEFAULT_TENANT_ID)
+
+
+def _storytelling_cache_key(table_name: str, tenant_id: Optional[str] = None) -> tuple:
+    """The ``(tenant, table)`` key of a storytelling cache entry.
+
+    The tenant id is part of the key: two tenants that each own a table with
+    the same name must never share a cache slot.
+    """
+    return (_storytelling_cache_tenant(tenant_id), str(table_name))
+
+
 def _storytelling_cache_path() -> str:
-    """Where the storytelling cache is persisted (beside the warehouse file),
-    so finished stories survive server restarts."""
+    """Where the current tenant's storytelling cache is persisted.
+
+    One file PER TENANT (beside the warehouse file), so a tenant's stories
+    survive a restart but are never read by another tenant.  The legacy
+    shared ``storytelling_cache.json`` is deliberately NOT read: it was not
+    tenant-scoped, so importing it into a tenant's namespace would
+    re-introduce the very leak this cache is now built to prevent.
+    """
+    tenant = current_tenant_id()
     return os.path.join(
         os.path.dirname(os.path.abspath(str(settings.duckdb.database_path))),
-        "storytelling_cache.json",
+        f"storytelling_cache_{tenant_slug(tenant)}.json",
     )
 
 
-def _storytelling_cache_load() -> None:
-    """Load a previously persisted cache (ignore missing/corrupt files)."""
-    global _STORYTELLING_CACHE
+def _storytelling_cache_load(tenant_id: Optional[str] = None) -> None:
+    """Load a tenant's persisted cache (ignore missing/corrupt files).
+
+    Only the tenant's OWN file is read; a corrupt file must never break a
+    request, so failures are logged and ignored.
+    """
+    tid = _storytelling_cache_tenant(tenant_id)
     try:
-        p = _storytelling_cache_path()
+        with use_tenant(tid):
+            p = _storytelling_cache_path()
         if not os.path.exists(p):
             return
         with open(p, "r", encoding="utf-8") as fh:
@@ -4406,23 +4588,48 @@ def _storytelling_cache_load() -> None:
             str(k): v for k, v in data.items()
             if isinstance(v, dict) and isinstance(v.get("stories"), list) and isinstance(v.get("signature"), str)
         }
-        if cleaned:
-            _STORYTELLING_CACHE = cleaned
+        if not cleaned:
+            return
+        namespace = _STORYTELLING_CACHE.get(tid)
+        if namespace is None:
+            namespace = {}
+            _STORYTELLING_CACHE[tid] = namespace
+        namespace.update(cleaned)
     except Exception:
-        _STORYTELLING_CACHE = {}
+        logger.debug("storytelling cache load failed", exc_info=True)
 
 
-def _storytelling_cache_save() -> None:
-    """Atomically persist the cache to disk (tmp file + rename)."""
+def _storytelling_cache_save(tenant_id: Optional[str] = None) -> None:
+    """Atomically persist a tenant's cache to disk (tmp file + rename)."""
+    tid = _storytelling_cache_tenant(tenant_id)
     try:
-        p = _storytelling_cache_path()
-        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with use_tenant(tid):
+            p = _storytelling_cache_path()
+        directory = os.path.dirname(p)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         tmp = f"{p}.tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(_STORYTELLING_CACHE, fh, ensure_ascii=True)
+            json.dump(_STORYTELLING_CACHE.get(tid) or {}, fh, ensure_ascii=True)
         os.replace(tmp, p)
     except Exception as e:
         logger.warning(f"Storytelling cache save failed: {e}")
+
+
+def _storytelling_cache_namespace(tenant_id: Optional[str] = None) -> Dict[str, Any]:
+    """The ``table -> entry`` namespace of one tenant.
+
+    The tenant's persisted cache is loaded on first use, so a story written
+    before the last restart is still found — and only ever in the tenant's
+    own namespace.
+    """
+    tid = _storytelling_cache_tenant(tenant_id)
+    namespace = _STORYTELLING_CACHE.get(tid)
+    if namespace is None:
+        namespace = {}
+        _STORYTELLING_CACHE[tid] = namespace
+        _storytelling_cache_load(tid)
+    return namespace
 
 
 _storytelling_cache_load()
@@ -4453,116 +4660,275 @@ def _storytelling_signature(row_count, sample_df) -> str:
     return f"{int(row_count)}:{hashlib.md5(sample.encode('utf-8')).hexdigest()}"
 
 
-def _storytelling_cache_hit(table_name: str, sig: str):
-    """Return the cached stories for `table_name` when the data signature
-    still matches, else None."""
-    entry = _STORYTELLING_CACHE.get(table_name)
-    if entry and entry.get("signature") == sig:
-        return entry
-    return None
+#: Request keys that mean "throw the cached story away and write a new one".
+#: The UI's "Regenerate" button must be able to bust the per-table cache;
+#: without an explicit signal the server cannot tell a regenerate request
+#: apart from a plain re-load of the page.
+_STORYTELLING_REGENERATE_FLAGS = (
+    "force", "regenerate", "refresh", "bypass_cache", "force_refresh",
+)
 
 
-def _storytelling_cache_put(entry: Dict[str, Any]) -> None:
+def _storytelling_truthy(value: Any) -> bool:
+    """Interpret a client-supplied flag as a boolean."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    return False
+
+
+def _storytelling_wants_regeneration(request: Dict[str, Any]) -> bool:
+    """True when the caller explicitly asked for a freshly written story."""
+    for key in _STORYTELLING_REGENERATE_FLAGS:
+        if _storytelling_truthy(request.get(key)):
+            return True
+    return False
+
+
+def _storytelling_entry_has_llm(entry: Dict[str, Any]) -> bool:
+    """True when a cache entry really holds an LLM-written story.
+
+    An entry whose stories are all ``source == "auto"`` means the LLM call
+    failed when it was written (rate limit, empty answer, no model): serving
+    it again would present stale rule-based output as if it were a current AI
+    narrative, so such an entry is never a cache hit.
+    """
+    stories = entry.get("stories") or []
+    return any(
+        isinstance(s, dict) and s.get("source") == "llm" for s in stories
+    )
+
+
+def _storytelling_cache_hit(table_name: str, sig: str, question: str = "",
+                            tenant_id: Optional[str] = None):
+    """Return the cached stories for `table_name` when the data signature and
+    the question still match and the entry holds an LLM-written story.
+
+    The lookup is tenant-scoped: a story written for another tenant is never
+    returned, not even when both tenants own a table with the same name.
+
+    Returns None for a missing, outdated, differently-asked or rule-based
+    (never LLM-written) entry."""
+    tid, table = _storytelling_cache_key(table_name, tenant_id)
+    entry = _storytelling_cache_namespace(tid).get(table)
+    if not entry:
+        return None
+    if entry.get("tenant_id") not in (None, tid):
+        # Defence in depth: an entry that belongs to another tenant is never
+        # served, whatever namespace it was found in.
+        return None
+    if entry.get("signature") != sig:
+        return None
+    if str(entry.get("question", "") or "") != str(question or ""):
+        return None
+    if not _storytelling_entry_has_llm(entry):
+        return None
+    return entry
+
+
+def _storytelling_cache_invalidate(table_name: str, tenant_id: Optional[str] = None) -> bool:
+    """Drop the cached entry for *table_name* (a regenerate request).
+
+    Only the caller's own entry is dropped — a regenerate in one tenant never
+    invalidates another tenant's story.
+
+    Returns True when an entry was removed. The change is persisted so a
+    restart cannot resurrect the story the user asked to replace."""
+    tid, table = _storytelling_cache_key(table_name, tenant_id)
+    namespace = _STORYTELLING_CACHE.get(tid)
+    if not namespace or namespace.pop(table, None) is None:
+        return False
+    _storytelling_cache_save(tid)
+    return True
+
+
+def _storytelling_cache_put(entry: Dict[str, Any], tenant_id: Optional[str] = None) -> None:
     """Store a finished storytelling result, keeping the cache bounded (and
     persisted to disk so it survives restarts)."""
-    if len(_STORYTELLING_CACHE) >= _STORYTELLING_CACHE_MAX:
-        oldest = min(_STORYTELLING_CACHE, key=lambda k: _STORYTELLING_CACHE[k].get("created_at", ""))
-        _STORYTELLING_CACHE.pop(oldest, None)
-    _STORYTELLING_CACHE[entry["table"]] = entry
-    _storytelling_cache_save()
+    tid = _storytelling_cache_tenant(tenant_id)
+    namespace = _storytelling_cache_namespace(tid)
+    if len(namespace) >= _STORYTELLING_CACHE_MAX:
+        oldest = min(namespace, key=lambda k: namespace[k].get("created_at", ""))
+        namespace.pop(oldest, None)
+    entry = dict(entry)
+    entry.setdefault("question", "")
+    entry["has_llm"] = _storytelling_entry_has_llm(entry)
+    entry["tenant_id"] = tid
+    namespace[entry["table"]] = entry
+    _storytelling_cache_save(tid)
 
 
-async def _run_storytelling_job(job_id: str, table_name: str, user_question: str, max_stories: int):
+def _storytelling_trim(stories: List[Dict[str, Any]], max_stories: Any) -> List[Dict[str, Any]]:
+    """Cap the story list, always keeping the LLM narrative when there is one.
+
+    The rule-based stories are the supporting detail; the AI narrative is the
+    point of the feature, so it must survive the cap."""
+    try:
+        limit = int(max_stories)
+    except (TypeError, ValueError):
+        limit = 10
+    if limit <= 0:
+        return []
+    if len(stories) <= limit:
+        return list(stories)
+    llm = [s for s in stories if s.get("source") == "llm"]
+    auto = [s for s in stories if s.get("source") != "llm"]
+    keep_llm = llm[:limit]
+    keep_auto = auto[: max(0, limit - len(keep_llm))]
+    # The AI stories are appended last, so this keeps the original order.
+    return keep_auto + keep_llm
+
+
+async def _run_storytelling_job(job_id: str, table_name: str, user_question: str,
+                                 max_stories: int, tenant_id: Optional[str] = None):
+    """Run one storytelling job in the tenant that created it.
+
+    The tenant is captured when the job is created (the request is gone by
+    the time the job runs), so the job reads the creator's table and writes
+    into the creator's cache namespace — never another tenant's."""
     job = _STORYTELLING_JOBS.get(job_id)
     if job is None:
         return
+    tenant_id = str(tenant_id or job.get("tenant_id") or current_tenant_id())
     try:
-        from analysis.insights import generate_auto_insights, generate_llm_insights
-        with tenant_connection() as conn:
-            conn.execute(f"SET search_path = '{tenant_search_path()}'")
-            df = conn.execute(f"SELECT * FROM {table_name}").df()
-        if df.empty:
-            job.update({"status": "error", "error": "Empty table",
-                        "finished_at": datetime.now(timezone.utc).isoformat()})
-            return
-        auto = generate_auto_insights(df, table_name)
-        llm = {}
-        try:
-            llm = await generate_llm_insights(
-                df, table_name, user_question,
-                client=getattr(orchestrator, "llm_client", None),
-            )
-        except Exception:
-            llm = {}
-        stories = []
-        if auto.get("summary"):
-            stories.append({"type": "trend", "title": "Data Overview", "narrative": auto["summary"], "confidence": "high", "source": "auto"})
-        for f in (auto.get("key_findings") or [])[:3]:
-            stories.append({"type": "trend", "title": "Key Finding", "narrative": f, "confidence": "medium", "source": "auto"})
-        for c in (auto.get("correlation_highlights") or [])[:2]:
-            stories.append({"type": "correlation", "title": "Correlation", "narrative": c, "confidence": "medium", "source": "auto"})
-        for r in (auto.get("recommendations") or [])[:3]:
-            stories.append({"type": "recommendation", "title": "Recommendation", "narrative": r, "confidence": "high", "source": "auto"})
-        # Only surface stories as AI-generated when the LLM actually produced
-        # them (source == "llm"); never mislabel the rule-based fallback as AI.
-        if llm.get("source") == "llm" and llm.get("narrative"):
-            stories.append({"type": "trend", "title": "AI Analysis", "narrative": llm["narrative"], "confidence": "high", "source": "llm"})
-        if llm.get("source") == "llm":
-            for f in (llm.get("findings") or [])[:3]:
-                stories.append({"type": "correlation", "title": "AI Finding", "narrative": f, "confidence": "medium", "source": "llm"})
-        job.update({"status": "done", "stories": stories[:max_stories], "table": table_name,
-                    "finished_at": datetime.now(timezone.utc).isoformat()})
-        # Seed the cache so repeat requests for unchanged data are instant.
-        _storytelling_cache_put({
-            "table": table_name,
-            "signature": _storytelling_signature(len(df), df),
-            "stories": stories[:max_stories],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        })
+        # Bind the tenant for the whole job: the warehouse connection and the
+        # cache both resolve the tenant from the request context.
+        with use_tenant(tenant_id):
+            await _storytelling_job_body(job, job_id, table_name, user_question, max_stories)
     except Exception as e:
         logger.error(f"Storytelling job {job_id} failed: {e}")
         job.update({"status": "error", "error": str(e),
                     "finished_at": datetime.now(timezone.utc).isoformat()})
 
 
+async def _storytelling_job_body(job: Dict[str, Any], job_id: str, table_name: str,
+                                 user_question: str, max_stories: int) -> None:
+    """Produce the stories for one table and cache the result."""
+    from analysis.insights import generate_auto_insights, generate_llm_insights
+    with tenant_connection() as conn:
+        conn.execute(f"SET search_path = '{tenant_search_path()}'")
+        df = conn.execute(f"SELECT * FROM {table_name}").df()
+    if df.empty:
+        job.update({"status": "error", "error": "Empty table",
+                    "finished_at": datetime.now(timezone.utc).isoformat()})
+        return
+    # NOTE: the table name must be passed by keyword — the second
+    # positional parameter of generate_auto_insights() is `profile`, so
+    # passing it positionally silently dropped the dataset name and the
+    # story ended up saying "Dataset name: unnamed".
+    auto = generate_auto_insights(df, table_name=table_name)
+    llm = {}
+    try:
+        llm = await generate_llm_insights(
+            df, table_name, user_question,
+            client=getattr(orchestrator, "llm_client", None),
+        )
+    except Exception as e:
+        logger.warning(f"Storytelling LLM step failed for {table_name}: {e}")
+        llm = {}
+    if llm.get("source") != "llm":
+        # The stories below are the rule-based fallback. Say so in the log
+        # (the cache refuses to serve such an entry as a fresh story).
+        logger.warning(
+            "Storytelling for %s fell back to rule-based stories: the LLM "
+            "returned no narrative (provider error or rate limit).",
+            table_name,
+        )
+    stories = []
+    if auto.get("summary"):
+        stories.append({"type": "trend", "title": "Data Overview", "narrative": auto["summary"], "confidence": "high", "source": "auto"})
+    for f in (auto.get("key_findings") or [])[:3]:
+        stories.append({"type": "trend", "title": "Key Finding", "narrative": f, "confidence": "medium", "source": "auto"})
+    for c in (auto.get("correlation_highlights") or [])[:2]:
+        stories.append({"type": "correlation", "title": "Correlation", "narrative": c, "confidence": "medium", "source": "auto"})
+    for r in (auto.get("recommendations") or [])[:3]:
+        stories.append({"type": "recommendation", "title": "Recommendation", "narrative": r, "confidence": "high", "source": "auto"})
+    # Only surface stories as AI-generated when the LLM actually produced
+    # them (source == "llm"); never mislabel the rule-based fallback as AI.
+    if llm.get("source") == "llm" and llm.get("narrative"):
+        stories.append({"type": "trend", "title": f"AI Analysis: {table_name}", "narrative": llm["narrative"], "confidence": "high", "source": "llm"})
+    if llm.get("source") == "llm":
+        for f in (llm.get("findings") or [])[:3]:
+            stories.append({"type": "correlation", "title": "AI Finding", "narrative": f, "confidence": "medium", "source": "llm"})
+    trimmed = _storytelling_trim(stories, max_stories)
+    job.update({"status": "done", "stories": trimmed, "table": table_name,
+                "has_llm": _storytelling_entry_has_llm({"stories": trimmed}),
+                "finished_at": datetime.now(timezone.utc).isoformat()})
+    # Seed the cache so repeat requests for unchanged data are instant.
+    # The entry records the question it was written for and whether it
+    # really holds an LLM story, so a rule-based fallback is never served
+    # later as if it were a current AI narrative.
+    _storytelling_cache_put({
+        "table": table_name,
+        "signature": _storytelling_signature(len(df), df),
+        "stories": trimmed,
+        "question": user_question,
+        "has_llm": _storytelling_entry_has_llm({"stories": trimmed}),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
 @app.post("/analysis/storytelling", response_model=Dict[str, Any])
 async def storytelling_endpoint(
     request: Dict[str, Any],
+    force: Optional[bool] = None,
     _: None = Depends(require_feature(FEATURE_STORYTELLING)),
 ):
     """Generate structured data stories from a table.
 
     Returns a job_id immediately (the potentially ~90s LLM narrative step runs
     in a background task — poll /analysis/storytelling/status/{job_id}). When a
-    finished result is cached for the table's current data, it returns inline
-    with `cached: true` instead of starting a new job."""
+    finished result is cached for the table's current data and question, it
+    returns inline with `cached: true` instead of starting a new job.
+
+    Regenerate: pass `force`/`regenerate`/`refresh` in the body (or `?force=1`
+    on the query string). The cached story for that table is then dropped and
+    a fresh — LLM-written — story is generated. A cached entry that only holds
+    rule-based stories is never served either: it means the LLM call failed
+    when the entry was written, so it is refreshed instead of being passed off
+    as a current AI narrative."""
     try:
         table_name = request.get("table_name", "")
-        user_question = request.get("user_question", "")
+        user_question = request.get("user_question", "") or ""
         max_stories = request.get("max_stories", 10)
+        regenerate = bool(force) or _storytelling_wants_regeneration(request)
+        # The caller's tenant, captured for the whole request: the cache and
+        # the background job must never touch another tenant's namespace.
+        tenant_id = current_tenant_id()
         if not table_name:
             return {"success": False, "error": "table_name is required"}
         table_name = validate_table_name(table_name)
         if not loader.table_exists(table_name):
             return {"success": False, "error": f"Table '{table_name}' not found"}
-        with tenant_connection() as conn:
-            conn.execute(f"SET search_path = '{tenant_search_path()}'")
+        with tenant_connection(tenant_id) as conn:
+            conn.execute(f"SET search_path = '{tenant_search_path(tenant_id)}'")
             count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
             sample_df = conn.execute(f"SELECT * FROM {table_name} LIMIT 20").df()
         sig = _storytelling_signature(count, sample_df)
-        hit = _storytelling_cache_hit(table_name, sig)
-        if hit:
-            return {"success": True, "cached": True, "stories": hit["stories"], "table": table_name}
+        if regenerate:
+            # "Regenerate" must produce a new story: drop the cached entry so
+            # a stale (or rule-based) one can never be served for this table.
+            _storytelling_cache_invalidate(table_name, tenant_id)
+        else:
+            hit = _storytelling_cache_hit(table_name, sig, user_question, tenant_id)
+            if hit:
+                return {"success": True, "cached": True, "stories": hit["stories"], "table": table_name}
         job_id = uuid.uuid4().hex[:12]
         _storytelling_prune()
         _STORYTELLING_JOBS[job_id] = {
             "job_id": job_id,
             "table": table_name,
             "status": "running",
+            # Captured here: the job runs after this request is gone, so it
+            # must not pick up whichever tenant is current when it finishes.
+            "tenant_id": tenant_id,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         asyncio.create_task(_run_storytelling_job(job_id, table_name, user_question, max_stories))
-        return {"success": True, "job_id": job_id, "status": "running"}
+        return {"success": True, "cached": False, "job_id": job_id, "status": "running"}
     except Exception as e:
         logger.error(f"Storytelling failed: {e}")
         return {"success": False, "error": str(e)}
@@ -4577,12 +4943,16 @@ async def storytelling_status(
     job = _STORYTELLING_JOBS.get(job_id)
     if job is None:
         return {"success": False, "error": "Unknown job id", "job_id": job_id}
+    stories = job.get("stories")
     return {
         "success": True,
         "job_id": job_id,
         "status": job.get("status"),
         "table": job.get("table"),
-        "stories": job.get("stories"),
+        "stories": stories,
+        # False when the LLM could not be reached: the stories are then the
+        # rule-based fallback, never an AI narrative.
+        "has_llm": _storytelling_entry_has_llm({"stories": stories or []}),
         "error": job.get("error"),
     }
 
@@ -4950,13 +5320,28 @@ def _agg_expr(col: str, agg: str = "SUM") -> str:
     return f"{agg}({_qcol(col)})"
 
 
+def _date_expr(col: str) -> str:
+    """Parse the mixed date strings real CSVs carry without aborting the query."""
+    c = _qcol(col)
+    return (
+        f"COALESCE(try_cast({c} AS TIMESTAMP), "
+        f"try_strptime({c}, '%d/%m/%Y'), "
+        f"try_strptime({c}, '%d-%m-%Y'), "
+        f"try_strptime({c}, '%Y/%m/%d'), "
+        f"try_strptime({c}, '%b %d %Y'), "
+        f"try_strptime({c}, '%B %d %Y'))"
+    )
+
+
 def _trend_sql(table: str, date_col: str, metric: str, bucket: str = "month") -> str:
     fmt = {"week": "%Y-W%W", "month": "%Y-%m", "quarter": "%Y-Q%q", "year": "%Y"}.get(
         bucket, "%Y-%m"
     )
+    ts = _date_expr(date_col)
     return (
-        f"SELECT strftime(CAST({_qcol(date_col)} AS TIMESTAMP), '{fmt}') AS label, "
-        f"{_agg_expr(metric)} AS value FROM {_qcol(table)} GROUP BY 1 ORDER BY 1"
+        f"SELECT strftime({ts}, '{fmt}') AS label, "
+        f"{_agg_expr(metric)} AS value FROM {_qcol(table)} "
+        f"WHERE {ts} IS NOT NULL GROUP BY 1 ORDER BY 1"
     )
 
 
@@ -4977,10 +5362,11 @@ def _series_sql(table: str, cat: str, series: str, metric: str = "", limit: int 
 
 
 def _combo_sql(table: str, date_col: str, a: str, b: str) -> str:
+    ts = _date_expr(date_col)
     return (
-        f"SELECT strftime(CAST({_qcol(date_col)} AS TIMESTAMP), '%Y-%m') AS label, "
+        f"SELECT strftime({ts}, '%Y-%m') AS label, "
         f"SUM({_qcol(a)}) AS value, AVG({_qcol(b)}) AS avg_val FROM {_qcol(table)} "
-        f"GROUP BY 1 ORDER BY 1"
+        f"WHERE {ts} IS NOT NULL GROUP BY 1 ORDER BY 1"
     )
 
 
@@ -7240,45 +7626,6 @@ class RegisterRequest(BaseModel):
     email: str = ""
 
 
-#: Bind hosts that mean "this process is only reachable from this machine".
-_LOCAL_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
-
-
-def _bootstrap_gate_required() -> bool:
-    """True when creating the first account requires a bootstrap token.
-
-    The token gate exists to stop whoever reaches an *exposed* port first
-    from taking over the instance (see docs/OPERATIONS.md).  A desktop
-    build binds the loopback interface only, is never published, and ships
-    no ``DATAAGENT_BOOTSTRAP_TOKEN`` — so on a local-only instance the
-    gate would lock the owner of their own app out of it, with no recovery
-    path.
-
-    The decision is therefore taken from the *configuration* — the bind
-    host and the deployment environment — and never from a hardcoded
-    constant:
-
-    * loopback bind host and a non-production environment → no gate (the
-      first registrant becomes the local admin);
-    * any other bind host, or ``app.env == "production"`` → the gate
-      applies, exactly as before.
-    """
-    try:
-        from config import current_app_env
-
-        env = str(current_app_env() or "").strip().lower()
-    except Exception:  # noqa: BLE001 - fall back to the settings value
-        env = str(getattr(settings.app, "env", "development") or "").strip().lower()
-    try:
-        host = str(getattr(settings.app, "host", "127.0.0.1") or "").strip().lower()
-    except Exception:  # noqa: BLE001 - fail closed: the gate stays on
-        logger.warning("Could not read the app bind settings; keeping the bootstrap gate")
-        return True
-    if env == "production":
-        return True
-    return host not in _LOCAL_BIND_HOSTS
-
-
 @app.post("/auth/register", response_model=Dict[str, Any])
 async def register_user(request: RegisterRequest, request_ctx: Request):
     """Register a new user.
@@ -7318,7 +7665,7 @@ async def register_user(request: RegisterRequest, request_ctx: Request):
         default_role = str(getattr(settings.rbac, "default_role", "user") or "user")
         role = "admin" if first_user else default_role
 
-        if first_user and _bootstrap_gate_required():
+        if first_user and _bootstrap_gate_required(request_ctx):
             # Bootstrap gate: the first admin must present the bootstrap
             # token. When no token is configured the first admin cannot be
             # created over HTTP at all — an admin must be provisioned
@@ -8254,21 +8601,25 @@ async def get_lineage(table_name: str):
 
 @app.post("/lineage/record", response_model=Dict[str, Any])
 async def record_lineage(request: Dict[str, Any]):
-    """Record a transformation in lineage."""
+    """Record a manual transformation in the caller's lineage."""
+    from api.lineage_service import validate_lineage_payload
+
+    try:
+        payload = validate_lineage_payload(request)
+        validate_table_name(payload["table"])
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     try:
         from analysis.lineage import LineageTracker
         tracker = LineageTracker()
-        tracker.record_transform(
-            table=request.get("table", ""),
-            operation=request.get("operation", ""),
-            inputs=request.get("inputs", []),
-            outputs=request.get("outputs", []),
-            description=request.get("description", ""),
-            column_map=request.get("column_map", {}),
-        )
+        tracker.record_transform(**payload)
         return {"success": True, "message": "Lineage recorded"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        logger.error("Manual lineage record failed: %s", e, exc_info=True)
+        return {"success": False, "error": "Could not record lineage"}
 
 @app.get("/lineage/{table_name}/dag", response_model=Dict[str, Any])
 async def get_lineage_dag(table_name: str):
@@ -8766,9 +9117,12 @@ async def bi_live_query(request: Dict[str, Any], req: Request):
 
         conn = get_connection()
         with _bi_query_lock:
-            conn.execute(f"SET search_path = '{tenant_search_path()}'")
-            with readonly_transaction(conn):
-                result = conn.execute(query).fetchdf()
+            # The shared connection is process-wide: the tenant search path
+            # is set for this query and RESTORED afterwards, so the next
+            # request (any tenant) cannot resolve this tenant's tables.
+            with tenant_search_path_scope(conn):
+                with readonly_transaction(conn):
+                    result = conn.execute(query).fetchdf()
         return {"success": True, "columns": list(result.columns),
                 "rows": json.loads(result.to_json(orient="records")), "row_count": len(result)}
     except Exception as e:
@@ -9833,6 +10187,8 @@ def _step_event_payload(ev: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                    "ok": ev.get("ok"), "ms": ev.get("ms")}
         if "rows" in ev:
             payload["rows"] = ev["rows"]
+        if "artifact" in ev:
+            payload["artifact"] = ev["artifact"]
         return payload
     if kind == "answering":
         return {"type": "answering"}
@@ -9941,9 +10297,15 @@ async def llm_chat_stream(request: QuestionRequest, req: Request):
             #  3. Data / analytical questions  real agent pipeline 
             if not _is_smalltalk(q):
                 tables = loader.list_tables() if loader else []
+                # An explicitly named table is a hard scope: the planner only
+                # ever sees the table(s) the request named.
+                _named_tables = request.resolved_tables or []
                 filtered = _scope_tables_for_question(tables, q,
-                                                      preferred=request.resolved_tables)
+                                                      preferred=_named_tables)
                 _refresh_planner_schema(filtered)
+                _available_tables = (
+                    filtered if _named_tables else (filtered or tables)
+                )
 
                 if getattr(request, "stream_steps", False):
                     # Live pipeline: relay step/chart progress while the agent
@@ -9965,7 +10327,7 @@ async def llm_chat_stream(request: QuestionRequest, req: Request):
                             return await asyncio.wait_for(
                                 orchestrator.answer_question(
                                     question=q,
-                                    available_tables=filtered,
+                                    available_tables=_available_tables,
                                     context=request.context,
                                     preferred_table=request.resolved_table,
                                     preferred_tables=request.resolved_tables,
@@ -10008,7 +10370,15 @@ async def llm_chat_stream(request: QuestionRequest, req: Request):
                             yield f"data: [DONE]\n\n"
                             return
                     except asyncio.CancelledError:
+                        # The browser dropped the stream. Cancel the pipeline
+                        # and WAIT for it, so the provider's abort handler can
+                        # release the opencode session before the loop tears
+                        # the request down.
                         task.cancel()
+                        try:
+                            await task
+                        except (asyncio.CancelledError, Exception):  # noqa: BLE001
+                            pass
                         raise
 
                     answer = _strip_think_leak(resp.final_answer or "")
@@ -10023,7 +10393,7 @@ async def llm_chat_stream(request: QuestionRequest, req: Request):
                     resp = await asyncio.wait_for(
                         orchestrator.answer_question(
                             question=q,
-                            available_tables=filtered,
+                            available_tables=_available_tables,
                             context=request.context,
                             preferred_table=request.resolved_table,
                             preferred_tables=request.resolved_tables,

@@ -77,10 +77,10 @@ const UploadPage = {
                 <div class="card hidden" id="actions-section">
                     <h3 class="text-lg font-semibold mb-3">Actions</h3>
                     <div class="flex flex-wrap gap-3">
-                        <button onclick="UploadPage.cleanData()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-medium transition-colors">
+                        <button onclick="UploadPage.cleanData()" class="btn btn-sm btn-secondary">
                             <i class="fas fa-broom mr-1"></i>Clean Data
                         </button>
-                        <button onclick="UploadPage.loadToWarehouse()" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium transition-colors">
+                        <button onclick="UploadPage.loadToWarehouse()" class="btn btn-sm btn-primary">
                             <i class="fas fa-database mr-1"></i>Load to Warehouse
                         </button>
                     </div>
@@ -134,10 +134,10 @@ const UploadPage = {
                         </select>
                     </div>
                     <div class="mt-4 flex gap-2">
-                        <button type="button" onclick="UploadPage.testDbConnection()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <button type="button" onclick="UploadPage.testDbConnection()" class="btn btn-sm btn-secondary">
                             <i class="fas fa-plug mr-1"></i>Test Connection
                         </button>
-                        <button type="button" onclick="UploadPage.importFromDb()" id="btn-db-import" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors" disabled>
+                        <button type="button" onclick="UploadPage.importFromDb()" id="btn-db-import" class="btn btn-sm btn-primary" disabled>
                             <i class="fas fa-download mr-1"></i>Import
                         </button>
                     </div>
@@ -175,7 +175,7 @@ const UploadPage = {
                         </div>
                     </div>
                     <div class="mt-4 flex gap-2">
-                        <button type="button" onclick="UploadPage.importFromApi()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <button type="button" onclick="UploadPage.importFromApi()" class="btn btn-sm btn-primarys">
                             <i class="fas fa-download mr-1"></i>Import from API
                         </button>
                     </div>

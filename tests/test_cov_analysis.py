@@ -244,6 +244,17 @@ class TestHypothesis:
         r = test_hypothesis(df, "a", "b", test_type="ttest")
         assert r.groups == ["a", "b"]
 
+    def test_ttest_rejects_more_than_two_groups(self):
+        from analysis.statistical import test_hypothesis
+        df = pd.DataFrame({
+            "g": ["A"] * 4 + ["B"] * 4 + ["C"] * 4,
+            "x": [1.0, 1.2, 0.9, 1.1, 5.0, 5.2, 4.8, 5.1, 9.0, 9.1, 8.9, 9.2],
+        })
+        r = test_hypothesis(df, "x", group_col="g", test_type="ttest")
+        assert r.ok is False
+        assert "Error" in r.interpretation
+        assert "ANOVA" in r.error
+
     def test_ttest_errors(self):
         from analysis.statistical import test_hypothesis
         df = pd.DataFrame({"g": ["A"], "x": [1.0]})
@@ -269,6 +280,13 @@ class TestHypothesis:
         r2 = test_hypothesis(df, "a", "b", test_type="mannwhitney")
         assert r2.groups == ["a", "b"]
         assert "Error" in test_hypothesis(df, "", test_type="mannwhitney").interpretation
+        three = pd.DataFrame({
+            "g": ["A", "A", "B", "B", "C", "C"],
+            "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        })
+        r3 = test_hypothesis(three, "x", group_col="g", test_type="mannwhitney")
+        assert r3.ok is False
+        assert "ANOVA" in r3.error
 
     def test_chi2(self):
         from analysis.statistical import test_hypothesis
@@ -292,6 +310,8 @@ class TestHypothesis:
         r = test_hypothesis(df, "x", group_col="g", test_type="anova")
         assert r.effect_size_name == "Eta-squared"
         assert "ANOVA" in r.interpretation
+        assert "comparing group means across 3 groups" in r.interpretation
+        assert "comparing 'x'" not in r.interpretation
         assert "Error" in test_hypothesis(df, "", test_type="anova").interpretation
         one = pd.DataFrame({"g": ["A", "A"], "x": [1.0, 2.0]})
         assert "Error" in test_hypothesis(one, "x", group_col="g", test_type="anova").interpretation

@@ -28,7 +28,7 @@
     // Build toolbar
     var toolbar = document.createElement("div");
     toolbar.className = "chart-toolbar";
-    toolbar.style.cssText = "position:absolute;top:4px;right:4px;display:none;gap:2px;z-index:10;background:rgba(255,255,255,0.9);border:1px solid #e2e8f0;border-radius:6px;padding:2px;box-shadow:0 2px 8px rgba(0,0,0,0.1);";
+    toolbar.style.cssText = "position:absolute;top:4px;right:4px;display:none;gap:2px;z-index:10;background:rgba(255,255,255,0.9);border:1px solid var(--color-border);border-radius:6px;padding:2px;box-shadow:0 2px 8px rgba(0,0,0,0.1);";
     toolbar.innerHTML =
       '<button class="ctb-btn" data-action="fullscreen" title="Full screen"><i class="fas fa-expand" style="font-size:11px"></i></button>' +
       '<button class="ctb-btn" data-action="export-png" title="Download PNG"><i class="fas fa-download" style="font-size:11px"></i></button>' +
@@ -37,8 +37,8 @@
 
     // Style buttons
     toolbar.querySelectorAll(".ctb-btn").forEach(function(btn) {
-      btn.style.cssText = "width:26px;height:26px;border:none;border-radius:4px;background:transparent;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;";
-      btn.addEventListener("mouseenter", function() { this.style.background = "#f1f5f9"; });
+      btn.style.cssText = "width:26px;height:26px;border:none;border-radius:4px;background:transparent;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;";
+      btn.addEventListener("mouseenter", function() { this.style.background = "var(--color-surface-2)"; });
       btn.addEventListener("mouseleave", function() { this.style.background = "transparent"; });
     });
 
@@ -46,7 +46,7 @@
     function updateDark() {
       var dark = document.documentElement.classList.contains("dark");
       toolbar.style.background = dark ? "rgba(30,41,59,0.9)" : "rgba(255,255,255,0.9)";
-      toolbar.style.borderColor = dark ? "#475569" : "#e2e8f0";
+      toolbar.style.borderColor = dark ? "var(--color-text-secondary)" : "var(--color-border)";
     }
     updateDark();
 

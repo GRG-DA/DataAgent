@@ -75,7 +75,10 @@
   }
 
   // ── Core fetch wrapper ─────────────────────────────────────────────────
-  async function _request(method, path, { body, params, headers: extraHeaders, silent } = {}) {
+  // `signal` (an AbortSignal) is optional: when supplied it is handed to
+  // fetch() so the caller can cancel an in-flight request. Without it the
+  // behaviour is exactly as before (no signal on the fetch config).
+  async function _request(method, path, { body, params, headers: extraHeaders, silent, signal } = {}) {
     const quiet = _quiet || !!silent;
     const epoch = _loadEpoch;
     if (!quiet) _showLoading();
@@ -95,6 +98,14 @@
     }
 
     const config = { method, headers: {} };
+
+    // Cancellation: hand the AbortSignal to fetch() so an aborted request
+    // is really dropped by the browser instead of running to completion
+    // on the server (a stopped LLM turn would otherwise burn 30-90s of
+    // server work for a reply nobody is waiting for).
+    if (signal) {
+      config.signal = signal;
+    }
 
     // Set content type unless body is FormData (browser sets multipart boundary)
     if (body && !(body instanceof FormData)) {
@@ -197,8 +208,11 @@
       // Re-throw network errors or API errors. Silent (background/polling)
       // requests must not spam error toasts. Upgrade-required 403s already
       // opened the premium overlay above — never toast those either.
+      // A cancelled request (AbortError) is a deliberate stop, not a
+      // failure: no error toast, no console noise — the caller decides.
+      const isAbort = !!(err && (err.name === "AbortError" || err.code === 20));
       const isUpgrade = err && err.upgradeRequired;
-      if (!quiet && !isUpgrade && typeof window !== "undefined" && window.App && typeof window.App.toast === "function") {
+      if (!quiet && !isUpgrade && !isAbort && typeof window !== "undefined" && window.App && typeof window.App.toast === "function") {
         try {
           window.App.toast(err.message || "Network error", "error");
         } catch (_) { /* toast system not ready */ }
@@ -215,6 +229,31 @@
   const PUT = (path, body, opts) => _request("PUT", path, { ...opts, body });
   const PATCH = (path, body, opts) => _request("PATCH", path, { ...opts, body });
   const DELETE = (path, opts) => _request("DELETE", path, opts);
+
+  function _saveBlob(data, filename) {
+    const blob = data instanceof Blob
+      ? data
+      : new Blob([data == null ? "" : String(data)], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "download";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // Download through the authenticated client. window.open()/plain <a href>
+  // cannot attach the Bearer token, so protected export endpoints answer 401
+  // in the new tab. GET() already returns a Blob for file content types.
+  function download(path, filename) {
+    return GET(path).then(function (data) {
+      if (data == null) throw new Error("Empty download");
+      _saveBlob(data, filename);
+      return true;
+    });
+  }
 
   // ── Global API Object ──────────────────────────────────────────────────
   window.API = {
@@ -237,6 +276,9 @@
     clean: (filename, sheet) => POST("/clean", { filename, sheet }),
     cleanPreview: (tableName, opts = {}) => POST("/clean/preview", { table_name: tableName, ...opts }),
     load: (filename, sheet, table) => POST("/load", { filename, sheet, table_name: table }),
+    // `opts.signal` (an AbortSignal) cancels the underlying HTTP request:
+    // the browser drops the connection and the server stops working on a
+    // turn the user already stopped. Omit it and nothing changes.
     ask: (question, opts = {}) => POST("/ask", {
       question,
       table: opts.table || undefined,
@@ -245,7 +287,7 @@
         ...(opts.sessionId ? { session_id: opts.sessionId } : {}),
         ...(opts.context || {}),
       },
-    }),
+    }, opts.signal ? { signal: opts.signal } : undefined),
 
     // Tables
     tables: () => GET("/tables"),
@@ -290,13 +332,19 @@
     // Analysis - Anomalies & patterns
     anomalies: (table) => GET(`/analysis/anomalies/${encodeURIComponent(table)}`),
     insights: (table) => GET(`/analysis/insights/${encodeURIComponent(table)}`),
-    llmInsights: (table, question = "") => POST("/analysis/insights/llm", { table_name: table, user_question: question }),
-    storytelling: (table, question = "") => POST("/analysis/storytelling", { table_name: table, user_question: question }),
+    // `opts` lets a caller opt out of the global loading overlay (the LLM
+    // call can run for 30-90s; the page renders its own loading state).
+    llmInsights: (table, question = "", opts = {}) =>
+      POST("/analysis/insights/llm", { table_name: table, user_question: question }, opts),
+    storytelling: (table, question = "", force = false, opts = undefined) =>
+      POST("/analysis/storytelling", { table_name: table, user_question: question, force: !!force }, opts),
     storytellingStatus: (jobId) => GET(`/analysis/storytelling/status/${encodeURIComponent(jobId)}`),
 
     // Analysis - segment breakdowns & correlations
+    // The backend endpoint declares `segment_col`; `seg_col` was silently
+    // ignored and the server fell back to auto-detecting a segment column.
     segmentation: (table, segCol, metricCol) =>
-      GET(`/analysis/segmentation/${encodeURIComponent(table)}`, { params: { seg_col: segCol, metric_col: metricCol } }),
+      GET(`/analysis/segmentation/${encodeURIComponent(table)}`, { params: { segment_col: segCol, metric_col: metricCol } }),
     correlation: (table) => GET(`/analysis/correlation/${encodeURIComponent(table)}`),
 
     // Analysis - Normality testing
@@ -305,7 +353,10 @@
     normalityAll: (table) => GET(`/analysis/normality/${encodeURIComponent(table)}`),
 
     // Analysis - Hypothesis testing
-    hypothesis: (table, colA, colB, testType = "auto", groupCol, alpha = 0.05) =>
+    // The backend only accepts: ttest, paired_ttest, mannwhitney, chi2,
+    // anova, pearsonr. "auto" (and "t-test") are rejected as unknown test
+    // types, so the default here is a valid one.
+    hypothesis: (table, colA, colB, testType = "ttest", groupCol, alpha = 0.05) =>
       POST("/analysis/hypothesis", { table_name: table, column_a: colA, column_b: colB, test_type: testType, group_col: groupCol, alpha }),
 
     // Analysis - Regression & modeling
@@ -544,6 +595,7 @@
     recordLineage: (request) => POST("/lineage/record", request),
 
     // Export
+    download: (path, filename) => download(path, filename),
     exportBI: (table, format = "powerbi") =>
       GET(`/export/bi/${encodeURIComponent(table)}`, { params: { format } }),
     exportCSV: (table) => GET(`/export/csv/${encodeURIComponent(table)}`),
@@ -874,6 +926,8 @@
     complianceReport: () => GET("/compliance/report"),
 
     // ── Generic HTTP methods for arbitrary endpoints ──
+    // `opts` is forwarded to the request helper, so `{ signal }` cancels
+    // the call (see _request above).
     get: (path, opts) => GET(path, opts),
     post: (path, body, opts) => POST(path, body, opts),
     put: (path, body, opts) => PUT(path, body, opts),

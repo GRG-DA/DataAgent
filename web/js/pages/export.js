@@ -35,13 +35,13 @@ const ExportPage = {
                     </select>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button onclick="ExportPage.downloadDashboard('pbit')" class="border-2 border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 px-4 py-4 rounded-lg text-center transition-colors">
-                        <i class="fab fa-microsoft text-yellow-500 text-xl mb-1"></i>
+                    <button onclick="ExportPage.downloadDashboard('pbit')" class="export-format-card">
+                        <i class="fab fa-microsoft text-xl mb-1"></i>
                         <div class="font-medium">Power BI Report (.pbix)</div>
                         <div class="text-xs text-gray-500">Designed report with KPI cards + charts</div>
                     </button>
-                    <button onclick="ExportPage.downloadDashboard('pptx')" class="border-2 border-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 px-4 py-4 rounded-lg text-center transition-colors">
-                        <i class="fas fa-file-powerpoint text-red-500 text-xl mb-1"></i>
+                    <button onclick="ExportPage.downloadDashboard('pptx')" class="export-format-card">
+                        <i class="fas fa-file-powerpoint text-xl mb-1"></i>
                         <div class="font-medium">PowerPoint Deck (.pptx)</div>
                         <div class="text-xs text-gray-500">Designed slides with chart images</div>
                     </button>
@@ -60,32 +60,32 @@ const ExportPage = {
                     </select>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button onclick="ExportPage.download('csv')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('csv')" class="btn btn-secondary">
                         <i class="fas fa-file-csv mr-1"></i>CSV
                     </button>
-                    <button onclick="ExportPage.download('parquet')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('parquet')" class="btn btn-secondary">
                         <i class="fas fa-file-code mr-1"></i>Parquet
                     </button>
-                    <button onclick="ExportPage.download('xlsx')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('xlsx')" class="btn btn-secondary">
                         <i class="fas fa-file-excel mr-1"></i>Excel
                     </button>
-                    <button onclick="ExportPage.download('markdown')" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('markdown')" class="btn btn-secondary">
                         <i class="fas fa-file-lines mr-1"></i>Markdown
                     </button>
-                    <button onclick="ExportPage.download('html')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('html')" class="btn btn-secondary">
                         <i class="fas fa-file-code mr-1"></i>HTML Report
                     </button>
-                    <button onclick="ExportPage.download('pptx')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('pptx')" class="btn btn-secondary">
                         <i class="fas fa-file-powerpoint mr-1"></i>PowerPoint
                     </button>
-                    <button onclick="ExportPage.download('pdf')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                    <button onclick="ExportPage.download('pdf')" class="btn btn-secondary"
                         title="PDF (basic) — a minimal, text-only PDF. The full report layout needs the optional PDF rendering engine, which is not bundled in the Windows build.">
                         <i class="fas fa-file-pdf mr-1"></i>PDF (basic)
                     </button>
-                    <button onclick="ExportPage.download('zip')" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.download('zip')" class="btn btn-secondary">
                         <i class="fas fa-file-archive mr-1"></i>ZIP All
                     </button>
-                    <button onclick="ExportPage.copyMarkdown()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium transition-colors">
+                    <button onclick="ExportPage.copyMarkdown()" class="btn btn-secondary">
                         <i class="fas fa-copy mr-1"></i>Copy as MD
                     </button>
                 </div>
@@ -141,7 +141,7 @@ const ExportPage = {
             <!-- Schema Documentation -->
             <div class="card">
                 <h3 class="text-lg font-semibold mb-4">📋 Schema Documentation</h3>
-                <button onclick="ExportPage.downloadSchemaDoc()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                <button onclick="ExportPage.downloadSchemaDoc()" class="btn btn-sm btn-secondary">
                     <i class="fas fa-download mr-1"></i>Download Schema Doc (Markdown)
                 </button>
             </div>
@@ -208,30 +208,29 @@ const ExportPage = {
         const table = document.getElementById('exp-table').value;
         if (!table) return App.toast('Select a table first', 'error');
 
-        // Handle new formats
-        if (format === 'html') {
-            window.open(`/export/html/${encodeURIComponent(table)}`, '_blank');
-            return;
+        const ext = { markdown: 'md' }[format] || format;
+        const path = format === 'zip'
+            ? '/export/zip'
+            : format === 'pdf'
+                ? `/export/pdf/${encodeURIComponent(table)}`
+                : `/export/${format}/${encodeURIComponent(table)}`;
+        const filename = format === 'zip'
+            ? 'dataagent-export.zip'
+            : `${table}.${ext}`;
+        try {
+            await API.download(path, filename);
+            App.success(`Downloaded ${filename}`);
+        } catch (e) {
+            App.toast(`Export failed: ${e.message || e}`, 'error');
         }
-        if (format === 'pptx') {
-            window.open(`/export/pptx/${encodeURIComponent(table)}`, '_blank');
-            return;
-        }
-        if (format === 'pdf') {
-            window.open(`/export/pdf/${encodeURIComponent(table)}`, '_blank');
-            return;
-        }
-
-        const url = format === 'zip' ? `/export/zip` : `/export/${format}/${table}`;
-        window.open(url, '_blank');
     },
 
     async copyMarkdown() {
         const table = document.getElementById('exp-table').value;
         if (!table) return App.toast('Select a table first', 'error');
         try {
-            const resp = await fetch((window.__API_BASE__ || '') + `/export/markdown/${encodeURIComponent(table)}`);
-            const text = await resp.text();
+            const data = await API.exportMarkdown(table);
+            const text = data instanceof Blob ? await data.text() : String(data);
             await navigator.clipboard.writeText(text);
             App.success('Markdown copied to clipboard!');
         } catch (e) { App.toast('Copy failed', 'error'); }
@@ -261,18 +260,26 @@ const ExportPage = {
                         <p class="font-medium text-green-700 dark:text-green-300">Report generated! Sections: ${result.sections?.join(', ')}</p>
                     </div>
                     <iframe srcdoc="${App.escapeHtml(result.report_html || '')}" class="w-full h-96 border rounded-lg"></iframe>
-                    <a href="/report/${table}" target="_blank" class="inline-block mt-2 text-primary-500 hover:underline text-sm"><i class="fas fa-external-link-alt mr-1"></i>Open full report</a>`;
+                    <button onclick="ExportPage.openReport('${App.escapeHtml(table)}')" class="inline-block mt-2 text-primary-500 hover:underline text-sm"><i class="fas fa-external-link-alt mr-1"></i>Open full report</button>`;
             }
         } catch (e) { App.toast('Report generation failed', 'error'); }
     },
 
+    async openReport(table) {
+        try {
+            const data = await API.exportHTMLReport(table);
+            const blob = data instanceof Blob
+                ? data
+                : new Blob([String(data)], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+        } catch (e) { App.toast('Report open failed', 'error'); }
+    },
+
     async downloadSchemaDoc() {
         try {
-            const resp = await fetch((window.__API_BASE__ || '') + '/export/schema-doc');
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'schema.md'; a.click();
-            URL.revokeObjectURL(url);
+            await API.download('/export/schema-doc', 'schema.md');
         } catch (e) { App.toast('Download failed', 'error'); }
     }
 };

@@ -57,6 +57,62 @@ def _payment_event(order_id: str, payment_id: str, email: str = "buyer@example.c
 # ── webhook signature: fail-closed ────────────────────────────────────
 
 
+def test_healthz_ok_without_a_license_key_in_keyless_mode(client, billing_env, tmp_path, monkeypatch):
+    cfg = billing_env["cfg"]
+    monkeypatch.setattr(cfg, "PAYMENTS_PROVIDER", "razorpay")
+    monkeypatch.setattr(cfg, "KEYLESS", True, raising=False)
+    monkeypatch.setattr(cfg, "LICENSE_PRIVATE_KEY_PATH", str(tmp_path / "missing.pem"))
+    monkeypatch.setattr(cfg, "LICENSE_PRIVATE_KEY", "")
+
+    r = client.get("/healthz")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["components"]["license_key"] is False
+    assert body["components"]["keyless"] is True
+
+
+def test_cors_allows_the_storefront_origin(client):
+    r = client.options(
+        "/create-order",
+        headers={
+            "Origin": "https://data-agent.me",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "https://data-agent.me"
+    assert r.headers["access-control-allow-credentials"] == "true"
+
+
+def test_cors_origins_never_allow_a_wildcard_or_plain_http():
+    from billing_server.config import _parse_cors_origins
+
+    assert _parse_cors_origins("*") == []
+    assert _parse_cors_origins("http://evil.example,https://ok.example") == [
+        "https://ok.example"
+    ]
+    assert _parse_cors_origins("http://localhost:3000") == ["http://localhost:3000"]
+    assert _parse_cors_origins("http://localhost.evil.example") == []
+    assert _parse_cors_origins("http://127.0.0.1.evil.example") == []
+    assert _parse_cors_origins("https://data-agent.me/path") == []
+
+
+def test_cors_rejects_an_unknown_origin(client):
+    r = client.options(
+        "/create-order",
+        headers={
+            "Origin": "https://evil.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert "access-control-allow-origin" not in r.headers
+
+
 def test_webhook_rejects_bad_signature(client):
     body = _payment_event("order_abc123", "pay_abc123")
     r = client.post("/razorpay/webhook", content=body,

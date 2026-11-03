@@ -27,6 +27,10 @@ read as untrusted input and sanitized against execution).
 | Review LOW follow-ups | 282-test sweep | `4a60e80` | buy-lock releases on dismiss/verify-fail; OverflowError amounts can't 500 the webhook; rollback test asserts the `failures` row (not a stub) |
 
 ## Verification
+- Ops follow-up pass (2026-10-24, the six ADR-016 backlogs): RED `tests/test_billing_famgateway_ops.py`
+  (17 tests against missing routes/store fns) → GREEN after `recovery.py` + store/emails/config;
+  regression legs `test_billing_famgateway.py` + `test_billing_server.py` +
+  `test_billing_server_subscriptions.py` (95) and the renewal/legal/security suites (71) all pass.
 - `python -m pytest` (18-suite sweep, 2026-10-23): **282 passed**, 14 warnings
   (pre-existing CSS-only). Notable suites: test_billing_famgateway.py (29),
   test_billing_server.py, test_security_regressions.py, test_launch_site_*.

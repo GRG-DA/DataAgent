@@ -15,7 +15,7 @@ import sqlite3
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -112,15 +112,41 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
     # Central accounts (ADR-002): email + bcrypt hash ONLY. Purchases
     # stay in orders; no user file data ever lands here.
     """CREATE TABLE IF NOT EXISTS accounts (
-        user_id       TEXT PRIMARY KEY,
-        email         TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        status        TEXT NOT NULL DEFAULT 'active',
-        created_at    TEXT NOT NULL,
-        updated_at    TEXT NOT NULL
+        user_id           TEXT PRIMARY KEY,
+        email             TEXT NOT NULL,
+        password_hash     TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'active',
+        email_verified_at TEXT,
+        created_at        TEXT NOT NULL,
+        updated_at        TEXT NOT NULL
     )""",
     """CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_email
         ON accounts(email COLLATE NOCASE)""",
+    # Storefront sessions (opaque cookie). Only the SHA-256 digest is stored;
+    # the raw cookie value never reaches the database or the logs.
+    """CREATE TABLE IF NOT EXISTS account_sessions (
+        token_hash TEXT PRIMARY KEY,
+        user_id    TEXT NOT NULL,
+        email      TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_account_sessions_user ON account_sessions(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_account_sessions_expires ON account_sessions(expires_at)",
+    # Email-confirmation links. Only the SHA-256 digest is stored; the raw
+    # token exists in the email and is single-use.
+    """CREATE TABLE IF NOT EXISTS account_email_verifications (
+        token_hash  TEXT PRIMARY KEY,
+        user_id     TEXT NOT NULL,
+        email       TEXT NOT NULL,
+        created_at  TEXT NOT NULL,
+        expires_at  TEXT NOT NULL,
+        consumed_at TEXT
+    )""",
+    "CREATE INDEX IF NOT EXISTS idx_account_verifications_user "
+    "ON account_email_verifications(user_id)",
+    "CREATE INDEX IF NOT EXISTS idx_account_verifications_expires "
+    "ON account_email_verifications(expires_at)",
     # Auto-renewing Pro subscriptions (Razorpay Subscriptions): one row per
     # sub_… id mirroring status + paid-through date. Folding rows into the
     # current entitlement happens in billing_server.grants — this table is
@@ -168,7 +194,13 @@ def _ensure_schema(con) -> None:
     try:
         con.execute(
             "UPDATE orders SET provider = 'razorpay' WHERE provider IS NULL")
-    except Exception:  # noqa: BLE001 — classification is best-effort
+    except Exception:  # noqa: BLE001 �?" classification is best-effort
+        pass
+    # Email ownership (accounts predate verification; unverified legacy rows
+    # stay unverified until their owner confirms the address).
+    try:
+        con.execute("ALTER TABLE accounts ADD COLUMN email_verified_at TEXT")
+    except Exception:  # noqa: BLE001 �?" already exists
         pass
     # A FamGateway UTR pays exactly one order, ever: a second webhook claiming
     # the same UTR against a different order can never double-grant (the
@@ -187,6 +219,11 @@ def _ensure_schema(con) -> None:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def now_dt() -> datetime:
+    """UTC now (datetime) — same clock _now() writes from, for cutoff math."""
+    return datetime.now(timezone.utc)
 
 
 def record_order(order_id: str, email: str, plan: str, amount: int,
@@ -289,6 +326,25 @@ def refund_order(payment_id: str) -> Optional[dict]:
         return dict(row)
 
 
+def refund_order_by_id(order_id: str) -> Optional[dict]:
+    """Mark one order refunded by its primary key (admin support path).
+
+    FamGateway has no refund webhook and no hosted refund API, so a refund
+    done in the provider dashboard is revoked here by hand — one order,
+    addressed directly.
+    """
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute("SELECT * FROM orders WHERE order_id = ?", [order_id]).fetchone()
+        if not row:
+            return None
+        con.execute(
+            "UPDATE orders SET status = 'refunded', updated_at = ? WHERE order_id = ?",
+            [_now(), order_id],
+        )
+        return dict(row)
+
+
 def get_redemption(key_hash_val: str) -> Optional[dict]:
     """Return the redemption row for a key hash, or None if never redeemed."""
     with _lock, _connect() as con:
@@ -355,8 +411,8 @@ def list_registry(limit: int = 200) -> list[dict]:
         _ensure_schema(con)
         rows = con.execute(
             """SELECT o.order_id, o.payment_id, o.email, o.plan, o.amount, o.currency,
-                      o.status, o.license_key, o.key_hash, o.created_at, o.updated_at,
-                      r.user_id AS redeemed_by, r.redeemed_at
+                      o.status, o.provider, o.license_key, o.key_hash, o.created_at,
+                      o.updated_at, r.user_id AS redeemed_by, r.redeemed_at
                FROM orders o
                LEFT JOIN redemptions r ON r.key_hash = o.key_hash
                ORDER BY o.updated_at DESC LIMIT ?""",
@@ -398,6 +454,111 @@ def resolve_utr_owner(utr: str) -> Optional[str]:
             [utr],
         ).fetchone()
         return dict(row)["order_id"] if row else None
+
+
+def list_unsettled_fam_orders(older_than_minutes: int = 5, limit: int = 50) -> list[dict]:
+    """FamGateway orders still 'created' — candidates for the reconcile sweep.
+
+    FamGateway documents NO webhook retry guarantees, so a missed
+    ``payment.success`` would otherwise leave a real payment ungranted
+    forever. Only fam orders are listed: Razorpay settles through its own
+    verifier/webhooks. ``older_than_minutes`` keeps brand-new orders alone
+    (the webhook may still be in flight); 0 makes the sweep immediate, which
+    is what tests and an operator-triggered run want.
+    """
+    older_than_minutes = max(0, min(int(older_than_minutes or 0), 24 * 60))
+    cutoff = (now_dt() - timedelta(minutes=older_than_minutes)).isoformat()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        rows = con.execute(
+            """SELECT * FROM orders
+               WHERE provider = 'famgateway' AND status = 'created'
+                     AND created_at <= ?
+               ORDER BY created_at
+               LIMIT ?""",
+            [cutoff, max(1, min(int(limit or 50), 1000))],
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def fam_grant_expiries() -> list[dict]:
+    """Per-email live Pro window end dates (fam orders only).
+
+    Expiry per order row = updated_at (grant time) + grant_days; an email's
+    entitlement is the LONGEST live window (grants.py folding). Used by the
+    expiry-nudge job to find windows ending soon. Refunded and perpetual
+    (grant_days IS NULL) orders are excluded.
+    """
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        rows = con.execute(
+            """SELECT email, MAX(updated_at) AS granted_at, MAX(grant_days) AS days
+               FROM orders
+               WHERE provider = 'famgateway' AND status = 'paid'
+                     AND grant_days IS NOT NULL
+               GROUP BY email""",
+        ).fetchall()
+    out = []
+    for r in rows:
+        try:
+            granted_at = datetime.fromisoformat(str(r["granted_at"]))
+            days = int(r["days"] or 0)
+        except (ValueError, TypeError):  # malformed timestamps never nudge
+            continue
+        if granted_at.tzinfo is None:
+            granted_at = granted_at.replace(tzinfo=timezone.utc)
+        out.append({"email": str(r["email"]),
+                    "expires_at": granted_at + timedelta(days=days)})
+    return out
+
+
+def event_seen(kind: str, ref_id: str) -> bool:
+    """Read-only duplicate check (no insert) — for markers the caller records
+    only after its side effect succeeded (e.g. an email that actually sent)."""
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute(
+            "SELECT 1 FROM events WHERE kind = ? AND ref_id = ?", [kind, ref_id]
+        ).fetchone()
+        return row is not None
+
+
+def mark_event(kind: str, ref_id: str, payload: Optional[str] = None) -> None:
+    """Record a one-time marker (idempotent)."""
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        con.execute(
+            """INSERT INTO events (kind, ref_id, payload, created_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(kind, ref_id) DO NOTHING""",
+            [kind, ref_id, payload, _now()],
+        )
+
+
+def list_recent_event_failures(limit: int = 50) -> list[dict]:
+    """Newest webhook-processing rollback rows (support visibility)."""
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        rows = con.execute(
+            """SELECT kind, ref_id, error, created_at FROM failures
+               ORDER BY created_at DESC LIMIT ?""",
+            [max(1, min(int(limit or 50), 1000))],
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def event_failure_counts(window_minutes: int = 24 * 60) -> dict:
+    """Rollback counts by event kind over a window (default 24h)."""
+    window_minutes = max(1, min(int(window_minutes or 1440), 24 * 365))
+    cutoff = (now_dt() - timedelta(minutes=window_minutes)).isoformat()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        rows = con.execute(
+            "SELECT kind, COUNT(*) AS n FROM failures WHERE created_at >= ? "
+            "GROUP BY kind ORDER BY n DESC",
+            [cutoff],
+        ).fetchall()
+        return {str(r["kind"]): int(r["n"]) for r in rows}
 
 
 def seen_event(kind: str, ref_id: str) -> bool:
@@ -527,6 +688,149 @@ def touch_account(user_id: str) -> None:
             "UPDATE accounts SET updated_at = ? WHERE user_id = ?",
             [_now(), user_id],
         )
+
+
+def create_account_session(user_id: str, email: str, token_hash: str,
+                           expires_at: str) -> dict:
+    """Persist one opaque website session. Only the digest is stored."""
+    now = _now()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        con.execute("DELETE FROM account_sessions WHERE expires_at <= ?", [now])
+        con.execute(
+            """INSERT INTO account_sessions
+                   (token_hash, user_id, email, created_at, expires_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            [token_hash, user_id, (email or "").strip().lower(), now, expires_at],
+        )
+        return {"token_hash": token_hash, "user_id": user_id,
+                "email": (email or "").strip().lower(), "created_at": now,
+                "expires_at": expires_at}
+
+
+def get_account_session(token_hash: str) -> Optional[dict]:
+    """Return a live session row; expired rows are never returned."""
+    if not token_hash:
+        return None
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute(
+            """SELECT * FROM account_sessions
+               WHERE token_hash = ? AND expires_at > ?""",
+            [token_hash, _now()],
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def delete_account_session(token_hash: str) -> bool:
+    if not token_hash:
+        return False
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        cur = con.execute(
+            "DELETE FROM account_sessions WHERE token_hash = ?", [token_hash],
+        )
+        return bool(cur.rowcount)
+
+
+def delete_account_sessions_for_user(user_id: str) -> int:
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        cur = con.execute(
+            "DELETE FROM account_sessions WHERE user_id = ?", [user_id],
+        )
+        return int(cur.rowcount or 0)
+
+
+def update_account_password(user_id: str, password_hash: str) -> bool:
+    """Replace the password on an unverified (claimable) account."""
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        cur = con.execute(
+            "UPDATE accounts SET password_hash = ?, updated_at = ? WHERE user_id = ?",
+            [password_hash, _now(), user_id],
+        )
+        return bool(cur.rowcount)
+
+
+def set_email_verified(user_id: str) -> bool:
+    """Mark an account's email as proven. Idempotent; never clears the stamp."""
+    now = _now()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        cur = con.execute(
+            """UPDATE accounts
+                  SET email_verified_at = COALESCE(email_verified_at, ?),
+                      updated_at = ?
+                WHERE user_id = ?""",
+            [now, now, user_id],
+        )
+        return bool(cur.rowcount)
+
+
+def create_email_verification(user_id: str, email: str, token_hash: str,
+                              expires_at: str) -> dict:
+    """Replace any outstanding link for this account with a fresh digest."""
+    now = _now()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        con.execute(
+            "DELETE FROM account_email_verifications WHERE user_id = ?",
+            [user_id],
+        )
+        con.execute(
+            """INSERT INTO account_email_verifications
+                   (token_hash, user_id, email, created_at, expires_at, consumed_at)
+               VALUES (?, ?, ?, ?, ?, NULL)""",
+            [token_hash, user_id, (email or "").strip().lower(), now, expires_at],
+        )
+        return {"token_hash": token_hash, "user_id": user_id,
+                "email": (email or "").strip().lower(), "created_at": now,
+                "expires_at": expires_at, "consumed_at": None}
+
+
+def get_email_verification(token_hash: str) -> Optional[dict]:
+    """Return a live, unconsumed verification row (never an expired one)."""
+    if not token_hash:
+        return None
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute(
+            """SELECT * FROM account_email_verifications
+                WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?""",
+            [token_hash, _now()],
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def consume_email_verification(token_hash: str) -> Optional[dict]:
+    """Atomically consume a link and stamp the account's email as verified."""
+    if not token_hash:
+        return None
+    now = _now()
+    with _lock, _connect() as con:
+        _ensure_schema(con)
+        row = con.execute(
+            """SELECT * FROM account_email_verifications
+                WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?""",
+            [token_hash, now],
+        ).fetchone()
+        if not row:
+            return None
+        con.execute(
+            """UPDATE account_email_verifications
+                  SET consumed_at = ?
+                WHERE token_hash = ? AND consumed_at IS NULL""",
+            [now, token_hash],
+        )
+        con.execute(
+            """UPDATE accounts
+                  SET email_verified_at = COALESCE(email_verified_at, ?),
+                      updated_at = ?
+                WHERE user_id = ?""",
+            [now, now, row["user_id"]],
+        )
+        return dict(row)
 
 
 # ── Auto-renewing subscriptions (Razorpay Subscriptions) ─────────

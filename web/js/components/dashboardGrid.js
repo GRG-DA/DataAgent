@@ -98,14 +98,14 @@
       var col = wi.col || 1;
       var rows = wi.rows || 2;
       var cols = wi.cols || 4;
-      html += '<div class="dash-widget" data-id="' + wi.id + '" data-type="' + _esc(wi.type) + '" draggable="' + state.editMode + '" style="grid-row:' + row + '/span ' + rows + ';grid-column:' + col + '/span ' + cols + ';background:var(--color-card-bg,#fff);border:1px solid var(--color-card-border,#e2e8f0);border-radius:12px;box-shadow:var(--shadow-sm);overflow:hidden;position:relative;min-height:60px;">';
+      html += '<div class="dash-widget" data-id="' + wi.id + '" data-type="' + _esc(wi.type) + '" draggable="' + state.editMode + '" style="grid-row:' + row + '/span ' + rows + ';grid-column:' + col + '/span ' + cols + ';background:var(--color-card-bg,#fff);border:1px solid var(--color-card-border,var(--color-border));border-radius:12px;box-shadow:var(--shadow-sm);overflow:hidden;position:relative;min-height:60px;">';
       // Header
-      html += '<div class="dash-widget-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-card-border,#e2e8f0);cursor:' + (state.editMode ? 'grab' : 'default') + ';background:var(--color-content-bg,#f8fafc);">';
+      html += '<div class="dash-widget-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--color-card-border,var(--color-border));cursor:' + (state.editMode ? 'grab' : 'default') + ';background:var(--color-content-bg,var(--color-surface-2));">';
       html += '<span class="text-xs font-medium truncate">' + _esc(wi.title || wi.type) + '</span>';
       if (state.editMode) {
         html += '<div class="flex gap-1">';
-        html += '<button class="dash-widget-config" data-id="' + wi.id + '" style="border:none;background:transparent;cursor:pointer;color:#64748b;padding:2px;font-size:11px;" title="Configure"><i class="fas fa-cog"></i></button>';
-        html += '<button class="dash-widget-remove" data-id="' + wi.id + '" style="border:none;background:transparent;cursor:pointer;color:#ef4444;padding:2px;font-size:11px;" title="Remove"><i class="fas fa-times"></i></button>';
+        html += '<button class="dash-widget-config" data-id="' + wi.id + '" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);padding:2px;font-size:11px;" title="Configure"><i class="fas fa-cog"></i></button>';
+        html += '<button class="dash-widget-remove" data-id="' + wi.id + '" style="border:none;background:transparent;cursor:pointer;color:var(--color-danger);padding:2px;font-size:11px;" title="Remove"><i class="fas fa-times"></i></button>';
         html += '</div>';
       }
       html += '</div>';
@@ -115,7 +115,7 @@
       html += '</div>';
       // Resize handle
       if (state.editMode) {
-        html += '<div class="dash-resize-handle" data-id="' + wi.id + '" style="position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;background:linear-gradient(135deg,transparent 50%,#94a3b8 50%);border-radius:0 0 12px 0;"></div>';
+        html += '<div class="dash-resize-handle" data-id="' + wi.id + '" style="position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;background:linear-gradient(135deg,transparent 50%,var(--color-text-muted) 50%);border-radius:0 0 12px 0;"></div>';
       }
       html += '</div>';
     }
@@ -191,7 +191,7 @@
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
         container.querySelectorAll(".dash-widget").forEach(function(wi) { wi.style.outline = "none"; });
-        this.style.outline = "2px dashed #6366f1";
+        this.style.outline = "2px dashed var(--color-primary)";
       });
       el.addEventListener("dragleave", function() { this.style.outline = "none"; });
       el.addEventListener("drop", function(e) {

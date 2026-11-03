@@ -259,38 +259,36 @@
   // ============================================================================
   // Health Check
   // ============================================================================
+  // The app bar markup uses #connection-status / #status-dot / #status-text.
+  // The previous ids (#health-status-wrapper, #health-dot, #health-text) exist
+  // nowhere in the DOM, so the indicator never updated and the dot kept the
+  // UA default (transparent) background.
+  function _setConnectionState(healthy) {
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+    const wrapper = document.getElementById("connection-status");
+    if (wrapper) {
+      wrapper.className = "flex items-center gap-1.5 text-xs shrink-0 " +
+        (healthy ? "connected" : "disconnected");
+    }
+    if (dot) {
+      dot.className = "status-dot";
+    }
+    if (text) {
+      text.textContent = healthy ? "Connected" : "Disconnected";
+      text.className = "status-text font-medium hidden md:inline";
+    }
+  }
+
   async function _checkHealth() {
     try {
       const health = await window.API.get("/health", { silent: true });
-      const dot = document.getElementById("health-dot");
-      const text = document.getElementById("health-text");
-      const statusWrapper = document.getElementById("health-status-wrapper");
       _state.apiHealthy = health?.status === "healthy";
-      if (dot && text) {
-        if (_state.apiHealthy) {
-          dot.className = "status-dot rounded-full bg-green-500";
-          text.textContent = "Connected";
-          text.className = "text-green-400 font-medium hidden md:inline";
-          if (statusWrapper) statusWrapper.className = "flex items-center gap-1.5 text-xs shrink-0 connected";
-        } else {
-          dot.className = "status-dot rounded-full bg-red-500";
-          text.textContent = "Disconnected";
-          text.className = "text-red-400 font-medium hidden md:inline";
-          if (statusWrapper) statusWrapper.className = "flex items-center gap-1.5 text-xs shrink-0 disconnected";
-        }
-      }
+      _setConnectionState(_state.apiHealthy);
       _updateNavStats();
     } catch (e) {
       _state.apiHealthy = false;
-      const dot = document.getElementById("health-dot");
-      const text = document.getElementById("health-text");
-      const statusWrapper = document.getElementById("health-status-wrapper");
-      if (dot && text) {
-        dot.className = "status-dot rounded-full bg-red-500";
-        text.textContent = "Disconnected";
-        text.className = "text-red-400 font-medium hidden md:inline";
-        if (statusWrapper) statusWrapper.className = "flex items-center gap-1.5 text-xs shrink-0 disconnected";
-      }
+      _setConnectionState(false);
     }
   }
 
@@ -842,12 +840,36 @@
       });
     }
 
-    // Mobile nav overlay close
+    // Mobile nav drawer — the app-bar toggle opens it; the overlay or a
+    // link inside it closes it. Without the toggle the drawer markup could
+    // never be shown on a small screen.
     const mobileOverlay = document.getElementById("mobile-nav-overlay");
+    const mobileNav = document.getElementById("mobile-nav");
+    const mobileToggle = document.getElementById("mobile-menu-toggle");
+    const _closeMobileNav = function () {
+      mobileNav?.classList.add("hidden");
+      mobileOverlay?.classList.add("hidden");
+    };
     if (mobileOverlay) {
-      mobileOverlay.addEventListener("click", function () {
-        document.getElementById("mobile-nav")?.classList.add("hidden");
-        this.classList.add("hidden");
+      mobileOverlay.addEventListener("click", _closeMobileNav);
+    }
+    if (mobileToggle && mobileNav) {
+      // A real toggle: it opens AND closes, keeps `aria-expanded` in sync,
+      // and Escape dismisses the drawer.
+      const _setMobileNavOpen = function (open) {
+        mobileNav.classList.toggle("hidden", !open);
+        mobileOverlay?.classList.toggle("hidden", !open);
+        mobileToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        mobileToggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+      };
+      mobileToggle.addEventListener("click", function () {
+        _setMobileNavOpen(mobileNav.classList.contains("hidden"));
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !mobileNav.classList.contains("hidden")) {
+          _setMobileNavOpen(false);
+          mobileToggle.focus();
+        }
       });
     }
 
@@ -870,6 +892,7 @@
       if (link) {
         e.preventDefault();
         _navigate(link.getAttribute("href"));
+        _closeMobileNav();
       }
     });
 

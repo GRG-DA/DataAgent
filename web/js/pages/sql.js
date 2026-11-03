@@ -147,10 +147,10 @@ const SqlPage = {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="SqlPage._buildQuery()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium">
+                        <button onclick="SqlPage._buildQuery()" class="btn btn-sm btn-primary">
                             <i class="fas fa-code mr-1"></i>Generate SQL
                         </button>
-                        <button onclick="SqlPage._generateSqlWithAI()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium">
+                        <button onclick="SqlPage._generateSqlWithAI()" class="btn btn-sm btn-secondary">
                             <i class="fas fa-wand-magic-sparkles mr-1"></i>AI Generate
                         </button>
                         <div id="qb-ai-prompt" class="flex-1 hidden">

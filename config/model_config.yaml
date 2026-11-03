@@ -11,7 +11,12 @@
 #                          | groq | gemini | xai | deepseek | opencode
 
 # Default provider to use when routing rules don't apply
-default_provider: "ollama"  # ollama | lmstudio | openai | openrouter | anthropic | groq | gemini | xai | deepseek | opencode
+#
+# "opencode" is the anonymous free tier (no API key): the app talks to the
+# bundled opencode CLI's local server and lets "auto" pick the fastest free
+# model. Point this at "ollama"/"lmstudio"/"openai" for a fully local
+# backend, or at a cloud provider with an API key.
+default_provider: "opencode"  # ollama | lmstudio | openai | openrouter | anthropic | groq | gemini | xai | deepseek | opencode
 
 # ─── Provider: Ollama (local, privacy-first) ─────────────────────
 # Install: https://ollama.ai | Then: ollama pull <model>
@@ -146,8 +151,11 @@ deepseek:
 
 # ─── Provider: OpenCode Free (opencode.ai/zen/v1 — NO API key) ──
 # Anonymous public free tier — no key, no signup. Only the free model set
-# works: big-pickle, deepseek-v4-flash-free, mimo-v2.6-flash-free, mimo-v2.5-free, hy3-free,
-# nemotron-3-ultra-free, north-mini-code-free (or any id ending in "-free").
+# works (or any id ending in "-free"). The tier rotates; as of the pinned
+# opencode v1.18.30 the server lists: big-pickle, beam-free, flint-40b-free,
+# minimax-m3.1-flash-free, deepseek-v4.1-flash-free, glm-5.3-flash-free,
+# mimo-v2.6-flash-free, nemotron-3-ultra-free, nemotron-3.5-lightning-free,
+# nemotron-3.5-super-vl-free.
 # Premium models (e.g. claude-sonnet-4) need an opencode API key and are
 # rejected with a clear error.
 #
@@ -175,7 +183,7 @@ opencode:
   server_auto_start: true
   server_hostname: "127.0.0.1"
   server_port: 3000
-  model: "big-pickle"            # free model (or any "-free" id)
+  model: "auto"                 # "auto" = the fastest free model the server offers
   proxies: []                    # e.g. ["http://127.0.0.1:7890", "socks5://127.0.0.1:1080"]
   options:
     temperature: 0.1
@@ -184,31 +192,33 @@ opencode:
 # ─── Smart Routing ───────────────────────────────────────────────
 # Route specific query types to the best provider for that task.
 # If a provider has no API key, falls back to default_provider.
-# All rules point at the local llama.cpp server ("openai" = OpenAI-compatible).
+# The rules point at "opencode" (the anonymous free tier) so every query
+# shape reaches the same LLM. Point them at "openai" (the local
+# llama.cpp server) or "ollama" to serve those shapes locally instead.
 routing:
-  # Complex SQL (joins, CTEs, window functions) → local coder model
+  # Complex SQL (joins, CTEs, window functions) → the routed provider
   - pattern: "complex_sql"
-    provider: "openai"
+    provider: "opencode"
     keywords: ["join", "window", "lag", "lead", "rank", "cte", "complex", "advanced", "pivot", "union"]
 
-  # Quick visualizations → local coder model
+  # Quick visualizations → the routed provider
   - pattern: "quick_chart"
-    provider: "openai"
+    provider: "opencode"
     keywords: ["chart", "plot", "graph", "show me", "quick", "simple", "bar", "line", "pie"]
 
-  # Statistical analysis → local coder model
+  # Statistical analysis → the routed provider
   - pattern: "statistical"
-    provider: "openai"
+    provider: "opencode"
     keywords: ["test", "p-value", "regression", "correlation", "anova", "significance", "distribution", "median", "percentile"]
 
-  # Data cleaning → local coder model
+  # Data cleaning → the routed provider
   - pattern: "data_cleaning"
-    provider: "openai"
+    provider: "opencode"
     keywords: ["clean", "fix", "null", "missing", "duplicate", "outlier", "normalize", "transform"]
 
-  # Narrative/summary → local coder model
+  # Narrative/summary → the routed provider
   - pattern: "narrative"
-    provider: "openai"
+    provider: "opencode"
     keywords: ["summary", "explain", "why", "insight", "recommend", "suggest", "report"]
 
 # ─── Agent Behavior ──────────────────────────────────────────────

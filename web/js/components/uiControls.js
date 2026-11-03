@@ -281,7 +281,7 @@
   // 11. gradient
   _reg("gradient", function (prop, widget) {
     var cur = _curVal(prop, widget) || "";
-    var c1 = "#7B61FF", c2 = "#3B82F6", angle = 135;
+    var c1 = "#2563eb", c2 = "#1d4ed8", angle = 135;
     var gm = cur.match(/linear-gradient\((\d+)deg,\s*(#[0-9a-f]{3,6})\s*(?:0%|),\s*(#[0-9a-f]{3,6})\s*(?:100%|)\)/i);
     if (gm) { angle = parseInt(gm[1]); c1 = gm[2]; c2 = gm[3]; }
     var gid1 = _uid("gr1");
@@ -300,8 +300,8 @@
   }, function (root) {
     var inputs = root.querySelectorAll("input[type='color']");
     var angleInp = root.querySelector("input[type='number']");
-    var c1 = inputs[0] ? inputs[0].value : "#7B61FF";
-    var c2 = inputs[1] ? inputs[1].value : "#3B82F6";
+    var c1 = inputs[0] ? inputs[0].value : "#2563eb";
+    var c2 = inputs[1] ? inputs[1].value : "#1d4ed8";
     var angle = angleInp && angleInp.value !== "" ? parseInt(angleInp.value) : 135;
     return "linear-gradient(" + angle + "deg," + c1 + "," + c2 + ")";
   });
@@ -310,7 +310,7 @@
   _reg("multicolor", function (prop, widget) {
     var cur = _curVal(prop, widget);
     if (!Array.isArray(cur)) cur = [];
-    var palette = window.UIControlKit ? window.UIControlKit.themePalette() : ["#7B61FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
+    var palette = window.UIControlKit ? window.UIControlKit.themePalette() : ["#2563eb", "#0d9488", "#b45309", "#be123c", "#0369a1", "#7c3aed"];
     var html = '<div class="bd-ctrl" data-prop-key="' + _esc(prop.key) + '" data-prop-type="multicolor">' +
       '<div class="bd-mc-palette" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
     for (var i = 0; i < palette.length; i++) {
@@ -360,7 +360,7 @@
       '<div id="' + gid + '" class="bd-icon-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;max-height:140px;overflow-y:auto">';
     for (var i = 0; i < icons.length; i++) {
       var sel = icons[i] === cur ? " active" : "";
-      html += '<button type="button" class="bd-icon-btn' + sel + '" data-icon="' + icons[i] + '" title="' + icons[i] + '" style="padding:5px;border:1px solid ' + (sel ? "#7B61FF" : "#3a3a5c") + ";background:" + (sel ? "rgba(123,97,255,0.2)" : "transparent") + ";color:#ccc;cursor:pointer;border-radius:4px;text-align:center;font-size:12px\"><i class=\"fas " + icons[i] + "\"></i></button>";
+      html += '<button type="button" class="bd-icon-btn' + sel + '" data-icon="' + icons[i] + '" title="' + icons[i] + '" style="padding:5px;border:1px solid ' + (sel ? "var(--color-primary)" : "#3a3a5c") + ";background:" + (sel ? "rgba(var(--color-primary-rgb),0.2)" : "transparent") + ";color:#ccc;cursor:pointer;border-radius:4px;text-align:center;font-size:12px\"><i class=\"fas " + icons[i] + "\"></i></button>";
     }
     html += '</div></div>';
     return html;
@@ -439,7 +439,7 @@
       var v = typeof o === "object" ? o.value : o;
       var l = typeof o === "object" ? o.label : o;
       var active = String(v) === String(cur) ? " active" : "";
-      html += '<button type="button" class="bd-radio-btn bd-props-btn' + active + '" data-val="' + _esc(v) + '" style="padding:5px 10px;border:1px solid #3a3a5c;background:' + (active ? "rgba(123,97,255,0.25)" : "transparent") + ";color:#ccc;cursor:pointer;font-size:12px\">" +
+      html += '<button type="button" class="bd-radio-btn bd-props-btn' + active + '" data-val="' + _esc(v) + '" style="padding:5px 10px;border:1px solid #3a3a5c;background:' + (active ? "rgba(var(--color-primary-rgb),0.25)" : "transparent") + ";color:#ccc;cursor:pointer;font-size:12px\">" +
         _esc(l) + '</button>';
     }
     html += '</div></div>';
@@ -508,7 +508,7 @@
     var create = function (prop, widget) {
       var cur = _curVal(prop, widget);
       if (!Array.isArray(cur)) cur = [];
-      var palette = window.UIControlKit ? window.UIControlKit.themePalette() : ["#7B61FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899"];
+      var palette = window.UIControlKit ? window.UIControlKit.themePalette() : ["#2563eb", "#0d9488", "#b45309", "#be123c", "#0369a1", "#7c3aed"];
       var html = '<div class="bd-ctrl" data-prop-key="' + _esc(prop.key) + '" data-prop-type="' + _esc(prop.type) + '">' +
         '<div class="bd-mc-palette" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
       for (var i = 0; i < palette.length; i++) {
@@ -549,27 +549,27 @@
     var create = function (prop, widget) {
       var cur = _curVal(prop, widget);
       if (!Array.isArray(cur)) cur = [];
-      var rows = cur.length ? cur : [{ value: 0, label: "", color: "#EF4444", type: "line", bandTo: 0 }];
+      var rows = cur.length ? cur : [{ value: 0, label: "", color: "#b91c1c", type: "line", bandTo: 0 }];
       var html = '<div class="bd-ctrl bd-reflines" data-prop-key="' + _esc(prop.key) + '" data-prop-type="referenceLines">';
       html += '<div class="bd-reflines-list" style="display:flex;flex-direction:column;gap:6px;">';
       for (var i = 0; i < rows.length; i++) {
         var r = rows[i] || {};
         var rid = _uid("rl");
         var isBand = r.type === "band";
-        html += '<div class="bd-refline-row" data-idx="' + i + '" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;border:1px solid #e5e7eb;border-radius:6px;padding:4px;">' +
+        html += '<div class="bd-refline-row" data-idx="' + i + '" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;border:1px solid var(--color-border);border-radius:6px;padding:4px;">' +
           '<input type="number" class="bd-rl-value" value="' + _esc(r.value != null ? r.value : 0) + '" step="any" style="width:64px;" title="Value" />' +
           '<input type="text" class="bd-rl-label" value="' + _esc(r.label != null ? r.label : "") + '" placeholder="Label" style="width:70px;" />' +
-          '<input type="color" class="bd-rl-color" value="' + _esc(_pickColor(r.color || "#EF4444")) + '" style="width:26px;height:22px;padding:0;border:none;cursor:pointer;" />' +
+          '<input type="color" class="bd-rl-color" value="' + _esc(_pickColor(r.color || "#b91c1c")) + '" style="width:26px;height:22px;padding:0;border:none;cursor:pointer;" />' +
           '<select class="bd-rl-type" style="width:58px;">' +
             '<option value="line"' + (isBand ? "" : " selected") + '>Line</option>' +
             '<option value="band"' + (isBand ? " selected" : "") + '>Band</option>' +
           '</select>' +
           '<input type="number" class="bd-rl-bandto" value="' + _esc(r.bandTo != null ? r.bandTo : 0) + '" step="any" placeholder="To" title="Band upper value" style="width:56px;' + (isBand ? "" : "display:none;") + '" />' +
-          '<button type="button" class="bd-rl-del" title="Remove" style="border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;">\u2715</button>' +
+          '<button type="button" class="bd-rl-del" title="Remove" style="border:none;background:transparent;color:var(--color-danger);cursor:pointer;font-size:12px;">\u2715</button>' +
         '</div>';
       }
       html += '</div>';
-      html += '<button type="button" class="bd-rl-add" style="margin-top:6px;border:1px dashed #cbd5e1;background:transparent;color:#6b7280;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">+ Add reference line</button>';
+      html += '<button type="button" class="bd-rl-add" style="margin-top:6px;border:1px dashed var(--color-border-strong);background:transparent;color:var(--color-text-secondary);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">+ Add reference line</button>';
       html += '</div>';
       return html;
     };
@@ -583,7 +583,7 @@
         out.push({
           value: parseFloat(row.querySelector(".bd-rl-value").value) || 0,
           label: row.querySelector(".bd-rl-label").value || "",
-          color: row.querySelector(".bd-rl-color").value || "#EF4444",
+          color: row.querySelector(".bd-rl-color").value || "#b91c1c",
           type: type,
           bandTo: type === "band" ? (parseFloat(bandTo.value) || 0) : undefined
         });
@@ -744,8 +744,8 @@
             siblings[i].style.background = "transparent";
           }
           btn.classList.add("active");
-          btn.style.borderColor = "#7B61FF";
-          btn.style.background = "rgba(123,97,255,0.2)";
+          btn.style.borderColor = "var(--color-primary)";
+          btn.style.background = "rgba(var(--color-primary-rgb),0.2)";
         }
         return;
       }
@@ -768,7 +768,7 @@
             siblings[i].style.background = "transparent";
           }
           btn.classList.add("active");
-          btn.style.background = "rgba(123,97,255,0.25)";
+          btn.style.background = "rgba(var(--color-primary-rgb),0.25)";
         }
         return;
       }
@@ -785,13 +785,13 @@
           row.innerHTML =
             '<input type="number" class="bd-rl-value" value="0" step="any" style="width:64px;" title="Value" />' +
             '<input type="text" class="bd-rl-label" value="" placeholder="Label" style="width:70px;" />' +
-            '<input type="color" class="bd-rl-color" value="#EF4444" style="width:26px;height:22px;padding:0;border:none;cursor:pointer;" />' +
+            '<input type="color" class="bd-rl-color" value="#b91c1c" style="width:26px;height:22px;padding:0;border:none;cursor:pointer;" />' +
             '<select class="bd-rl-type" style="width:58px;">' +
               '<option value="line" selected>Line</option>' +
               '<option value="band">Band</option>' +
             '</select>' +
             '<input type="number" class="bd-rl-bandto" value="0" step="any" placeholder="To" title="Band upper value" style="width:56px;display:none;" />' +
-            '<button type="button" class="bd-rl-del" title="Remove" style="border:none;background:transparent;color:#ef4444;cursor:pointer;font-size:12px;">\u2715</button>';
+            '<button type="button" class="bd-rl-del" title="Remove" style="border:none;background:transparent;color:var(--color-danger);cursor:pointer;font-size:12px;">\u2715</button>';
           list.appendChild(row);
         }
         return;
@@ -834,9 +834,14 @@
     });
   }
 
+  /* Preset swatch colours. Hex, not var(): a swatch value is stored in the
+     widget config and later painted on a canvas, where a custom property
+     cannot be resolved. The values are the shared chart palette plus the
+     semantic ramp of the design-token contract. */
   var _presetColors = [
-    "#7B61FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899",
-    "#8B5CF6", "#14B8A6", "#06B6D4", "#F97316", "#6366F1", "#0EA5E9"
+    "#2563eb", "#0d9488", "#b45309", "#7c3aed",
+    "#be123c", "#0369a1", "#4d7c0f", "#64748b",
+    "#15803d", "#1d4ed8", "#b91c1c", "#475569"
   ];
 
   window.UIControlKit = {

@@ -32,10 +32,10 @@ const WarehousePage = {
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="WarehousePage.clearAll()" class="text-sm bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 px-3 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-trash-alt mr-1"></i>Clear All
+                    <button onclick="WarehousePage.clearAll()" class="btn btn-sm btn-danger">
+                        <i class="fas fa-trash-alt"></i>Clear All
                     </button>
-                    <button onclick="WarehousePage.refresh()" class="text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                    <button onclick="WarehousePage.refresh()" class="icon-btn" title="Refresh tables">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -44,7 +44,7 @@ const WarehousePage = {
             <!-- Search + Bulk Actions -->
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
-                    <i class="fas fa-search pointer-events-none" aria-hidden="true" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9ca3af;"></i>
+                    <i class="fas fa-search pointer-events-none" aria-hidden="true" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--color-text-muted);"></i>
                     <input type="text" id="wh-search" placeholder="Search tables..." aria-label="Search tables" class="w-full pl-9 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 text-sm" oninput="WarehousePage.onSearch(this.value)">
                 </div>
                 <div class="flex items-center gap-2">
@@ -65,26 +65,26 @@ const WarehousePage = {
             <div id="wh-quick-actions" class="card hidden">
                 <h3 class="text-sm font-semibold mb-3">Quick Actions (<span id="wh-action-count">0</span> selected)</h3>
                 <div class="flex flex-wrap gap-2">
-                    <button onclick="WarehousePage.sendToAnalysis()" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-microscope mr-1"></i>Send to Analysis
+                    <button onclick="WarehousePage.sendToAnalysis()" class="btn btn-sm btn-primary">
+                        <i class="fas fa-microscope"></i>Send to Analysis
                     </button>
-                    <button onclick="WarehousePage.sendToSQL()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-code mr-1"></i>Send to SQL
+                    <button onclick="WarehousePage.sendToSQL()" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-code"></i>Send to SQL
                     </button>
-                    <button onclick="WarehousePage.deleteSelected()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-trash mr-1"></i>Delete Selected
+                    <button onclick="WarehousePage.deleteSelected()" class="btn btn-sm btn-danger">
+                        <i class="fas fa-trash"></i>Delete Selected
                     </button>
                 </div>
             </div>
 
             <!-- Upload Additional File -->
             <div class="card">
-                <h3 class="text-lg font-semibold mb-3"><i class="fas fa-plus-circle mr-1 text-green-500"></i>Upload Additional File</h3>
+                <h3 class="text-sm font-semibold mb-3"><i class="fas fa-plus-circle mr-1"></i>Upload Additional File</h3>
                 <div class="flex items-center gap-3">
-                    <input type="file" id="wh-file-input" class="flex-1 text-sm border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600" accept=".csv,.xlsx,.xls,.parquet,.json,.tsv">
-                    <input type="text" id="wh-table-name" placeholder="Table name (optional)" class="text-sm border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 w-48">
-                    <button onclick="WarehousePage.uploadQuick()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
-                        <i class="fas fa-upload mr-1"></i>Upload &amp; Load
+                    <input type="file" id="wh-file-input" class="form-control flex-1" accept=".csv,.xlsx,.xls,.parquet,.json,.tsv">
+                    <input type="text" id="wh-table-name" placeholder="Table name (optional)" class="form-control w-48">
+                    <button onclick="WarehousePage.uploadQuick()" class="btn btn-sm btn-primary whitespace-nowrap">
+                        <i class="fas fa-upload"></i>Upload &amp; Load
                     </button>
                 </div>
                 <div id="wh-upload-status" class="mt-2 text-sm"></div>
@@ -166,22 +166,22 @@ const WarehousePage = {
                         <div class="text-xs text-gray-500 dark:text-gray-400">${rows.toLocaleString()} rows &middot; ${cols} columns</div>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
-                        <button onclick="WarehousePage.togglePreview('${App.escapeHtml(name)}')" class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Preview data">
-                            <i class="fas fa-eye mr-1"></i>Preview
+                        <button onclick="WarehousePage.togglePreview('${App.escapeHtml(name)}')" class="icon-btn icon-btn-label" title="Preview data">
+                            <i class="fas fa-eye"></i>Preview
                         </button>
-                        <button onclick="WarehousePage._showCleanPanel('${App.escapeHtml(name)}')" class="text-xs px-2 py-1.5 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-green-500" title="Clean data">
+                        <button onclick="WarehousePage._showCleanPanel('${App.escapeHtml(name)}')" class="icon-btn" title="Clean data">
                             <i class="fas fa-broom"></i>
                         </button>
-                        <button onclick="WarehousePage._showDictionary('${App.escapeHtml(name)}')" class="text-xs px-2 py-1.5 rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-purple-500" title="Data dictionary">
+                        <button onclick="WarehousePage._showDictionary('${App.escapeHtml(name)}')" class="icon-btn" title="Data dictionary">
                             <i class="fas fa-book"></i>
                         </button>
-                        <button onclick="WarehousePage.sendSingleToAnalysis('${App.escapeHtml(name)}')" class="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-primary-500" title="Send to Analysis">
+                        <button onclick="WarehousePage.sendSingleToAnalysis('${App.escapeHtml(name)}')" class="icon-btn" title="Send to Analysis">
                             <i class="fas fa-microscope"></i>
                         </button>
-                        <button onclick="WarehousePage.sendSingleToSQL('${App.escapeHtml(name)}')" class="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-blue-500" title="Send to SQL">
+                        <button onclick="WarehousePage.sendSingleToSQL('${App.escapeHtml(name)}')" class="icon-btn" title="Send to SQL">
                             <i class="fas fa-code"></i>
                         </button>
-                        <button onclick="WarehousePage.deleteTable('${App.escapeHtml(name)}')" class="text-xs px-2 py-1.5 rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-500" title="Delete table">
+                        <button onclick="WarehousePage.deleteTable('${App.escapeHtml(name)}')" class="icon-btn icon-btn-danger" title="Delete table">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
@@ -536,7 +536,7 @@ const WarehousePage = {
                     </label>
                 </div>
                 <button onclick="WarehousePage._previewClean('${App.escapeHtml(name)}')" id="clean-preview-btn-${cleanId}"
-                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors">
+                    class="btn btn-sm btn-secondary">
                     <i class="fas fa-eye mr-1"></i>Preview Changes
                 </button>
                 <div id="clean-result-${cleanId}"></div>

@@ -42,6 +42,16 @@ committed hash.** The opencode CLI is pinned to `v1.19.3`:
 - A mismatch is a hard `throw`. A missing hash file is written and loudly
   reported — verification is never silently skipped.
 
+The pin is a **v1** release on purpose. The provider speaks the opencode v1
+session API (`POST /session`, `POST /session/{id}/message`) and refuses a v2
+server outright (ADR-015); the CLI this project ships is the one that serves
+that dialect natively.
+
+The npm package `opencode-ai` publishes the **same** binary as the GitHub
+release for a given version, so the pin can be verified out of band without
+the CDN: `npm install opencode-ai@1.19.3` and hash the installed binary — it
+matches the committed `installers/opencode-v1.19.3.sha256` digest.
+
 The Linux install path follows the same contract. The `.deb`/`.rpm` does not
 bundle the CLI (~180 MB); the install-time helper
 `packaging/linux/opencode-install.sh` downloads it, and that download is

@@ -407,6 +407,62 @@ def test_the_export_never_carries_a_platform_table(export_warehouse, tenant_con)
     assert "tenant_sales" in tables
 
 
+def test_the_export_reads_the_platform_registry_not_a_private_copy(
+    export_warehouse, tenant_con
+):
+    """The export must not keep its own list of platform tables.
+
+    It used to.  The copy drifted from ``warehouse.system_tables``: tables
+    added to the registry (``api_keys_legacy``, ``catalog_assets_new``,
+    ``_dataagent_health_probe``) were still exported as "tenant data",
+    because only the registry was updated.  A single source of truth means a
+    table added to the registry is excluded from the export automatically.
+    """
+    from api.user_data import build_user_export
+    from warehouse.system_tables import SYSTEM_TABLES
+
+    # Platform tables that are NOT in the export layer's historical copy.
+    drifted = ("api_keys_legacy", "catalog_assets_new", "_dataagent_health_probe")
+    assert set(drifted) <= set(SYSTEM_TABLES), "test assumes these are registered"
+    for name in drifted:
+        tenant_con.execute(f"CREATE TABLE analytics.{name} (secret VARCHAR)")
+        tenant_con.execute(f"INSERT INTO analytics.{name} VALUES ('must-not-export')")
+
+    user = _make_user("export_default")
+    doc = build_user_export(user["user_id"], DEFAULT_TENANT_ID, con=tenant_con)
+
+    tables = doc["tenant_data"]["tables"]
+    for name in drifted:
+        assert name not in tables, name
+    assert "must-not-export" not in json.dumps(doc)
+
+
+def test_the_export_drops_derived_platform_tables(export_warehouse, tenant_con):
+    """Derived helper names belong to the platform, not to the tenant.
+
+    ``DateTable_<table>_<column>`` and ``<table>__npk`` cannot be listed in a
+    fixed set because their name is built from a variable, so the registry
+    recognises them by convention.  The export must honour the same rule: a
+    leftover ``tenant_sales__npk`` is a full copy of the table, and a
+    ``DateTable_*`` spine is platform machinery, not the tenant's data.
+    """
+    from api.user_data import build_user_export
+
+    for name in ("DateTable_tenant_sales_amount", "tenant_sales__npk"):
+        tenant_con.execute(f"CREATE TABLE analytics.{name} (amount DOUBLE)")
+        tenant_con.execute(f"INSERT INTO analytics.{name} VALUES (1234.5)")
+
+    user = _make_user("export_default")
+    doc = build_user_export(user["user_id"], DEFAULT_TENANT_ID, con=tenant_con)
+
+    tables = doc["tenant_data"]["tables"]
+    assert "DateTable_tenant_sales_amount" not in tables
+    assert "tenant_sales__npk" not in tables
+    assert "1234.5" not in json.dumps(doc)
+    # The real table still travels.
+    assert "tenant_sales" in tables
+
+
 def test_the_export_marks_truncation_instead_of_dropping_data(
     export_warehouse, tenant_con, monkeypatch
 ):

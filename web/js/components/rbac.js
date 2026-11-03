@@ -60,11 +60,11 @@
     var plan = getPlan() || "free";
     var allowed = { free: 1, pro: 1, lifetime: 1 };
     var safe = allowed[plan] ? plan : "free";
-    var colors = { free: "#6b7280", pro: "#6366f1", lifetime: "#8b5cf6" };
-    var color = colors[safe];
-    return '<span class="plan-badge" style="display:inline-flex;align-items:center;gap:4px;' +
-      'padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.4px;' +
-      'text-transform:uppercase;color:#fff;background:' + color + ';">' +
+    /* Plan is a tier, not a status: a neutral chip for free, the brand hue
+       for the paid tiers. The colours are tokens so the badge follows the
+       theme instead of carrying a fixed purple that fails contrast in dark. */
+    var cls = safe === "free" ? "plan-badge plan-badge-free" : "plan-badge plan-badge-paid";
+    return '<span class="' + cls + '">' +
       (safe.charAt(0).toUpperCase() + safe.slice(1)) + '</span>';
   }
 
@@ -192,11 +192,11 @@
         '<button onclick="RBAC.dismissUpgradeOverlay()" style="position:absolute;top:12px;right:12px;border:none;background:transparent;cursor:pointer;font-size:18px;color:#666;">&times;</button>' +
         '<div style="font-size:32px;margin-bottom:8px;">&#9733;</div>' +
         '<div style="font-size:20px;font-weight:600;margin-bottom:8px;">Premium Feature</div>' +
-        '<div style="display:inline-block;background:#ede9fe;color:#6d28d9;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:12px;">' + label + '</div>' +
+        '<div style="display:inline-block;background:var(--color-primary-light);color:var(--color-accent-purple);font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:12px;">' + label + '</div>' +
         '<p style="font-size:13px;color:#666;line-height:20px;margin-bottom:20px;">This feature is part of the Pro plan. Upgrade to unlock ' + label.toLowerCase() + ', a higher daily AI allowance, and all premium capabilities.</p>' +
-        '<button onclick="window.location.hash=\'#subscription\';RBAC.dismissUpgradeOverlay();" style="width:100%;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">Upgrade to Pro</button>' +
-        '<button onclick="RBAC.dismissUpgradeOverlay()" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;cursor:pointer;">Not now</button>' +
-        '<div style="font-size:11px;color:#9ca3af;margin-top:10px;">One-time Lifetime plan also available.</div>' +
+        '<button onclick="window.location.hash=\'#subscription\';RBAC.dismissUpgradeOverlay();" style="width:100%;padding:10px;border:none;border-radius:8px;background:var(--color-primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">Upgrade to Pro</button>' +
+        '<button onclick="RBAC.dismissUpgradeOverlay()" style="width:100%;padding:8px;border:1px solid var(--color-border-strong);border-radius:8px;background:#fff;color:var(--color-text-secondary);font-size:13px;cursor:pointer;">Not now</button>' +
+        '<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;">One-time Lifetime plan also available.</div>' +
       '</div>';
     document.body.appendChild(overlay);
     return overlay;

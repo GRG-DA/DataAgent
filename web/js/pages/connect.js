@@ -70,7 +70,7 @@ const ConnectPage = {
                         <input id="conn-pass" type="password" autocomplete="current-password" aria-label="Database password" class="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600" placeholder="••••••••">
                     </div>
                     <div class="flex items-end gap-2">
-                        <button type="button" onclick="ConnectPage._testConnection()" id="conn-test-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex-1">
+                        <button type="button" onclick="ConnectPage._testConnection()" id="conn-test-btn" class="btn btn-sm btn-primary-sm font-medium flex-1">
                             <i class="fas fa-plug mr-1"></i>Connect
                         </button>
                         <button type="button" onclick="ConnectPage._clearForm()" class="text-gray-400 hover:text-red-500 px-2 py-2"><i class="fas fa-eraser"></i></button>

@@ -8,6 +8,8 @@ are persisted to ``data/lineage.json``.
 
 import json
 import logging
+import os
+import threading
 import uuid
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -15,6 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+# One process-wide lock for the read-modify-write cycle.  The API runs several
+# requests in a thread pool; without this two uploads could each load the old
+# file and the later save would silently drop the earlier record.
+_LINEAGE_LOCK = threading.RLock()
 
 # The lineage file is runtime state, so it belongs in the WRITABLE per-user
 # directory (see ``api.runtime_paths``).  Resolving it from ``__file__``
@@ -36,6 +43,39 @@ def _default_lineage_path() -> Path:
 DEFAULT_LINEAGE_PATH = _default_lineage_path()
 
 
+def lineage_storage_path(tenant_id: Optional[str] = None) -> Path:
+    """Return the lineage file for *tenant_id*.
+
+    The default tenant keeps the legacy ``data/lineage.json`` path so an
+    existing install is unaffected.  Every other tenant gets its own file
+    under ``data/lineage/<slug>.json``; otherwise table names and provenance
+    from one tenant would be visible to another.
+    """
+    if tenant_id is None:
+        try:
+            from api.tenancy import current_tenant_id
+
+            tenant_id = current_tenant_id()
+        except Exception:  # noqa: BLE001 - standalone analysis checkout
+            tenant_id = None
+
+    try:
+        from api.tenancy import DEFAULT_TENANT_ID, tenant_slug
+
+        tid = str(tenant_id or DEFAULT_TENANT_ID).strip()
+        if not tid or tid == DEFAULT_TENANT_ID:
+            return _default_lineage_path()
+        slug = tenant_slug(tid)
+    except Exception:  # noqa: BLE001 - tenancy is optional outside the API
+        return _default_lineage_path()
+
+    if not slug:
+        return _default_lineage_path()
+    if _runtime_file is not None:
+        return _runtime_file("data", "lineage", f"{slug}.json")
+    return Path(__file__).resolve().parent.parent / "data" / "lineage" / f"{slug}.json"
+
+
 class LineageTracker:
     """
     Records and queries data transformation lineage.
@@ -45,16 +85,25 @@ class LineageTracker:
     persisted to / loaded from a JSON file.
 
     Args:
-        storage_path: Path to the JSON persistence file.  Defaults to
-                      ``data/lineage.json`` relative to the project root.
+        storage_path: Path to the JSON persistence file.  Defaults to the
+                      caller's tenant lineage file (the default tenant keeps
+                      ``data/lineage.json``).
+        tenant_id:    Tenant whose lineage file to use when *storage_path*
+                      is not given.  Defaults to the current request tenant.
     """
 
-    def __init__(self, storage_path: Optional[Path] = None):
+    def __init__(
+        self,
+        storage_path: Optional[Path] = None,
+        tenant_id: Optional[str] = None,
+    ):
         # Resolved per instance rather than read from a module constant, so a
         # caller that changes $DATAAGENT_DATA_DIR after import still gets the
         # right directory.
         self._storage_path: Path = (
-            Path(storage_path) if storage_path else _default_lineage_path()
+            Path(storage_path)
+            if storage_path
+            else lineage_storage_path(tenant_id)
         )
         self._lineage: Dict[str, List[Dict[str, Any]]] = {}
         self._load()
@@ -107,19 +156,26 @@ class LineageTracker:
             "column_map": column_map or {},
         }
 
-        # Index by the primary output table
-        if table not in self._lineage:
-            self._lineage[table] = []
-        self._lineage[table].append(record)
+        with _LINEAGE_LOCK:
+            # Re-read under the lock: another request may have appended since
+            # this tracker was constructed.  Merging the on-disk state avoids
+            # the lost-update race between concurrent uploads/cleans.
+            self._load()
 
-        # Also index under any additional output names that differ
-        for out_name in outputs:
-            if out_name != table:
-                if out_name not in self._lineage:
-                    self._lineage[out_name] = []
-                self._lineage[out_name].append(record)
+            # Index by the primary output table
+            if table not in self._lineage:
+                self._lineage[table] = []
+            self._lineage[table].append(record)
 
-        self._save()
+            # Also index under any additional output names that differ
+            for out_name in outputs:
+                if out_name != table:
+                    if out_name not in self._lineage:
+                        self._lineage[out_name] = []
+                    self._lineage[out_name].append(record)
+
+            self._save()
+
         logger.info(
             "Recorded transform %s for table '%s': %s",
             transform_id[:8],
@@ -235,8 +291,13 @@ class LineageTracker:
                 if rec not in all_transforms:
                     all_transforms.append(rec)
 
-        # Build nodes and edges
+        # Build nodes and edges. Skip incomplete records (for example an empty
+        # POST /lineage/record) so they do not render as phantom nodes.
         for rec in all_transforms:
+            if not rec.get("transform_id"):
+                continue
+            if not rec.get("inputs") and not rec.get("outputs"):
+                continue
             transform_id = rec.get("transform_id", "")
             operation = rec.get("operation", "transform")
             timestamp = rec.get("timestamp", "")
@@ -331,11 +392,13 @@ class LineageTracker:
             table: If given, only clear records for this table.  Otherwise
                    clear everything.
         """
-        if table:
-            self._lineage.pop(table, None)
-        else:
-            self._lineage.clear()
-        self._save()
+        with _LINEAGE_LOCK:
+            self._load()
+            if table:
+                self._lineage.pop(table, None)
+            else:
+                self._lineage.clear()
+            self._save()
         logger.info("Lineage cleared%s.", f" for '{table}'" if table else "")
 
     # ------------------------------------------------------------------
@@ -360,13 +423,27 @@ class LineageTracker:
             self._lineage = {}
 
     def _save(self) -> None:
-        """Persist lineage data to the JSON file."""
+        """Persist lineage data atomically to the JSON file.
+
+        Write to a sibling temp file and ``os.replace`` it, so a crash or a
+        concurrent reader never sees a half-written JSON document.
+        """
+        tmp_path = self._storage_path.with_name(
+            f"{self._storage_path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+        )
         try:
             self._storage_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self._storage_path, "w", encoding="utf-8") as fh:
+            with open(tmp_path, "w", encoding="utf-8") as fh:
                 json.dump(self._lineage, fh, indent=2, ensure_ascii=False)
-        except OSError as exc:
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp_path, self._storage_path)
+        except (OSError, TypeError, ValueError) as exc:
             logger.error("Failed to save lineage file: %s", exc)
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     # ------------------------------------------------------------------
     # Representation

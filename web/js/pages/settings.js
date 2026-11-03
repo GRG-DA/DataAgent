@@ -14,6 +14,10 @@
 
 const SettingsPage = {
     _current: 'general',
+    // Cached CLI-version / server-state payload for the opencode provider
+    // card. Null until the first fetch resolves (see _loadOpencodeInfo).
+    _opencodeInfo: null,
+    _opencodeInfoTs: 0,
 
     async init() {},
     async destroy() {
@@ -165,7 +169,7 @@ const SettingsPage = {
         }
         return `<div class="flex items-center justify-between flex-wrap gap-2 mt-3 pt-3" style="border-top:1px solid var(--color-card-border)">
             <div class="text-xs text-secondary">
-                <i class="fas fa-envelope-circle-exclamation mr-1" style="color:var(--color-accent-amber)"></i>
+                <i class="fas fa-envelope mr-1" style="color:var(--color-accent-amber)"></i>
                 <strong>${this._esc(email)}</strong> is not confirmed yet — notifications cannot reach it.
             </div>
             <button onclick="SettingsPage._resendVerification()" class="btn btn-secondary btn-sm">
@@ -621,7 +625,14 @@ const SettingsPage = {
         const el = document.getElementById('llm-providers-list');
         if (!el) return;
         try {
-            const data = await API.llmProviders();
+            // The opencode card also shows the CLI version and the loopback
+            // server state. Those live on their own endpoints, so they are
+            // fetched in parallel with the provider list — once per card
+            // render, never per repaint (see _loadOpencodeInfo).
+            const [data, opencodeInfo] = await Promise.all([
+                API.llmProviders(),
+                this._loadOpencodeInfo(),
+            ]);
             const providers = data.providers || [];
             let modelsByProvider = {};
             try {
@@ -630,7 +641,7 @@ const SettingsPage = {
             } catch (_) {}
 
             const statusPill = (s, reason) => {
-                const colors = { configured: 'tag-green', missing_key: 'tag-amber', no_model: 'tag-amber', unreachable: 'tag-red', offline: 'tag-gray' };
+                const colors = { configured: 'tag-green', running: 'tag-green', missing_key: 'tag-amber', no_model: 'tag-amber', unreachable: 'tag-red', offline: 'tag-gray' };
                 return `<span class="tag ${colors[s] || 'tag-gray'}" title="${this._esc(reason || '')}">${s === 'configured' ? 'Ready' : this._esc((s || '').replace(/_/g, ' '))}</span>`;
             };
 
@@ -638,11 +649,17 @@ const SettingsPage = {
                 const cfg = p.config || {};
                 const isDefault = p.is_default;
                 const needsKey = p.needs_api_key;
+                const isOpencode = p.name === 'opencode';
                 const showBaseUrl = ['ollama', 'lmstudio', 'openrouter'].includes(p.name);
                 const showProxies = false;
                 const proxies = (cfg.proxies || []).join(', ');
-                const models = (modelsByProvider[p.name] || []).filter(Boolean);
-                const modelOptions = models.slice(0, 60).map(mm => `<option value="${this._esc(mm)}"></option>`).join('');
+                // GET /llm/models returns one entry per model, and each entry is
+                // an OBJECT ({id} for opencode, {name}/{model} for ollama).
+                // Stringifying them produced "[object Object]" datalist options,
+                // so the real model id is read out of the object instead.
+                const rawModels = modelsByProvider[p.name];
+                const models = (Array.isArray(rawModels) ? rawModels : []).map(mm => this._modelId(mm)).filter(Boolean);
+                const modelOptions = models.slice(0, 60).map(id => `<option value="${this._esc(id)}"></option>`).join('');
                 const keyPlaceholder = cfg.api_key_masked ? `● ${this._esc(cfg.api_key_masked)}` : 'API key';
                 let geminiBlock = '';
                 if (p.name === 'gemini') {
@@ -656,6 +673,9 @@ const SettingsPage = {
                         geminiBlock = `<span class="text-xs text-secondary">Google sign-in needs an OAuth client (<code>google.client_id</code> in settings.yaml) or a Gemini API key above</span>`;
                     }
                 }
+                // opencode is a real, configurable provider: it has a model
+                // override, a CLI version and a loopback server — show them.
+                const opencodeBlock = isOpencode ? this._renderOpencodeDetail(cfg, opencodeInfo) : '';
                 return `<div class="settings-provider ${isDefault ? 'default' : ''}">
                     <div class="settings-provider-icon"><i class="fas ${p.icon || 'fa-cube'}"></i></div>
                     <div class="flex-1 min-w-0">
@@ -663,17 +683,17 @@ const SettingsPage = {
                             <span class="font-medium text-sm">${this._esc(p.label || p.name)}</span>
                             ${statusPill(p.status, p.status_reason)}
                             ${isDefault ? '<span class="tag tag-primary" style="font-size:10px">DEFAULT</span>' : ''}
-                            ${p.name === 'opencode' ? '' : `<span class="text-xs text-secondary">Model: ${cfg.model ? this._esc(cfg.model) : 'Not set'}</span>`}
+                            <span class="text-xs text-secondary">Model: ${cfg.model ? this._esc(cfg.model) : 'Not set'}</span>
                             ${cfg.has_api_key ? '<i class="fas fa-key" style="color:var(--color-accent-green);font-size:10px" title="API key set"></i>' : (needsKey ? '<i class="fas fa-exclamation-triangle" style="color:var(--color-accent-amber);font-size:10px" title="No API key"></i>' : '')}
                             ${geminiBlock}
                         </div>
                         <form class="settings-provider-controls" autocomplete="off" onsubmit="return false;">
                             ${needsKey ? `<input id="llm-key-${p.name}" type="password" autocomplete="new-password" aria-label="${p.label || p.name} API key" placeholder="${keyPlaceholder}" class="form-input text-xs" style="width:170px">` : ''}
-                            ${p.name === 'opencode' ? '' : `<input id="llm-model-${p.name}" type="text" placeholder="Model" aria-label="${p.label || p.name} model" list="llm-models-${p.name}" class="form-input text-xs" style="width:190px" value="${this._esc(cfg.model || '')}">`}
+                            <input id="llm-model-${p.name}" type="text" placeholder="${isOpencode ? 'Model (auto = fastest free)' : 'Model'}" aria-label="${p.label || p.name} model" list="llm-models-${p.name}" class="form-input text-xs" style="width:190px" value="${this._esc(cfg.model || '')}">
                             ${modelOptions ? `<datalist id="llm-models-${p.name}">${modelOptions}</datalist>` : ''}
                             ${showBaseUrl ? `<input id="llm-url-${p.name}" type="text" placeholder="Base URL" aria-label="${p.label || p.name} base URL" class="form-input text-xs" style="width:210px" value="${this._esc(cfg.base_url || '')}">` : ''}
                             ${showProxies ? `<input id="llm-proxies-${p.name}" type="text" placeholder="Proxies (comma-separated, for IP rotation)" class="form-input text-xs" style="width:230px" value="${this._esc(proxies)}">` : ''}
-                            ${p.name === 'opencode' ? '' : `<button type="button" onclick="SettingsPage._saveProvider('${p.name}')" class="btn btn-primary btn-sm">Save</button>`}
+                            <button type="button" onclick="SettingsPage._saveProvider('${p.name}')" class="btn btn-primary btn-sm">Save</button>
                             ${!isDefault ? `<button type="button" onclick="SettingsPage._setDefault('${p.name}')" class="settings-link">Set Default</button>` : ''}
                             ${p.name === 'opencode' ? '' : `<button type="button" onclick="SettingsPage._testProvider('${p.name}')" class="settings-link">Test</button>`}
                             ${(needsKey || p.name === 'opencode') ? `<button type="button" onclick="SettingsPage._clearProvider('${p.name}')" class="settings-link settings-link-danger">Clear overrides</button>` : ''}
@@ -681,7 +701,7 @@ const SettingsPage = {
                         </form>
                         ${p.name === 'lmstudio' ? '<p class="text-xs text-secondary mt-1"><i class="fas fa-circle-info mr-1" style="color:var(--color-accent-blue)"></i>Independent local server on <code>localhost:1234</code> — separate from OpenAI. No API key; never contacts the OpenAI cloud.</p>' : ''}
                         ${p.name === 'ollama' ? '<p class="text-xs text-secondary mt-1"><i class="fas fa-circle-info mr-1" style="color:var(--color-accent-blue)"></i>Separate local runtime on <code>localhost:11434</code> — independent of the OpenAI provider above.</p>' : ''}
-                        ${p.name === 'opencode' ? '<p class="text-xs text-secondary mt-1"><i class="fas fa-circle-info mr-1" style="color:var(--color-accent-blue)"></i>Free anonymous tier — no API key, no model to set.</p>' : ''}
+                        ${opencodeBlock}
                     </div>
                 </div>`;
             }).join('');
@@ -706,6 +726,101 @@ const SettingsPage = {
         } catch (e) {
             if (el) el.innerHTML = `<div class="settings-error"><i class="fas fa-circle-exclamation"></i><span>Failed: ${this._esc(e.message)}</span></div>`;
         }
+    },
+
+    // ── opencode helpers ─────────────────────────────────────────────
+    // The model list returned by GET /llm/models holds OBJECTS, one per
+    // model: {id, …} for opencode, {name, model, …} for ollama. Read the
+    // identifier out of the object instead of stringifying it (which
+    // produced "[object Object]" datalist options).
+    _modelId(entry) {
+        if (entry == null) return '';
+        if (typeof entry === 'string') return entry;
+        if (typeof entry === 'object') return entry.id || entry.name || entry.model || '';
+        return '';
+    },
+
+    // GET /llm/providers/opencode/{version,server}. These two endpoints are
+    // not wrapped by the shared API client, so the request is made here.
+    _opencodeGet(path) {
+        const headers = {};
+        const token = (window.RBAC && window.RBAC.getToken) ? window.RBAC.getToken() : null;
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        return fetch((window.__API_BASE__ || '') + path, { headers: headers })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            });
+    },
+
+    // Fetched once when the provider card renders and cached briefly, so a
+    // repaint (tab switch, refresh, post-save) does not re-hit the server.
+    // A failure is tolerated: the card still renders, just without the
+    // version / server lines.
+    async _loadOpencodeInfo() {
+        const now = Date.now();
+        if (this._opencodeInfo && (now - this._opencodeInfoTs) < 15000) return this._opencodeInfo;
+        const [version, server] = await Promise.all([
+            this._opencodeGet('/llm/providers/opencode/version').catch(() => null),
+            this._opencodeGet('/llm/providers/opencode/server').catch(() => null),
+        ]);
+        this._opencodeInfo = { version: version, server: server };
+        this._opencodeInfoTs = now;
+        return this._opencodeInfo;
+    },
+
+    // The opencode card body: what "auto" means, the CLI version, and the
+    // loopback AI server (URL / port / running state).
+    _renderOpencodeDetail(cfg, info) {
+        const v = (info && info.version) || null;
+        const s = (info && info.server) || null;
+        const model = (cfg && cfg.model) || '';
+        const rows = [];
+
+        let modelHint;
+        if (!model) modelHint = 'no model set — the opencode server picks its own default';
+        else if (/^auto$/i.test(model)) modelHint = 'the opencode server picks the fastest free model it offers, on every request';
+        else modelHint = 'pinned to this model — Clear overrides puts it back on auto';
+        rows.push(`<p class="text-xs text-secondary mt-1">
+            <i class="fas fa-circle-info mr-1" style="color:var(--color-accent-blue)"></i>
+            Model <code class="settings-code">${this._esc(model || 'not set')}</code> — ${modelHint}.
+        </p>`);
+
+        if (v && (v.current || v.pinned)) {
+            const current = v.current || v.pinned;
+            const bits = [`CLI <code class="settings-code">${this._esc(current)}</code>`];
+            if (v.pinned && v.pinned !== current) bits.push(`pinned release ${this._esc(v.pinned)}`);
+            if (v.update_available && v.latest) {
+                bits.push(`<span class="tag tag-amber" style="font-size:10px"><i class="fas fa-arrow-up mr-1"></i>update available: ${this._esc(v.latest)}</span>`);
+            } else {
+                bits.push('up to date');
+            }
+            rows.push(`<p class="text-xs text-secondary mt-1"><i class="fas fa-terminal mr-1"></i>${bits.join(' &middot; ')}</p>`);
+        }
+
+        if (s) {
+            const bits = [];
+            if (s.server_url) bits.push(`<code class="settings-code">${this._esc(s.server_url)}</code>`);
+            if (s.port) bits.push(`port ${this._esc(String(s.port))}`);
+            if (s.installed === false) bits.push('<span class="tag tag-red" style="font-size:10px">CLI not installed</span>');
+            if (s.running) {
+                bits.push('<span class="tag tag-green" style="font-size:10px">running</span>');
+                if (s.pid) bits.push(`pid ${this._esc(String(s.pid))}`);
+            } else {
+                bits.push('<span class="tag tag-gray" style="font-size:10px">not running</span>');
+            }
+            if (s.port_busy) bits.push('<span class="tag tag-amber" style="font-size:10px">port busy</span>');
+            rows.push(`<p class="text-xs text-secondary mt-1"><i class="fas fa-server mr-1"></i>Server ${bits.join(' &middot; ')}</p>`);
+            if (s.last_error) {
+                rows.push(`<p class="text-xs mt-1" style="color:var(--color-accent-red)"><i class="fas fa-triangle-exclamation mr-1"></i>${this._esc(s.last_error)}</p>`);
+            }
+        }
+
+        if (!v && !s) {
+            rows.push('<p class="text-xs text-secondary mt-1"><i class="fas fa-circle-info mr-1" style="color:var(--color-accent-amber)"></i>CLI version and server details are unavailable right now.</p>');
+        }
+
+        return rows.join('');
     },
 
     _esc(s) {
@@ -883,8 +998,9 @@ const SettingsPage = {
                 <div class="settings-provider-icon"><i class="fas fa-robot" style="color:var(--color-accent-blue)"></i></div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-medium text-sm">Data Agent AI</span> ${warpPill}
+                        <span class="font-medium text-sm">Cloudflare WARP</span> ${warpPill}
                     </div>
+                    <p class="text-xs text-secondary mt-1"><i class="fas fa-circle-info mr-1" style="color:var(--color-accent-blue)"></i>Routes provider traffic through a Cloudflare WARP tunnel and rotates the egress IP — used to recover from provider rate limits.</p>
                     <div class="mt-2 flex items-center gap-2 flex-wrap">${warpActions}</div>
                     <div id="warp-install-progress"></div>
                 </div>
@@ -893,10 +1009,10 @@ const SettingsPage = {
                 <div class="settings-provider-icon"><i class="fas fa-lock" style="color:var(--color-accent-red)"></i></div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-medium text-sm">Data Agent AI</span>
+                        <span class="font-medium text-sm">Cloudflare WARP</span>
                         <span class="tag tag-gray" style="font-size:10px"><i class="fas fa-lock mr-1"></i>Pro / Lifetime</span>
                     </div>
-                    <p class="text-xs text-secondary mt-1">A higher daily AI allowance is available on the Pro or Lifetime plan.</p>
+                    <p class="text-xs text-secondary mt-1">Cloudflare WARP egress rotation is available on the Pro or Lifetime plan.</p>
                     <div class="mt-2 flex items-center gap-2 flex-wrap">
                         <a href="#subscription" class="btn btn-primary btn-sm"><i class="fas fa-crown mr-1"></i>Upgrade</a>
                     </div>

@@ -138,7 +138,7 @@
   function _googleSection() {
     if (!_enabled || !_configured) return "";
     return '<button id="auth-google-btn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;' +
-      'padding:12px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#111827;' +
+      'padding:12px 16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);' +
       'font-size:15px;font-weight:600;cursor:pointer;">' +
       '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">' +
       '<path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>' +
@@ -153,25 +153,25 @@
     var idPlaceholder = _central ? "Email" : "Username";
     var idType = _central ? "email" : "text";
     var hint = _central
-      ? '<p style="font-size:11px;color:#9ca3af;margin:12px 0 0;">Your DataAgent account stores only your email, password and purchases — your data stays on this machine.</p>'
-      : '<p style="font-size:11px;color:#9ca3af;margin:12px 0 0;">Register creates a standard account in its own workspace (12+ chars, upper/lower/number/symbol).</p>';
+      ? '<p style="font-size:11px;color:var(--color-text-muted);margin:12px 0 0;">Your DataAgent account stores only your email, password and purchases — your data stays on this machine.</p>'
+      : '<p style="font-size:11px;color:var(--color-text-muted);margin:12px 0 0;">Register creates a standard account in its own workspace (12+ chars, upper/lower/number/symbol).</p>';
     return '<div style="display:flex;align-items:center;gap:12px;margin:20px 0 16px;">' +
-      '<div style="flex:1;height:1px;background:#e5e7eb;"></div>' +
-      '<span style="font-size:12px;color:#9ca3af;font-weight:600;">' + label + '</span>' +
-      '<div style="flex:1;height:1px;background:#e5e7eb;"></div></div>' +
+      '<div style="flex:1;height:1px;background:var(--color-border);"></div>' +
+      '<span style="font-size:12px;color:var(--color-text-muted);font-weight:600;">' + label + '</span>' +
+      '<div style="flex:1;height:1px;background:var(--color-border);"></div></div>' +
       '<input id="auth-username" type="' + idType + '" maxlength="64" autocomplete="' + (_central ? "email" : "username") + '" aria-label="' + idPlaceholder + '" placeholder="' + idPlaceholder + '" style="width:100%;padding:11px 14px;margin-bottom:10px;' +
-      'border:1px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;" />' +
+      'border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:14px;box-sizing:border-box;background:var(--color-surface);" />' +
       '<input id="auth-email" type="email" maxlength="254" autocomplete="email" aria-label="E-mail address (optional)" placeholder="E-mail address (optional)" style="width:100%;padding:11px 14px;margin-bottom:10px;' +
-      'border:1px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;' + (_central ? 'display:none;' : '') + '" />' +
+      'border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:14px;box-sizing:border-box;background:var(--color-surface);' + (_central ? 'display:none;' : '') + '" />' +
       '<input id="auth-password" type="password" maxlength="256" autocomplete="current-password" aria-label="Password" placeholder="Password" style="width:100%;padding:11px 14px;' +
-      'margin-bottom:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;box-sizing:border-box;" />' +
+      'margin-bottom:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:14px;box-sizing:border-box;background:var(--color-surface);" />' +
       '<div style="display:flex;gap:10px;">' +
-      '<button type="button" id="auth-login-btn" style="flex:1;padding:11px;border:none;border-radius:10px;background:#4f46e5;color:#fff;' +
+      '<button type="button" id="auth-login-btn" style="flex:1;padding:11px;border:none;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-on-primary);font-weight:600;' +
       'font-size:14px;font-weight:700;cursor:pointer;">Log in</button>' +
-      '<button type="button" id="auth-register-btn" style="flex:1;padding:11px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;' +
-      'color:#111827;font-size:14px;font-weight:700;cursor:pointer;">Register</button></div>' +
+      '<button type="button" id="auth-register-btn" style="flex:1;padding:11px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);' +
+      'color:var(--color-text);font-size:14px;font-weight:700;cursor:pointer;">Register</button></div>' +
       '<div style="display:flex;justify-content:center;margin-top:12px;">' +
-      '<button type="button" id="auth-forgot-btn" style="border:none;background:none;padding:0;font-size:12px;color:#4f46e5;' +
+      '<button type="button" id="auth-forgot-btn" style="border:none;background:none;padding:0;font-size:12px;color:var(--color-primary);' +
       'cursor:pointer;text-decoration:underline;">Forgot your password?</button></div>' +
       hint;
   }
@@ -181,20 +181,20 @@
     overlay.id = "auth-overlay";
     overlay.style.cssText =
       "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;" +
-      "background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%);" +
+      "background:var(--color-bg);" +
       "font-family:Inter,system-ui,-apple-system,sans-serif;";
     overlay.innerHTML =
-      '<div style="background:#fff;border-radius:20px;padding:36px 40px;max-width:400px;width:92%;' +
-      'box-shadow:0 25px 60px rgba(0,0,0,.35);text-align:center;max-height:92vh;overflow-y:auto;">' +
-      '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;' +
-      'background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;">' +
-      '<i class="fas fa-chart-network" style="color:#fff;font-size:24px;"></i></div>' +
-      '<h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 6px;">DataAgent</h1>' +
-      '<p style="font-size:14px;color:#6b7280;margin:0 0 20px;">Sign in to continue to your analytics workspace</p>' +
+      '<div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:32px 36px;max-width:400px;width:92%;' +
+      'box-shadow:var(--shadow-lg);text-align:center;max-height:92vh;overflow-y:auto;">' +
+      '<div style="width:48px;height:48px;margin:0 auto 14px;border-radius:var(--radius-md);' +
+      'background:var(--color-primary);display:flex;align-items:center;justify-content:center;">' +
+      '<i class="fas fa-network-wired" style="color:var(--color-on-primary);font-size:20px;"></i></div>' +
+      '<h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--color-text);margin:0 0 4px;">DataAgent</h1>' +
+      '<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 20px;">Sign in to continue to your analytics workspace</p>' +
       _googleSection() + _localSection() +
-      '<div id="auth-error" style="display:none;margin-top:14px;padding:10px 12px;border-radius:8px;' +
-      'background:#fef2f2;color:#dc2626;font-size:13px;text-align:left;"></div>' +
-      '<p style="font-size:12px;color:#9ca3af;margin:18px 0 0;">Your data stays in your local workspace.</p>' +
+      '<div id="auth-error" style="display:none;margin-top:14px;padding:10px 12px;border-radius:var(--radius-md);' +
+      'background:var(--color-danger-bg);color:var(--color-danger-hover, #991b1b);font-size:13px;text-align:left;"></div>' +
+      '<p style="font-size:12px;color:var(--color-text-muted);margin:18px 0 0;">Your data stays in your local workspace.</p>' +
       '</div>';
     _wireOverlay(overlay);
     return overlay;
@@ -293,21 +293,21 @@
     var card = overlay.firstElementChild;
     if (!card) return;
     card.innerHTML =
-      '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;' +
-        'background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;">' +
-        '<i class="fas fa-building" style="color:#fff;font-size:24px;"></i></div>' +
-      '<h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 6px;">Your workspace is being prepared</h1>' +
-      '<p style="font-size:14px;color:#6b7280;margin:0 0 18px;">The account <strong>' +
+      '<div style="width:48px;height:48px;margin:0 auto 14px;border-radius:var(--radius-md);' +
+        'background:var(--color-primary);display:flex;align-items:center;justify-content:center;">' +
+        '<i class="fas fa-building" style="color:var(--color-on-primary);font-size:20px;"></i></div>' +
+      '<h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--color-text);margin:0 0 4px;">Your workspace is being prepared</h1>' +
+      '<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 18px;">The account <strong>' +
         _escapeText(user.username || "") + '</strong> is ready. We are setting up a private workspace for it.</p>' +
-      '<div style="text-align:left;padding:12px 14px;border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb;' +
-        'font-size:13px;color:#374151;line-height:1.7;">' +
+      '<div style="text-align:left;padding:12px 14px;border-radius:10px;background:var(--color-surface-2);border:1px solid var(--color-border);' +
+        'font-size:13px;color:var(--color-text-secondary);line-height:1.7;">' +
         '<div><strong>Workspace</strong> &middot; created for this account</div>' +
         '<div><strong>Data</strong> &middot; only you can see it</div>' +
         (email ? '<div><strong>E-mail</strong> &middot; ' + _escapeText(email) + '</div>' : '') +
         '<div><strong>Next</strong> &middot; sign in and name the workspace</div>' +
       '</div>' +
       '<button type="button" id="auth-prepared-continue" style="width:100%;margin-top:18px;padding:11px;border:none;' +
-        'border-radius:10px;background:#4f46e5;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Enter the workspace</button>';
+        'border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-on-primary);font-size:14px;font-weight:600;cursor:pointer;">Enter the workspace</button>';
     var btn = card.querySelector("#auth-prepared-continue");
     if (btn) {
       btn.addEventListener("click", function () {

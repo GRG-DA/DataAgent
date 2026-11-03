@@ -1,6 +1,12 @@
 /* ============================================================
    Dashboard Builder — Properties Panel & UI Controls
    File: web/css/propsPanel.css
+   ────────────────────────────────────────────────────────────
+   Every colour comes from the design-system token contract
+   (docs/plans/design-system.md). The panel used to carry its
+   own violet palette on top of the app chrome; it now rides
+   the same single brand hue as the rest of the app, so light
+   and dark themes are inherited automatically.
    ============================================================ */
 
 /* ============================================================
@@ -14,9 +20,9 @@
   bottom: 0;
   width: 320px;
   z-index: 500;
-  background: var(--color-card-bg);
-  border-left: 1px solid var(--color-card-border);
-  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -28,7 +34,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--color-card-border);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   min-height: 0;
 }
@@ -37,8 +43,8 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: rgba(123, 97, 255, 0.1);
-  color: #7B61FF;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -47,7 +53,7 @@
 .bd-props-title {
   font-weight: 700;
   font-size: 14px;
-  color: var(--color-content-text);
+  color: var(--color-text);
 }
 
 .bd-props-body {
@@ -63,7 +69,7 @@
 
 .bd-props-tabs {
   display: flex;
-  border-bottom: 1px solid var(--color-card-border);
+  border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
   flex-shrink: 0;
   scrollbar-width: none;
@@ -79,7 +85,7 @@
   padding: 8px 10px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
@@ -90,13 +96,14 @@
 }
 
 .bd-props-tab:hover {
-  color: var(--color-content-text);
-  background: var(--color-surface-hover);
+  color: var(--color-text);
+  background: var(--color-surface-2);
 }
 
 .bd-props-tab.active {
-  color: #7B61FF;
-  border-bottom-color: #7B61FF;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-bottom-color: var(--color-primary);
 }
 
 .bd-props-tab i {
@@ -126,7 +133,7 @@
   justify-content: space-between;
   padding: 6px 0;
   margin: 10px 0 6px;
-  border-bottom: 1px solid var(--color-card-border);
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   user-select: none;
 }
@@ -140,12 +147,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #7B61FF;
+  color: var(--color-primary);
 }
 
 .bd-props-section-header i {
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   transition: transform 0.2s;
 }
 
@@ -174,7 +181,7 @@
 .bd-props-label {
   display: block;
   font-size: 11px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   margin-bottom: 4px;
   font-weight: 600;
 }
@@ -193,9 +200,8 @@
 
 .bd-props-help {
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-muted);
   margin-top: 2px;
-  opacity: 0.7;
 }
 
 /* ============================================================
@@ -221,10 +227,15 @@
   inset: 0;
   cursor: pointer;
   border-radius: 22px;
-  background: var(--color-card-border);
+  background: var(--color-border);
   transition: 0.15s;
 }
 
+/* The knob is a physical handle: it stays light on the neutral
+   off-track in both themes, and switches to the brand ink once the
+   track is brand-filled so it never washes out on the dark theme's
+   desaturated primary. The shadow gives the handle its elevation,
+   so it still reads against the light-theme off-track. */
 .bd-props-slider:before {
   content: "";
   position: absolute;
@@ -234,15 +245,17 @@
   top: 3px;
   background: #fff;
   border-radius: 50%;
+  box-shadow: var(--shadow-sm);
   transition: 0.15s;
 }
 
 .bd-props-switch input:checked + .bd-props-slider {
-  background: #7B61FF;
+  background: var(--color-primary);
 }
 
 .bd-props-switch input:checked + .bd-props-slider:before {
   transform: translateX(18px);
+  background: var(--color-on-primary);
 }
 
 /* ============================================================
@@ -263,7 +276,7 @@
   width: 32px;
   height: 30px;
   padding: 0;
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   background: none;
   cursor: pointer;
@@ -294,7 +307,7 @@
   -webkit-appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: var(--color-card-border);
+  background: var(--color-border);
   outline: none;
 }
 
@@ -303,10 +316,10 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #7B61FF;
+  background: var(--color-primary);
   cursor: pointer;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .bd-ctrl-slider-val {
@@ -314,7 +327,7 @@
   font-variant-numeric: tabular-nums;
   min-width: 28px;
   text-align: right;
-  color: var(--color-content-text);
+  color: var(--color-text);
 }
 
 /* ============================================================
@@ -327,7 +340,7 @@
 }
 
 .bd-ctrl-align-btn {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   background: transparent;
   width: 28px;
   height: 28px;
@@ -336,19 +349,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   font-size: 11px;
   transition: all 0.12s;
 }
 
 .bd-ctrl-align-btn:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
 }
 
 .bd-ctrl-align-btn.active {
-  background: #7B61FF;
-  color: #fff;
-  border-color: #7B61FF;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
 }
 
 /* ============================================================
@@ -356,7 +369,7 @@
    ============================================================ */
 
 .bd-ctrl-spacing {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px;
 }
@@ -376,7 +389,7 @@
 .bd-ctrl-spacing-cell label {
   font-size: 9px;
   text-transform: uppercase;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .bd-ctrl-spacing-cell input {
@@ -384,13 +397,14 @@
   text-align: center;
   font-size: 11px;
   padding: 3px;
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
+  color: var(--color-text);
 }
 
 .bd-ctrl-spacing-center {
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
@@ -399,7 +413,7 @@
    ============================================================ */
 
 .bd-ctrl-border {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px;
 }
@@ -422,7 +436,7 @@
 
 .bd-ctrl-border-label {
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   width: 100%;
   margin-top: 4px;
 }
@@ -432,7 +446,7 @@
    ============================================================ */
 
 .bd-ctrl-gradient {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px;
 }
@@ -442,7 +456,7 @@
   border-radius: 6px;
   margin-top: 6px;
   transition: background 0.2s;
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
 }
 
 .bd-ctrl-gradient-angle {
@@ -475,8 +489,8 @@
 }
 
 .bd-ctrl-swatch.active {
-  border-color: var(--color-content-text);
-  box-shadow: 0 0 0 2px rgba(123, 97, 255, 0.3);
+  border-color: var(--color-text);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.3);
 }
 
 /* ============================================================
@@ -484,7 +498,7 @@
    ============================================================ */
 
 .bd-ctrl-icon-picker {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px;
 }
@@ -512,19 +526,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   font-size: 12px;
   transition: all 0.1s;
 }
 
 .bd-ctrl-icon-btn:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-content-text);
+  background: var(--color-surface-2);
+  color: var(--color-text);
 }
 
 .bd-ctrl-icon-btn.active {
-  background: rgba(123, 97, 255, 0.1);
-  color: #7B61FF;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 /* ============================================================
@@ -533,7 +547,7 @@
 
 .bd-ctrl-radio-group {
   display: flex;
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -545,11 +559,11 @@
   padding: 5px 8px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.12s;
   text-align: center;
-  border-right: 1px solid var(--color-card-border);
+  border-right: 1px solid var(--color-border);
 }
 
 .bd-ctrl-radio-btn:last-child {
@@ -557,12 +571,12 @@
 }
 
 .bd-ctrl-radio-btn:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
 }
 
 .bd-ctrl-radio-btn.active {
-  background: #7B61FF;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 /* ============================================================
@@ -573,7 +587,7 @@
   display: flex;
   gap: 6px;
   padding: 12px 14px;
-  border-top: 1px solid var(--color-card-border);
+  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -599,12 +613,12 @@
   gap: 4px;
   align-items: center;
   padding: 4px 8px;
-  background: var(--color-card-bg);
-  border-bottom: 1px solid var(--color-card-border);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .bd-responsive-btn {
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   background: transparent;
   width: 28px;
   height: 28px;
@@ -613,24 +627,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   font-size: 12px;
   transition: all 0.12s;
 }
 
 .bd-responsive-btn:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-surface-2);
 }
 
 .bd-responsive-btn.active {
-  background: #7B61FF;
-  color: #fff;
-  border-color: #7B61FF;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
 }
 
 .bd-responsive-label {
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   margin-left: 8px;
 }
 
@@ -643,48 +657,65 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   font-size: 10px;
-  color: var(--color-content-text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.12s;
 }
 
 .bd-preset-chip:hover {
-  background: var(--color-surface-hover);
-  border-color: #7B61FF;
-  color: #7B61FF;
+  background: var(--color-surface-2);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .bd-preset-chip.active {
-  background: rgba(123, 97, 255, 0.1);
-  border-color: #7B61FF;
-  color: #7B61FF;
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 /* ============================================================
-   19. DARK THEME OVERRIDES
+   19. KEYBOARD FOCUS + DISABLED STATES
+   Every interactive control in the panel shows the shared
+   focus ring and reads as disabled when it is disabled.
+   The app-wide solid brand outline (styles.css) is left in
+   place — --ring adds the halo on top of it, it does not
+   replace it, so the indicator still clears 3:1 against the
+   adjacent colour (WCAG 2.2 SC 2.4.11).
    ============================================================ */
 
-[data-theme="dark"] .bd-props {
-  background: var(--color-card-bg);
-  border-left-color: var(--color-card-border);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+.bd-props :focus-visible,
+.bd-responsive-bar :focus-visible {
+  box-shadow: var(--ring);
 }
 
-[data-theme="dark"] .bd-ctrl-color-pick {
-  border-color: var(--color-card-border);
+.bd-props-switch input:focus-visible + .bd-props-slider {
+  box-shadow: var(--ring);
 }
 
-[data-theme="dark"] .bd-ctrl-spacing-cell input {
-  background: var(--color-card-bg);
-  border-color: var(--color-card-border);
-  color: var(--color-content-text);
+.bd-props :disabled,
+.bd-responsive-bar :disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ============================================================
-   20. ANIMATIONS
+   20. DARK THEME
+   The panel chrome uses tokens that flip automatically; only
+   the form-control surfaces need an explicit nudge.
+   ============================================================ */
+
+[data-theme="dark"] .bd-ctrl-spacing-cell input {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* ============================================================
+   21. ANIMATIONS
    ============================================================ */
 
 @keyframes bd-props-in {
@@ -708,3 +739,20 @@
     opacity: 0;
   }
 }
+
+/* Moved here from styles.css — this file owns the panel. */
+.bd-props-type {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--color-text-secondary); margin-bottom: 12px;
+}
+.bd-props-section {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--color-primary); margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--color-border);
+}
+.bdp-color { padding: 2px !important; height: 32px; cursor: pointer; }
+.bd-props-data-btn { width: 100%; justify-content: center; margin-top: 4px; }
+
+/* The switch, the slider knob and the action buttons are declared once,
+   above, in their tokenised form. Repeating them here would silently
+   override the brand ink on the checked knob (--color-on-primary) and
+   the knob's elevation shadow. */

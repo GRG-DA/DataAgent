@@ -10,8 +10,9 @@ Usage:
 Verifies:
   1. Free-model gate (premium models rejected without an API key).
   2. Quota-exhaustion detection (429 + reset headers / body markers).
-  3. Egress rotation picks proxies round-robin and skips cooled-down ones.
-  4. A real chat call to the free tier (unless --offline).
+  3. Egress rotation prefers the direct route and skips cooled-down ones.
+  4. A real chat call through the app's own opencode provider (unless
+     --offline) - i.e. the same server URL and model the app uses.
 """
 import asyncio
 import sys
@@ -19,11 +20,33 @@ import time
 
 sys.path.insert(0, ".")
 
+# The Windows console is cp1252 and the summary lines draw box characters
+# (and a model answer can carry anything at all). Without this the script
+# dies while PRINTING a successful result.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:  # noqa: BLE001 - not a TTY, or an old Python
+    pass
+
 from agent.llm_client import (  # noqa: E402
     Message,
     OpencodeConfig,
     OpencodeProvider,
+    opencode_provider_from_settings,
 )
+
+
+def _live_provider():
+    """The provider the APP itself uses.
+
+    The free tier refuses direct calls to the zen endpoint (HTTP 403
+    FreeTierError - "can only be used from within OpenCode"), so the live
+    calls must go through the local opencode server. Building the provider
+    from the app settings is what makes this a check of the real
+    configuration (server URL, model, dialect) instead of a guess.
+    """
+    return opencode_provider_from_settings()
 
 
 def test_free_model_gate():
@@ -62,9 +85,11 @@ def test_rotation():
     prov = OpencodeProvider(OpencodeConfig(model="big-pickle", proxies=["http://p1", "socks5://p2"]))
     keys = prov._egress_keys()
     assert keys == ["", "http://p1", "socks5://p2"], keys
-    # All routes healthy -> round-robin across all three.
+    # The direct route is preferred while it is healthy (it is the fastest
+    # and most reliable one); the proxies are only used once the direct
+    # route is cooling down. See OpencodeProvider._next_egress.
     picks = {prov._next_egress() for _ in range(6)}
-    assert picks == set(keys), picks
+    assert picks == {""}, picks
     # Cool down the direct route -> it must be skipped.
     prov._cooldowns[""] = time.time() + 600
     picks2 = {prov._next_egress() for _ in range(6)}
@@ -101,7 +126,7 @@ def test_cooldown_parsing():
 
 
 async def live_chat():
-    prov = OpencodeProvider(OpencodeConfig(model="big-pickle"))
+    prov = _live_provider()
     try:
         resp = await prov.chat(
             [Message(role="user", content="Reply with exactly: OK")],
@@ -116,7 +141,7 @@ async def live_chat():
 
 
 async def live_stream():
-    prov = OpencodeProvider(OpencodeConfig(model="big-pickle"))
+    prov = _live_provider()
     try:
         chunks = []
         gen = await prov.chat(

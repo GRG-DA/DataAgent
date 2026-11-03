@@ -94,7 +94,7 @@ const LineagePage = {
             this._dagData = dag;
 
             if (!dag.nodes || dag.nodes.length === 0) {
-                container.innerHTML = '<div class="text-center py-16 text-gray-400"><i class="fas fa-inbox text-4xl mb-4 opacity-30"></i><p>No lineage data recorded yet</p><p class="text-sm mt-1">Lineage is automatically tracked when you upload, clean, or transform data</p></div>';
+                container.innerHTML = '<div class="text-center py-16 text-gray-400"><i class="fas fa-inbox text-4xl mb-4 opacity-30"></i><p>No lineage data recorded yet</p><p class="text-sm mt-1">Lineage records appear here once transformations are recorded</p></div>';
                 if (tableName) this._loadHistory(tableName);
                 return;
             }
@@ -191,7 +191,7 @@ const LineagePage = {
         // Defs
         svg += `<defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-primary)"/>
             </marker>
         </defs>`;
 
@@ -203,10 +203,10 @@ const LineagePage = {
             const x1 = from.x + nodeW, y1 = from.y + nodeH / 2;
             const x2 = to.x, y2 = to.y + nodeH / 2;
             const mx = (x1 + x2) / 2;
-            svg += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arrow)" opacity="0.6"/>`;
+            svg += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" stroke="var(--color-primary)" stroke-width="2" fill="none" marker-end="url(#arrow)" opacity="0.6"/>`;
             // Edge label
             if (e.operation) {
-                svg += `<text x="${mx}" y="${(y1 + y2) / 2 - 6}" font-size="9" fill="#94a3b8" text-anchor="middle">${e.operation}</text>`;
+                svg += `<text x="${mx}" y="${(y1 + y2) / 2 - 6}" font-size="9" fill="var(--color-text-muted)" text-anchor="middle">${App.escapeHtml(e.operation)}</text>`;
             }
         });
 
@@ -215,17 +215,19 @@ const LineagePage = {
             const pos = positions[n.id];
             if (!pos) return;
             const isTransform = n.type === "transform";
-            const fill = isTransform ? "#4f46e5" : "#1e293b";
-            const textColor = "#ffffff";
+            const fill = isTransform ? "var(--color-primary)" : "#1e293b";
+            const textColor = isTransform ? "var(--color-on-primary)" : "#ffffff";
             const rx = 8;
 
             svg += `<rect x="${pos.x}" y="${pos.y}" width="${nodeW}" height="${nodeH}" rx="${rx}" fill="${fill}" opacity="0.9"/>`;
-            // Label (truncate if long)
-            const label = (n.label || n.id).length > 20 ? (n.label || n.id).substring(0, 18) + "…" : (n.label || n.id);
-            svg += `<text x="${pos.x + nodeW / 2}" y="${pos.y + nodeH / 2 - 4}" font-size="11" fill="${textColor}" text-anchor="middle" font-weight="600">${label}</text>`;
+            // Label (truncate if long). Escape after truncation so a
+            // filename like `<img onerror=...>` cannot become SVG markup.
+            const rawLabel = String(n.label || n.id || "");
+            const label = rawLabel.length > 20 ? rawLabel.substring(0, 18) + "…" : rawLabel;
+            svg += `<text x="${pos.x + nodeW / 2}" y="${pos.y + nodeH / 2 - 4}" font-size="11" fill="${textColor}" text-anchor="middle" font-weight="600">${App.escapeHtml(label)}</text>`;
             // Type label
             const typeLabel = isTransform ? (n.operation || "transform") : "table";
-            svg += `<text x="${pos.x + nodeW / 2}" y="${pos.y + nodeH / 2 + 10}" font-size="8" fill="#94a3b8" text-anchor="middle">${typeLabel}</text>`;
+            svg += `<text x="${pos.x + nodeW / 2}" y="${pos.y + nodeH / 2 + 10}" font-size="8" fill="var(--color-text-muted)" text-anchor="middle">${App.escapeHtml(typeLabel)}</text>`;
         });
 
         svg += '</svg>';
@@ -238,7 +240,7 @@ const LineagePage = {
                     <span><i class="fas fa-long-arrow-alt-right text-primary-500 mr-1"></i>Data flow</span>
                     <span class="ml-auto">${nodes.length} nodes, ${edges.length} edges</span>
                 </div>
-                <div class="overflow-auto" style="max-height:500px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+                <div class="overflow-auto" style="max-height:500px;border:1px solid var(--color-border);border-radius:8px;padding:10px;">
                     ${svg}
                 </div>
             </div>`;
@@ -272,7 +274,7 @@ const LineagePage = {
             const svg = this._renderColumnLineageGraph(colLineage, tableName);
 
             let html = `
-                <div class="mb-3 overflow-auto" style="max-height:400px;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+                <div class="mb-3 overflow-auto" style="max-height:400px;border:1px solid var(--color-border);border-radius:8px;padding:10px;">
                     ${svg}
                 </div>
                 <div class="overflow-x-auto"><table class="w-full text-xs border-collapse">`;
@@ -365,7 +367,7 @@ const LineagePage = {
         // Defs
         svg += `<defs>
             <marker id="col-arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-muted)"/>
             </marker>
         </defs>`;
 
@@ -374,29 +376,29 @@ const LineagePage = {
             const x1 = e.from.x + colW, y1 = e.from.y + nodeH / 2;
             const x2 = e.to.x, y2 = e.to.y + nodeH / 2;
             const mx = (x1 + x2) / 2;
-            svg += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" stroke="#94a3b8" stroke-width="1.5" fill="none" marker-end="url(#col-arrow)" opacity="0.6"/>`;
+            svg += `<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" stroke="var(--color-text-muted)" stroke-width="1.5" fill="none" marker-end="url(#col-arrow)" opacity="0.6"/>`;
             // Operation label on edge
             if (e.op) {
-                svg += `<text x="${mx}" y="${(y1 + y2) / 2 - 4}" font-size="8" fill="#94a3b8" text-anchor="middle">${App.escapeHtml(e.op)}</text>`;
+                svg += `<text x="${mx}" y="${(y1 + y2) / 2 - 4}" font-size="8" fill="var(--color-text-muted)" text-anchor="middle">${App.escapeHtml(e.op)}</text>`;
             }
         });
 
         // Draw source column nodes
         srcArr.forEach(n => {
-            svg += `<rect x="${n.x}" y="${n.y}" width="${colW}" height="${nodeH}" rx="6" fill="#e0e7ff" stroke="#818cf8" stroke-width="1"/>`;
+            svg += `<rect x="${n.x}" y="${n.y}" width="${colW}" height="${nodeH}" rx="6" fill="var(--color-primary-light)" stroke="var(--color-primary)" stroke-width="1"/>`;
             const label = `${n.table}.${n.col}`;
-            svg += `<text x="${n.x + 8}" y="${n.y + nodeH / 2 + 3}" font-size="10" fill="#3730a3">${App.escapeHtml(label.length > 22 ? label.slice(0, 20) + '…' : label)}</text>`;
+            svg += `<text x="${n.x + 8}" y="${n.y + nodeH / 2 + 3}" font-size="10" fill="var(--color-primary-active)">${App.escapeHtml(label.length > 22 ? label.slice(0, 20) + '…' : label)}</text>`;
         });
 
         // Draw target column nodes
         tgtArr.forEach(n => {
-            svg += `<rect x="${n.x}" y="${n.y}" width="${colW}" height="${nodeH}" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>`;
-            svg += `<text x="${n.x + 8}" y="${n.y + nodeH / 2 + 3}" font-size="10" fill="#92400e">${App.escapeHtml(n.col)}</text>`;
+            svg += `<rect x="${n.x}" y="${n.y}" width="${colW}" height="${nodeH}" rx="6" fill="var(--color-warning-bg)" stroke="var(--color-warning)" stroke-width="1"/>`;
+            svg += `<text x="${n.x + 8}" y="${n.y + nodeH / 2 + 3}" font-size="10" fill="var(--color-warning)">${App.escapeHtml(n.col)}</text>`;
         });
 
         // Labels
-        svg += `<text x="${srcX + colW / 2}" y="${padY - 10}" font-size="10" fill="#64748b" text-anchor="middle" font-weight="600">Source Columns</text>`;
-        svg += `<text x="${tgtX + colW / 2}" y="${padY - 10}" font-size="10" fill="#64748b" text-anchor="middle" font-weight="600">Target Columns</text>`;
+        svg += `<text x="${srcX + colW / 2}" y="${padY - 10}" font-size="10" fill="var(--color-text-muted)" text-anchor="middle" font-weight="600">Source Columns</text>`;
+        svg += `<text x="${tgtX + colW / 2}" y="${padY - 10}" font-size="10" fill="var(--color-text-muted)" text-anchor="middle" font-weight="600">Target Columns</text>`;
 
         svg += '</svg>';
         return svg;
@@ -426,8 +428,8 @@ const LineagePage = {
                         </div>
                         ${r.description ? `<div class="text-xs text-gray-500 mt-0.5">${App.escapeHtml(r.description)}</div>` : ''}
                         <div class="text-[10px] text-gray-400 mt-1">
-                            ${r.inputs?.length ? `Inputs: ${r.inputs.join(', ')}` : ''}
-                            ${r.outputs?.length ? ` → Outputs: ${r.outputs.join(', ')}` : ''}
+                            ${r.inputs?.length ? `Inputs: ${App.escapeHtml(r.inputs.join(', '))}` : ''}
+                            ${r.outputs?.length ? ` → Outputs: ${App.escapeHtml(r.outputs.join(', '))}` : ''}
                         </div>
                     </div>
                 </div>

@@ -18,7 +18,7 @@ const ChatPage = {
     _isWaiting: false,
     _scrollArea: null,
     _sessionId: 'chat_' + Date.now(),
-    _selectedTables: [],          // empty = All tables (no scope)
+    _selectedTables: [],          // EXPLICIT scope: the tables the user picked (empty = All tables, no scope)
     _tableSearch: '',
     _conversations: [],           // [{ id, title, messages, createdAt, updatedAt }]
     _activeConversationId: null,
@@ -28,6 +28,9 @@ const ChatPage = {
     _stopped: false,
     _STORAGE_KEY: 'chat_conversations',
     _SIDEBAR_KEY: 'chat_sidebar_collapsed',
+    // v2: the selection is now the INCLUSIVE scope (tables the user picked).
+    // The v1 key stored an EXCLUSION set, so it must not be resurrected.
+    _TABLES_KEY: 'chat_selected_tables_v2',
 
     // ── quick-task prompts ──
     PREBUILT_TASKS: [
@@ -62,6 +65,13 @@ const ChatPage = {
         this._ACTIVE_KEY = scoped('chat_active_conversation');
 
         this._loadConversations();
+
+        // Restore the query scope BEFORE the first await. destroy() persists
+        // the scope when the page is torn down and the router can call it
+        // while init() is still waiting on the server sync — an empty scope
+        // at that moment would overwrite the stored selection.
+        this._selectedTables = this._readStoredTables();
+
         await this._syncFromServer();
         this._sidebarCollapsed = localStorage.getItem(this._SIDEBAR_KEY) === 'true';
 
@@ -74,18 +84,13 @@ const ChatPage = {
         } else {
             this._newConversation();
         }
-
-        const selTables = sessionStorage.getItem('chat_selected_tables');
-        if (selTables) {
-            try { this._selectedTables = JSON.parse(selTables) || []; } catch (_) { this._selectedTables = []; }
-        }
     },
 
     async destroy() {
         this._saveConversations();
         try { localStorage.setItem(this._ACTIVE_KEY, this._activeConversationId || ''); } catch (_) {}
         try { localStorage.setItem(this._SIDEBAR_KEY, this._sidebarCollapsed ? 'true' : 'false'); } catch (_) {}
-        this._persistTables();
+        this._persistScopeOnExit();
         if (this._boundClose) document.removeEventListener('click', this._boundClose);
         this._scrollArea = null;
     },
@@ -373,15 +378,10 @@ const ChatPage = {
     async render() {
         await App.refreshTables();
         const pc = document.getElementById('page-content');
-        const tables = App.state.tables || {};
-        const tableNames = Array.isArray(tables) ? tables :
-            (typeof tables === 'object' && tables !== null) ? Object.keys(tables) : [];
 
-        // Prune any selected tables that no longer exist (e.g. were dropped).
-        const known = new Set(tableNames.map(x => x.toLowerCase()));
-        const before = this._selectedTables.length;
-        this._selectedTables = this._selectedTables.filter(t => known.has(t.toLowerCase()));
-        if (this._selectedTables.length !== before) this._persistTables();
+        // Drop selected tables that no longer exist — but only against a
+        // table list we actually have (see _pruneSelectedTables).
+        this._pruneSelectedTables();
 
         pc.innerHTML = `
         <div class="chat-layout animate-fade-in">
@@ -416,11 +416,16 @@ const ChatPage = {
                             <div class="relative" id="chat-table-picker">
                                 <button id="chat-table-btn" onclick="ChatPage._toggleTablePicker()"
                                     class="text-sm border rounded-lg px-2.5 py-1.5 min-w-[150px] max-w-[190px] flex items-center justify-between gap-2 dark:bg-gray-700 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                                    title="Select tables to analyze (multi-select)">
+                                    title="Choose which tables the agent may use (multi-select)">
+                                    <i class="fas fa-bullseye text-[10px] text-primary-500 shrink-0"></i>
                                     <span id="chat-table-btn-label" class="truncate">All tables</span>
                                     <i class="fas fa-chevron-down text-[9px] text-gray-400 shrink-0"></i>
                                 </button>
                                 <div id="chat-table-panel" class="hidden absolute z-10 right-0 mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                    <div class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                                        <i class="fas fa-bullseye text-primary-500 text-[11px]"></i>
+                                        <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Query scope</span>
+                                    </div>
                                     <div class="p-2 border-b border-gray-100 dark:border-gray-700">
                                         <input id="chat-table-search" type="text" placeholder="Search tables..."
                                             class="w-full text-sm border rounded-lg px-2.5 py-1.5 dark:bg-gray-700 dark:border-gray-600"
@@ -432,15 +437,18 @@ const ChatPage = {
                                                 ${this._selectedTables.length === 0 ? 'checked' : ''}
                                                 onchange="ChatPage._onAllTablesToggle(this.checked)">
                                             <span class="font-medium">All tables</span>
-                                            <span class="text-xs text-gray-400 ml-auto">no scope</span>
+                                            <span class="text-xs text-gray-400 ml-auto">${this._allTableNames().length} available</span>
                                         </label>
                                     </div>
                                     <div id="chat-table-list" class="max-h-56 overflow-y-auto p-1"></div>
-                                    <div class="flex items-center justify-between p-2 border-t border-gray-100 dark:border-gray-700">
-                                        <button onclick="ChatPage._clearTables()" class="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded" title="Clear table selection">
-                                            <i class="fas fa-times mr-1"></i>Clear
-                                        </button>
-                                        <button onclick="ChatPage._toggleTablePicker()" class="text-xs bg-primary-500 hover:bg-primary-600 text-white rounded-lg px-3 py-1.5 transition-colors">Done</button>
+                                    <div class="flex items-center justify-between gap-2 p-2 border-t border-gray-100 dark:border-gray-700">
+                                        <span id="chat-table-scope-hint" class="text-[11px] text-gray-400 truncate">No scope — every table reachable</span>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button onclick="ChatPage._clearTables()" class="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded" title="Clear table selection">
+                                                <i class="fas fa-times mr-1"></i>Clear
+                                            </button>
+                                            <button onclick="ChatPage._toggleTablePicker()" class="text-xs bg-primary-500 hover:bg-primary-600 text-white rounded-lg px-3 py-1.5 transition-colors">Done</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -525,22 +533,12 @@ const ChatPage = {
 
         list.innerHTML = filtered.map(c => {
             const active = c.id === this._activeConversationId;
-            const lastMsg = (c.messages || []).slice().reverse().find(m => m.content);
-            // Preview should read as plain text: strip code blocks, links,
-            // table pipes, and markdown emphasis markers.
-            const preview = lastMsg ? String(lastMsg.content)
-                .replace(/```[\s\S]*?```/g, '[code]')
-                .replace(/\[([^\]]+)\]\((?:https?:\/\/)[^\s)]+\)/g, '$1')
-                .replace(/\|/g, ' ')
-                .replace(/[*#>`~]+/g, '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 60) : '';
+            const subtitle = this._conversationSubtitle(c);
             const time = this._formatTime(c.updatedAt);
             return `
             <div class="chat-conv-item ${active ? 'active' : ''}" onclick="ChatPage._switchConversation('${c.id}')">
                 <div class="conv-title">${App.escapeHtml(c.title || 'New chat')}</div>
-                ${preview ? `<div class="conv-preview">${App.escapeHtml(preview)}</div>` : ''}
+                ${subtitle ? `<div class="conv-preview">${App.escapeHtml(subtitle)}</div>` : ''}
                 <div class="conv-time">${time}</div>
                 <div class="conv-actions" onclick="event.stopPropagation()">
                     <button onclick="ChatPage._startRename('${c.id}')" title="Rename"><i class="fas fa-pen"></i></button>
@@ -548,6 +546,31 @@ const ChatPage = {
                 </div>
             </div>`;
         }).join('');
+    },
+
+    /**
+     * One-line subtitle for a conversation row.
+     *
+     * It is the user's last question — the assistant's answer is long and
+     * noisy (a whole result table), which made the list unreadable. A
+     * conversation without a question yet falls back to a short placeholder.
+     */
+    _conversationSubtitle(conv) {
+        const messages = (conv && conv.messages) || [];
+        const lastUser = messages.slice().reverse()
+            .find(m => m && m.role === 'user' && m.content);
+        if (!lastUser) return 'No question yet';
+        // Read as plain text: strip code blocks, links, table pipes and
+        // markdown emphasis markers.
+        const text = String(lastUser.content)
+            .replace(/```[\s\S]*?```/g, '[code]')
+            .replace(/\[([^\]]+)\]\((?:https?:\/\/)[^\s)]+\)/g, '$1')
+            .replace(/\|/g, ' ')
+            .replace(/[*#>`~]+/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!text) return 'No question yet';
+        return text.length > 60 ? text.slice(0, 60).trimEnd() + '…' : text;
     },
 
     _startRename(id) {
@@ -682,7 +705,13 @@ const ChatPage = {
             const el = document.getElementById(id);
             if (!el) return;
             try {
-                Plotly.newPlot(el, spec.data || [], spec.layout || {}, { responsive: true });
+                // The backend spec can be taller (500px) than the 420px card.
+                // Fit it to the card so the x-axis is never clipped; fall back
+                // to the spec height while the card is still hidden.
+                const baseLayout = spec.layout || {};
+                const height = el.clientHeight || baseLayout.height || 420;
+                Plotly.newPlot(el, spec.data || [],
+                    { ...baseLayout, height, autosize: true }, { responsive: true });
             } catch (e) {
                 console.error('Plotly render failed:', e);
             }
@@ -1039,18 +1068,29 @@ const ChatPage = {
 
             // ── Fallback: non-streaming /ask ──
             if (!usedStream) {
-                const result = await API.ask(question, { tables, sessionId: this._sessionId });
-                const answer = (result.answer || '').trim();
+                // Stop must cancel the fallback request too, not only the SSE
+                // stream: the signal goes all the way into fetch(), so the
+                // server stops working on a turn nobody is waiting for.
+                const signal = this._abortCtrl ? this._abortCtrl.signal : undefined;
+                try {
+                    const result = await API.ask(question, { tables, sessionId: this._sessionId, signal });
+                    const answer = (result.answer || '').trim();
 
-                if (result.session_id) this._sessionId = result.session_id;
+                    if (result.session_id) this._sessionId = result.session_id;
 
-                // Render the charts the pipeline returned — dropping them here
-                // left "see chart above" with no chart whenever streaming was
-                // unavailable (it always was while askStream was unauthenticated).
-                const built = this._buildViz(result.visualizations || []);
-                // _addMessage stores the specs and renders them once (a second
-                // _renderVizSpecs here would Plotly-purge then re-plot).
-                this._addMessage('assistant', answer || result.error || 'No results returned.', built);
+                    // Render the charts the pipeline returned — dropping them here
+                    // left "see chart above" with no chart whenever streaming was
+                    // unavailable (it always was while askStream was unauthenticated).
+                    const built = this._buildViz(result.visualizations || []);
+                    // _addMessage stores the specs and renders them once (a second
+                    // _renderVizSpecs here would Plotly-purge then re-plot).
+                    this._addMessage('assistant', answer || result.error || 'No results returned.', built);
+                } catch (askErr) {
+                    const aborted = this._stopped
+                        || (askErr && (askErr.name === 'AbortError' || askErr.code === 20));
+                    if (!aborted) throw askErr;
+                    this._addMessage('assistant', 'Generation stopped.');
+                }
             }
 
         } catch (e) {
@@ -1309,9 +1349,16 @@ const ChatPage = {
     },
 
     _renderTablePreviewCard(tableName, profile, sample) {
-        const cols = profile?.columns || {};
+        // /profile returns { success, profile: {...} } — unwrap the nested
+        // payload, but tolerate a flat one.
+        const prof = (profile && profile.profile) || profile || {};
+        const rawCols = prof.columns || {};
+        // columns arrive as an array of {name, dtype, type} or a name→info map
+        const cols = Array.isArray(rawCols)
+            ? rawCols.reduce((acc, c) => { if (c && c.name) acc[c.name] = c; return acc; }, {})
+            : rawCols;
         const rows = sample?.data || sample?.rows || [];
-        const rowCount = profile?.row_count || 0;
+        const rowCount = prof.row_count || 0;
 
         let html = `<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-2">
             <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-200 dark:border-gray-700">
@@ -1328,7 +1375,7 @@ const ChatPage = {
             html += '<thead><tr class="bg-gray-100 dark:bg-gray-700/50">';
             colNames.forEach(c => {
                 const info = cols[c];
-                const badge = info ? ` <span class="text-[9px] text-gray-400 ml-1">${info.type || ''}</span>` : '';
+                const badge = info ? ` <span class="text-[9px] text-gray-400 ml-1">${info.type || info.dtype || ''}</span>` : '';
                 html += `<th class="px-2.5 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">${App.escapeHtml(c)}${badge}</th>`;
             });
             html += '</tr></thead><tbody>';
@@ -1401,30 +1448,47 @@ const ChatPage = {
             return;
         }
         list.innerHTML = tables.map(t => {
-            const checked = this._selectedTables.length === 0 || sel.has(t.toLowerCase());
+            // Checked ⇔ explicitly scoped to (inclusive selection).
+            const checked = sel.has(t.toLowerCase());
+            const rows = this._tableRowCount(t);
             return `<label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-sm hover:bg-gray-50 dark:hover:bg-gray-700/60">
                 <input type="checkbox" class="rounded" data-table="${App.escapeHtml(t)}" ${checked ? 'checked' : ''} onchange="ChatPage._onTableCheck(this)">
                 <span class="truncate">${App.escapeHtml(t)}</span>
+                ${rows != null ? `<span class="text-xs text-gray-400 ml-auto whitespace-nowrap">${rows.toLocaleString()} rows</span>` : ''}
             </label>`;
         }).join('');
+    },
+
+    /** Row count for a table when the warehouse metadata knows it. */
+    _tableRowCount(name) {
+        const tables = App.state.tables || {};
+        if (!tables || Array.isArray(tables) || typeof tables !== 'object') return null;
+        let info = tables[name];
+        if (!info) {
+            const lower = String(name || '').toLowerCase();
+            const key = Object.keys(tables).find(k => k.toLowerCase() === lower);
+            if (key) info = tables[key];
+        }
+        if (!info || typeof info !== 'object') return null;
+        const n = info.row_count != null ? info.row_count : info.rows;
+        return (typeof n === 'number' && n >= 0) ? n : null;
     },
 
     _onTableCheck(el) {
         const name = el && el.dataset && el.dataset.table;
         if (!name) return;
         const lower = name.toLowerCase();
-        const allMode = this._selectedTables.length === 0;
+        const idx = this._selectedTables.findIndex(t => t.toLowerCase() === lower);
 
+        // The selection is INCLUSIVE (the tables the user wants the agent to
+        // use). It used to be an EXCLUSION set — "all tables EXCEPT the ones
+        // I unchecked" — which made a single-table warehouse unscopable:
+        // unchecking the only table produced an empty exclusion set, i.e.
+        // "All tables" again.
         if (el.checked) {
-            if (!allMode && !this._selectedTables.some(x => x.toLowerCase() === lower)) {
-                this._selectedTables.push(name);
-            }
-        } else {
-            if (allMode) {
-                this._selectedTables = this._allTableNames().filter(t => t.toLowerCase() !== lower);
-            } else {
-                this._selectedTables = this._selectedTables.filter(t => t.toLowerCase() !== lower);
-            }
+            if (idx === -1) this._selectedTables.push(name);
+        } else if (idx !== -1) {
+            this._selectedTables.splice(idx, 1);
         }
         this._persistTables();
         this._updateTableUI();
@@ -1432,7 +1496,10 @@ const ChatPage = {
     },
 
     _onAllTablesToggle(checked) {
-        if (checked) this._selectedTables = [];
+        // "All tables" is the no-scope option: checking it clears the explicit
+        // scope; unchecking it starts an explicit scope over every table
+        // (the per-table checkboxes then narrow it down).
+        this._selectedTables = checked ? [] : this._allTableNames();
         this._persistTables();
         this._updateTableUI();
         this._renderTableList();
@@ -1455,7 +1522,62 @@ const ChatPage = {
     },
 
     _persistTables() {
-        try { sessionStorage.setItem('chat_selected_tables', JSON.stringify(this._selectedTables)); } catch (_) {}
+        try { sessionStorage.setItem(this._TABLES_KEY, JSON.stringify(this._selectedTables)); } catch (_) {}
+    },
+
+    /** The stored scope, read back safely (sessionStorage may be blocked). */
+    _readStoredTables() {
+        try {
+            const raw = sessionStorage.getItem(this._TABLES_KEY);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.filter(t => typeof t === 'string') : [];
+        } catch (_) {
+            return [];
+        }
+    },
+
+    /**
+     * Persist the scope when the page is torn down.
+     *
+     * An empty in-memory scope only means "All tables" when the user asked
+     * for it — the picker persists that immediately. If the scope is empty
+     * while a scope is still stored, the table list was simply not ready (or
+     * the restore had not run yet) and the stored scope has to survive.
+     */
+    _persistScopeOnExit() {
+        const stored = this._readStoredTables();
+        if (!this._selectedTables.length && stored.length) return;
+        this._persistTables();
+    },
+
+    /**
+     * Is the table list known to be loaded?
+     *
+     * App.refreshTables() swallows its own errors and App.state.tables starts
+     * out as {}, so an empty list is ambiguous: the fetch may not have
+     * finished, may have failed, or the workspace may really have no tables.
+     * Only a list that actually carries tables can be trusted for pruning.
+     */
+    _tableListLoaded() {
+        return this._allTableNames().length > 0;
+    },
+
+    /**
+     * Drop selected tables that no longer exist in the warehouse.
+     *
+     * The scope is the user's explicit choice, so it is only pruned against a
+     * table list we know arrived. Pruning against a list that never arrived
+     * would clear the scope and silently lose the selection.
+     */
+    _pruneSelectedTables() {
+        if (!this._tableListLoaded()) return false;   // no usable list → keep the scope
+        const known = new Set(this._allTableNames().map(x => String(x).toLowerCase()));
+        const before = this._selectedTables.length;
+        this._selectedTables = this._selectedTables.filter(t => known.has(String(t).toLowerCase()));
+        if (this._selectedTables.length === before) return false;
+        this._persistTables();
+        return true;
     },
 
     _updateTableUI() {
@@ -1465,8 +1587,16 @@ const ChatPage = {
                 ? 'All tables'
                 : this._selectedTables.length === 1
                     ? this._selectedTables[0]
-                    : `${this._selectedTables.length} tables`;
+                    : `${this._selectedTables.length} tables selected`;
         }
+        const hint = document.getElementById('chat-table-scope-hint');
+        if (hint) {
+            hint.textContent = this._selectedTables.length === 0
+                ? 'No scope — every table reachable'
+                : `${this._selectedTables.length} selected`;
+        }
+        const allEl = document.getElementById('chat-table-all');
+        if (allEl) allEl.checked = this._selectedTables.length === 0;
         const chips = document.getElementById('chat-chips');
         if (chips) {
             if (this._selectedTables.length) {

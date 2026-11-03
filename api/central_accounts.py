@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from api.billing import cloud_sync
+from api.bootstrap_gate import bootstrap_gate_required
 
 logger = logging.getLogger(__name__)
 
@@ -67,17 +68,18 @@ def provision_user(
     email: str,
     store_user_id: str,
     bootstrap_token: str = "",
+    request: Any = None,
 ) -> Optional[Dict[str, Any]]:
     """Find or create the local user for a central account. Returns user info.
 
     Mirrors the Google-login provisioning: username derived from the email
     local-part, no local password (the billing server verifies credentials).
 
-    The first account on a fresh instance becomes admin, but only when
-    ``DATAAGENT_BOOTSTRAP_TOKEN`` is configured *and* the request presents a
-    matching token — the same gate ``/auth/register`` enforces (ADR-009 D3).
-    Without it, "whoever registers first is admin" is a takeover, not a
-    bootstrap.
+    The first account on a fresh instance becomes admin. On a network-reachable
+    instance that requires ``DATAAGENT_BOOTSTRAP_TOKEN`` — the same gate
+    ``/auth/register`` enforces (ADR-009 D3). A loopback-only desktop install
+    is exempt, matching local registration (ADR-019). Without the gate,
+    "whoever registers first is admin" would be a takeover, not a bootstrap.
     """
     from api.auth import user_manager
 
@@ -108,7 +110,7 @@ def provision_user(
     first_user = not user_manager.get_users()
     role = "admin" if first_user else "viewer"
     if first_user:
-        _enforce_bootstrap_gate(bootstrap_token)
+        _enforce_bootstrap_gate(bootstrap_token, request)
 
     user_manager.add_user(
         username=username,
@@ -121,14 +123,17 @@ def provision_user(
     return user_manager.get_user_info(username)
 
 
-def _enforce_bootstrap_gate(supplied_token: str) -> None:
+def _enforce_bootstrap_gate(supplied_token: str, request: Any = None) -> None:
     """Refuse to create the first admin without the bootstrap token.
 
     Raises ``HTTPException`` (403) with the same wording as
-    ``/auth/register``. When no token is configured the first admin cannot
-    be created over HTTP at all — an admin has to be provisioned
-    out-of-band.
+    ``/auth/register``. Loopback non-production installs are exempt; any
+    forwarded/off-host request is gated. When no token is configured on a
+    gated instance the first admin cannot be created over HTTP — an admin
+    has to be provisioned out-of-band.
     """
+    if not bootstrap_gate_required(request):
+        return
     expected = (os.environ.get("DATAAGENT_BOOTSTRAP_TOKEN") or "").strip()
     if not expected:
         raise HTTPException(status_code=403, detail=NO_BOOTSTRAP_TOKEN_MESSAGE)
@@ -230,7 +235,7 @@ async def accounts_register(credentials: AccountCredentials, request_ctx: Reques
 
     try:
         user = provision_user(data.get("email", email), str(data.get("user_id", "")),
-                              credentials.bootstrap_token)
+                              credentials.bootstrap_token, request_ctx)
     except EmailInUseError:
         raise HTTPException(
             status_code=409,
@@ -263,7 +268,7 @@ async def accounts_login(credentials: AccountCredentials, request_ctx: Request) 
 
     try:
         user = provision_user(data.get("email", email), str(data.get("user_id", "")),
-                              credentials.bootstrap_token)
+                              credentials.bootstrap_token, request_ctx)
     except EmailInUseError:
         raise HTTPException(
             status_code=409,

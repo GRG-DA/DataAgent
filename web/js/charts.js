@@ -13,34 +13,68 @@
   }
 
   // ── Color Palette ──────────────────────────────────────────────────────
-  const PALETTE = {
-    primary: "#3b82f6",
-    secondary: "#8b5cf6",
-    success: "#10b981",
-    warning: "#f59e0b",
-    danger: "#ef4444",
-    info: "#06b6d4",
-    pink: "#ec4899",
-    indigo: "#6366f1",
-    orange: "#f97316",
-    teal: "#14b8a6",
-    slate: "#64748b",
-    rose: "#f43f5e",
-    cyan: "#22d3ee",
-    lime: "#84cc16",
-    amber: "#fbbf24",
+  // Read from the design-system CSS custom properties so the charts, the CSS
+  // and the TypeScript chart theme can never drift apart. Falls back to the
+  // light values when the tokens are unavailable (e.g. in a unit test).
+  const _cssVar = (name, fallback) => {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+      return v && v.trim() ? v.trim() : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  };
 
-    // Full ordered palette for categorical data
+  const _tokenPalette = (count) => {
+    const out = [];
+    for (let i = 1; i <= count; i++) {
+      out.push(_cssVar("--chart-" + i, ""));
+    }
+    return out.filter(Boolean);
+  };
+
+  const PALETTE = {
+    primary: "#2563eb",
+    secondary: "#0d9488",
+    success: "#15803d",
+    warning: "#b45309",
+    danger: "#b91c1c",
+    info: "#1d4ed8",
+    pink: "#be123c",
+    indigo: "#4f46e5",
+    orange: "#b45309",
+    teal: "#0d9488",
+    slate: "#64748b",
+    rose: "#be123c",
+    cyan: "#0369a1",
+    lime: "#4d7c0f",
+    amber: "#b45309",
+
+    // Full ordered palette for categorical data. The ORDER IS FIXED — the
+    // same series keeps the same colour slot when the theme flips; only the
+    // lightness of each slot changes between light and dark.
     categorical: [
-      "#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444",
-      "#06b6d4", "#ec4899", "#6366f1", "#f97316", "#14b8a6",
-      "#84cc16", "#f43f5e", "#22d3ee", "#fbbf24", "#64748b",
+      "#2563eb", "#0d9488", "#b45309", "#7c3aed",
+      "#be123c", "#0369a1", "#4d7c0f", "#64748b",
     ],
 
     // Sequential gradient stops
-    sequential: ["#eff6ff", "#3b82f6", "#1e40af"],
+    sequential: ["#eff6ff", "#2563eb", "#1e40af"],
     // Diverging gradient stops
-    diverging: ["#ef4444", "#f5f5f5", "#3b82f6"],
+    diverging: ["#b91c1c", "#f1f5f9", "#2563eb"],
+  };
+
+  // Live token values (re-read on demand so a theme switch is picked up).
+  PALETTE.token = function () {
+    return {
+      primary: _cssVar("--color-primary", PALETTE.primary),
+      secondary: _cssVar("--color-secondary", PALETTE.secondary),
+      success: _cssVar("--color-success", PALETTE.success),
+      warning: _cssVar("--color-warning", PALETTE.warning),
+      danger: _cssVar("--color-danger", PALETTE.danger),
+      info: _cssVar("--color-info", PALETTE.info),
+      categorical: _tokenPalette(8).length ? _tokenPalette(8) : PALETTE.categorical,
+    };
   };
 
   // ── Chart instance registry ────────────────────────────────────────────
@@ -170,7 +204,9 @@
 
   // ── Auto-colour palette application ────────────────────────────────────
   function _autoColorPalette(dataLength) {
-    const palette = PALETTE.categorical;
+    // Read the live token palette so a light/dark switch re-colours charts
+    // without reloading, and so CSS stays the single source of truth.
+    const palette = PALETTE.token().categorical;
     return Array.from({ length: dataLength }, (_, i) => palette[i % palette.length]);
   }
 
@@ -262,6 +298,7 @@
       const colour = _accentColour(options, PALETTE.primary);
       datasets = [
         {
+          label: (options && (options.label || options.datasetLabel)) || "",
           data: data,
           backgroundColor: _makeTransparent(colour, 0.7),
           borderColor: colour,
@@ -272,6 +309,11 @@
     }
 
     const opts = _mergeOptions(options);
+    // A lone unnamed series needs no legend; without this Chart.js renders an
+    // "undefined" entry. Callers can still opt in by passing a label.
+    if (datasets.length === 1 && !datasets[0].label && !(options && options.plugins && options.plugins.legend)) {
+      opts.plugins.legend.display = false;
+    }
     const chart = new Chart(canvas, {
       type: "bar",
       data: { labels, datasets },

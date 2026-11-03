@@ -48,6 +48,38 @@ def _connect():
     return db
 
 
+def _tenant_schema() -> str:
+    """Return the schema that owns the *current request's* tenant data.
+
+    Resolved from the request-scoped contextvar at USE time — never from
+    ``settings.duckdb.schema``, which is the *platform* schema and would
+    describe the operator's tables instead of the caller's own.
+    """
+    try:
+        from api.tenancy import current_tenant_id, tenant_schema
+
+        return tenant_schema(current_tenant_id())
+    except Exception:  # noqa: BLE001 - never break SQL generation
+        return str(settings.duckdb.schema)
+
+
+#: Table reference after FROM / JOIN, with an OPTIONAL schema prefix. The
+#: agent emits unqualified names (the tenant search path resolves them) but
+#: an LLM may still qualify them, so both shapes are recognised.
+def _referenced_table_names(sql: str):
+    """Return the bare table names a query references (schema prefix optional)."""
+    from agent.tools_sql import _referenced_tables
+
+    seen = set()
+    names = []
+    for name in _referenced_tables(sql):
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        names.append(name)
+    return names
+
+
 # ─────────────────────────────────────────────────────────────
 # Stage: extraction / normalization  (Level 1)
 # ─────────────────────────────────────────────────────────────
@@ -184,11 +216,14 @@ def _validate_sql(sql: str):
 
 def extract_identifiers(sql: str):
     """Best-effort extraction of table and column-like identifiers actually
-    referenced in the query, ignoring string literals and comments."""
+    referenced in the query, ignoring string literals and comments.
+
+    The schema prefix is optional: the agent's own SQL references tables
+    unqualified (they resolve through the caller's tenant search path), while
+    an LLM may still qualify them.
+    """
     scrubbed = _strip_strings_and_comments(sql)
-    tables = set(re.findall(rf'{re.escape(settings.duckdb.schema)}\.\"?([\w]+)\"?', scrubbed))
-    tables |= set(re.findall(r'\bFROM\s+(?:\w+\.)?\"?([\w]+)\"?', scrubbed, re.IGNORECASE))
-    tables |= set(re.findall(r'\bJOIN\s+(?:\w+\.)?\"?([\w]+)\"?', scrubbed, re.IGNORECASE))
+    tables = set(_referenced_table_names(scrubbed))
     idents = set(re.findall(r'\"([\w ]+)\"|\b([A-Za-z_][\w]*)\b', scrubbed))
     flat = {a or b for a, b in idents if (a or b)}
     return tables, flat
@@ -230,15 +265,16 @@ def _fix_sql_columns(sql: str, max_fixes: int = 3):
         if not m:
             break
         bad = m.group(1)
-        tables = set(re.findall(rf'{re.escape(settings.duckdb.schema)}\.\"?([\w]+)\"?', fixed))
+        tables = set(_referenced_table_names(fixed))
         candidates = []
         try:
             db = _connect()
             try:
+                tenant_schema = _tenant_schema()
                 for t in tables:
                     safe = t.replace('"', '""')
                     for row in db.execute(
-                        f'DESCRIBE "{settings.duckdb.schema}"."{safe}"'
+                        f'DESCRIBE "{tenant_schema}"."{safe}"'
                     ).fetchall():
                         candidates.append(row[0])
             finally:
@@ -265,15 +301,16 @@ def _fix_sql_case_insensitive(sql: str):
     comparisons on known VARCHAR columns (from DESCRIBE), and only the
     `=`, `!=`, `<>` and `IN`/`NOT IN` operators — never range/date filters.
     Returns the rewritten SQL (unchanged if nothing applies)."""
-    tables = set(re.findall(rf'{re.escape(settings.duckdb.schema)}\.\"?([\w]+)\"?', sql))
+    tables = set(_referenced_table_names(sql))
     varchar_cols = set()
     try:
         db = _connect()
         try:
+            tenant_schema = _tenant_schema()
             for t in tables:
                 safe = t.replace('"', '""')
                 for row in db.execute(
-                    f'DESCRIBE "{settings.duckdb.schema}"."{safe}"'
+                    f'DESCRIBE "{tenant_schema}"."{safe}"'
                 ).fetchall():
                     if 'VARCHAR' in str(row[1]).upper():
                         varchar_cols.add(row[0])
@@ -407,12 +444,13 @@ def discover_relationships(table_names, db=None, max_tables: int = 25):
     own_db = db or _connect()
     close_after = db is None
     tables = list(table_names or [])[:max_tables]
+    tenant_schema = _tenant_schema()
     try:
         meta = {}
         for t in tables:
             try:
                 safe = str(t).replace('"', '""')
-                cols = own_db.execute(f'DESCRIBE "{settings.duckdb.schema}"."{safe}"').fetchall()
+                cols = own_db.execute(f'DESCRIBE "{tenant_schema}"."{safe}"').fetchall()
                 meta[t] = {r[0]: r[1] for r in cols}
             except Exception:
                 continue
@@ -426,7 +464,7 @@ def discover_relationships(table_names, db=None, max_tables: int = 25):
             try:
                 safe_t = str(t).replace('"', '""')
                 total, distinct = own_db.execute(
-                    f'SELECT COUNT(*), COUNT(DISTINCT "{c}") FROM "{settings.duckdb.schema}"."{safe_t}"'
+                    f'SELECT COUNT(*), COUNT(DISTINCT "{c}") FROM "{tenant_schema}"."{safe_t}"'
                 ).fetchone()
             except Exception:
                 total, distinct = 0, 0
@@ -460,8 +498,8 @@ def discover_relationships(table_names, db=None, max_tables: int = 25):
                             safe_t1, safe_t2 = t1.replace('"', '""'), t2.replace('"', '""')
                             overlap = own_db.execute(
                                 f'SELECT COUNT(*) FROM '
-                                f'(SELECT DISTINCT "{c1}" v FROM "{settings.duckdb.schema}"."{safe_t1}" WHERE "{c1}" IS NOT NULL) a '
-                                f'JOIN (SELECT DISTINCT "{c2}" v FROM "{settings.duckdb.schema}"."{safe_t2}" WHERE "{c2}" IS NOT NULL) b '
+                                f'(SELECT DISTINCT "{c1}" v FROM "{tenant_schema}"."{safe_t1}" WHERE "{c1}" IS NOT NULL) a '
+                                f'JOIN (SELECT DISTINCT "{c2}" v FROM "{tenant_schema}"."{safe_t2}" WHERE "{c2}" IS NOT NULL) b '
                                 f'ON a.v = b.v'
                             ).fetchone()[0]
                             denom = max(min(t1d, t2d), 1)
@@ -575,28 +613,29 @@ def _sql_schema_context(table_names):
     try:
         db = _connect()
         try:
+            tenant_schema = _tenant_schema()
             schema_parts = []
             tables_ok = []
             for table_name in list(table_names)[:40]:
                 safe_table = str(table_name).replace('"', '""')
                 try:
-                    cols = db.execute(f'DESCRIBE "{settings.duckdb.schema}"."{safe_table}"').fetchall()
+                    cols = db.execute(f'DESCRIBE "{tenant_schema}"."{safe_table}"').fetchall()
                 except Exception:
                     continue
                 col_lines = [
-                    _column_profile(db, settings.duckdb.schema, table_name, row[0], row[1])
+                    _column_profile(db, tenant_schema, table_name, row[0], row[1])
                     for row in cols
                 ]
                 try:
                     count = db.execute(
-                        f'SELECT COUNT(*) FROM "{settings.duckdb.schema}"."{safe_table}"'
+                        f'SELECT COUNT(*) FROM "{tenant_schema}"."{safe_table}"'
                     ).fetchone()[0]
                 except Exception:
                     count = "?"
                 sample_rows = []
                 try:
                     sample = db.execute(
-                        f'SELECT * FROM "{settings.duckdb.schema}"."{safe_table}" LIMIT 3'
+                        f'SELECT * FROM "{tenant_schema}"."{safe_table}" LIMIT 3'
                     ).fetchall()
                     sample_cols = [c[0] for c in db.description]
                     for srow in sample:
@@ -606,7 +645,7 @@ def _sql_schema_context(table_names):
                 except Exception:
                     pass
                 header = (
-                    f"TABLE {settings.duckdb.schema}.{table_name} "
+                    f"TABLE {table_name} "
                     f"(rows={count}, columns={len(cols)}):"
                 )
                 body = "\n".join(col_lines)
@@ -909,7 +948,9 @@ SQL_SYSTEM_PROMPT = (
 "OUTPUT CONTRACT\n"
 "- Return ONLY the SQL query: no explanation, no markdown fences, no trailing prose.\n"
 "- Return exactly ONE read-only SQL statement (SELECT, or WITH ... SELECT).\n"
-"- Reference tables with the analytics schema, e.g. analytics.\"table_name\".\n"
+"- Reference tables by their BARE name (e.g. \"table_name\"), never with a schema prefix. "
+"The query runs inside the caller's own workspace, where an unqualified name resolves to that "
+"workspace's copy of the table; a schema-qualified name would point at somebody else's data.\n"
 "- Use JOIN ... ON with a key confirmed by the RELATIONSHIPS section or shared, type-compatible columns.\n"
 "- DuckDB SQL features (CTEs, window functions, CASE, subqueries, DATE_TRUNC, EXTRACT) are all available and encouraged.\n"
 "- CRITICAL: When a `reference_query` is provided in the prompt, you MUST preserve the EXACT output column aliases (e.g. `group_name`, `total_value`, `count`) used in that reference. This is required for downstream visualization compatibility. You may add extra metric columns, but do not rename or remove the primary aliases from the reference.\n"

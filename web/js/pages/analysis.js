@@ -2,6 +2,39 @@
    Analysis Page — 16-tab data analysis suite
    ═══════════════════════════════════════════ */
 
+/* ════════════════════════════════════════════════════════════════
+   Numeric helpers
+   ════════════════════════════════════════════════════════════════
+   A genuine 0 is a VALUE, not "absent". `||` treats 0 as missing, so a
+   group whose total really is 0 falls through to the next field and the
+   chart ends up plotting something else (e.g. the row count) under the
+   wrong label. Every numeric fallback below therefore uses an explicit
+   `typeof x === 'number'` + `Number.isFinite()` test — never `||`. */
+
+/** First key (in priority order) that holds a finite number in any row. */
+function pickNumericField(rows, keys) {
+    if (!Array.isArray(rows) || !Array.isArray(keys)) return null;
+    for (const key of keys) {
+        for (const row of rows) {
+            if (row && typeof row[key] === 'number' && Number.isFinite(row[key])) return key;
+        }
+    }
+    return null;
+}
+
+/** The value of `key` when it is a finite number, otherwise `fallback`. */
+function numericValue(row, key, fallback) {
+    if (!row) return fallback;
+    const v = row[key];
+    return (typeof v === 'number' && Number.isFinite(v)) ? v : fallback;
+}
+
+/** Coerce a cell to a finite number (numeric strings allowed), else fallback. */
+function toNumber(value, fallback) {
+    const n = (typeof value === 'number') ? value : Number(value);
+    return Number.isFinite(n) ? n : fallback;
+}
+
 const AnalysisPage = {
     _selectedTable: null,
     _activeTab: 'profiles',
@@ -206,10 +239,10 @@ const AnalysisPage = {
 
         // Summary row
         const summary = `<div class="flex flex-wrap gap-4 mb-4 text-sm">
-            <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full"><i class="fas fa-table mr-1"></i>${profile.row_count || 0} rows</span>
+            <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full"><i class="fas fa-table mr-1"></i>${numericValue(profile, 'row_count', 0)} rows</span>
             <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full"><i class="fas fa-columns mr-1"></i>${colNames.length} columns</span>
-            <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full"><i class="fas fa-check-circle mr-1"></i>${profile.duplicate_count || 0} duplicates</span>
-            <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-3 py-1 rounded-full"><i class="fas fa-exclamation-circle mr-1"></i>${profile.missing_cells || 0} missing</span>
+            <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1 rounded-full"><i class="fas fa-check-circle mr-1"></i>${numericValue(profile, 'duplicate_count', 0)} duplicates</span>
+            <span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-3 py-1 rounded-full"><i class="fas fa-exclamation-circle mr-1"></i>${numericValue(profile, 'missing_cells', 0)} missing</span>
         </div>`;
 
         let html = `
@@ -326,7 +359,7 @@ const AnalysisPage = {
         }
 
         const pairsHtml = displayPairs.slice(0, 10).map(p => {
-            const val = p.correlation != null ? p.correlation : p.value || 0;
+            const val = numericValue(p, 'correlation', numericValue(p, 'value', 0));
             const a = p.col1 || p.a || '';
             const b = p.col2 || p.b || '';
             const color = Math.abs(val) > 0.7 ? 'text-red-500' : Math.abs(val) > 0.4 ? 'text-yellow-500' : 'text-green-500';
@@ -381,13 +414,21 @@ const AnalysisPage = {
             });
         }
 
-        if (data) {
+        if (data && data.success !== false) {
+            // The backend nests the result under `normality`; the verdict must
+            // follow the backend's `is_normal` flag.
+            const n = data.normality || data;
+            const isNormal = n.is_normal === true;
+            const pVal = typeof n.p_value === 'number' ? n.p_value : null;
             document.getElementById('dist-normality').innerHTML = `
-                <span class="font-medium">Normality Test (${data.method || 'Shapiro-Wilk'}):</span>
-                Statistic: ${data.statistic?.toFixed(4) || '-'}, p-value: ${data.p_value?.toFixed(4) || data.pvalue?.toFixed(4) || '-'}
-                — <span class="${(data.p_value || data.pvalue) > 0.05 ? 'text-green-500' : 'text-red-500'} font-medium">
-                    ${(data.p_value || data.pvalue) > 0.05 ? 'Likely normal' : 'Not normal'}
+                <span class="font-medium">Normality Test (${App.escapeHtml(n.test_name || 'Shapiro-Wilk')}):</span>
+                Statistic: ${typeof n.statistic === 'number' ? n.statistic.toFixed(4) : '-'}, p-value: ${pVal != null ? pVal.toFixed(4) : '-'}
+                — <span class="${isNormal ? 'text-green-500' : 'text-red-500'} font-medium">
+                    ${isNormal ? 'Likely normal' : 'Not normal'}
                 </span>`;
+        } else if (data) {
+            document.getElementById('dist-normality').innerHTML =
+                `<span class="text-red-500">${App.escapeHtml(data.error || 'Normality test failed')}</span>`;
         }
     },
 
@@ -412,7 +453,7 @@ const AnalysisPage = {
                 <td class="font-medium">${App.escapeHtml(row.column || row.col || '')}</td>
                 <td>${row.lower_bound != null ? Number(row.lower_bound).toFixed(2) : '-'}</td>
                 <td>${row.upper_bound != null ? Number(row.upper_bound).toFixed(2) : '-'}</td>
-                <td class="font-bold text-red-500">${row.outlier_count != null ? row.outlier_count : (row.count || '-')}</td>
+                <td class="font-bold text-red-500">${numericValue(row, 'outlier_count', typeof row.count === 'number' && Number.isFinite(row.count) ? row.count : '-')}</td>
                 <td>${row.percentage != null ? row.percentage.toFixed(1) + '%' : '-'}</td>
             </tr>`;
         });
@@ -534,8 +575,8 @@ const AnalysisPage = {
             const histData = [...histValues, ...new Array(fcDates.length).fill(null)];
             const fcData = [...new Array(histDates.length - 1).fill(null), histValues[histValues.length - 1], ...fcValues];
 
-            const datasets = [{ label: 'Actual', data: histData, borderColor: '#3b82f6', backgroundColor: 'transparent' }];
-            datasets.push({ label: 'Forecast', data: fcData, borderColor: '#f59e0b', backgroundColor: 'transparent', borderDash: [5, 5] });
+            const datasets = [{ label: 'Actual', data: histData, borderColor: '#2563eb', backgroundColor: 'transparent' }];
+            datasets.push({ label: 'Forecast', data: fcData, borderColor: '#b45309', backgroundColor: 'transparent', borderDash: [5, 5] });
             if (lower.length || upper.length) {
                 const lowerData = [...new Array(histDates.length).fill(null), ...lower];
                 const upperData = [...new Array(histDates.length).fill(null), ...upper];
@@ -604,15 +645,32 @@ const AnalysisPage = {
                 return;
             }
             const labels = segments.map(s => s.segment || s.group || '');
-            const values = segments.map(s => s.total || s.mean || s.count || 0);
+            // Pick ONE metric for the whole chart, in priority order:
+            // total -> mean -> count. A real 0 must win over the fallback,
+            // so this is an explicit numeric test — never `||`.
+            const metricKey = pickNumericField(segments, ['total', 'mean', 'count']);
+            if (!metricKey) {
+                App.toast('No numeric metric available for this breakdown', 'info');
+                return;
+            }
+            const values = segments.map(s => numericValue(s, metricKey, 0));
+            // The backend may auto-detect the metric column, so trust the
+            // response over the dropdown when labelling the chart.
+            const metricColUsed = data.metric_col || metricCol || '';
+            const metricLabel = metricKey === 'total'
+                ? `total ${metricColUsed}`.trim()
+                : metricKey === 'mean'
+                    ? `average ${metricColUsed}`.trim()
+                    : 'row count';
+            const chartTitle = `Segment breakdown by ${segCol} (${metricLabel})`;
 
             if (labels.length <= 8) {
                 Charts.pie('seg-chart', labels, values, {
-                    plugins: { title: { display: true, text: `Segment breakdown by ${segCol} (${metricCol || 'count'})` } },
+                    plugins: { title: { display: true, text: chartTitle } },
                 });
             } else {
                 Charts.bar('seg-chart', labels, values, {
-                    plugins: { title: { display: true, text: `Segment breakdown by ${segCol}` } },
+                    plugins: { title: { display: true, text: chartTitle } },
                 });
             }
         } catch (e) {
@@ -858,7 +916,7 @@ const AnalysisPage = {
             data.forEach(row => {
                 const key = String(row[xCol] || 'null');
                 if (!groups[key]) groups[key] = [];
-                groups[key].push(Number(row[yCol]) || 0);
+                groups[key].push(toNumber(row[yCol], 0));
             });
 
             const labels = Object.keys(groups);
@@ -874,7 +932,7 @@ const AnalysisPage = {
                     if (!colorGroups[g]) colorGroups[g] = {};
                     const key = String(row[xCol] || 'null');
                     if (!colorGroups[g][key]) colorGroups[g][key] = [];
-                    colorGroups[g][key].push(Number(row[yCol]) || 0);
+                    colorGroups[g][key].push(toNumber(row[yCol], 0));
                 });
                 const series = Object.entries(colorGroups).map(([name, vals]) => ({
                     label: name,
@@ -895,7 +953,7 @@ const AnalysisPage = {
                         plugins: { title: { display: !!title, text: title } },
                     });
                 } else if (type === 'scatter') {
-                    const points = data.map(r => ({ x: Number(r[xCol]) || 0, y: Number(r[yCol]) || 0 }));
+                    const points = data.map(r => ({ x: toNumber(r[xCol], 0), y: toNumber(r[yCol], 0) }));
                     Charts.scatter('cb-canvas', points, {
                         plugins: { title: { display: !!title, text: title } },
                     });
@@ -928,9 +986,8 @@ const AnalysisPage = {
                     <select id="st-norm-method" class="border rounded p-2 dark:bg-gray-700 dark:border-gray-600">
                         <option value="shapiro">Shapiro-Wilk</option>
                         <option value="ks">Kolmogorov-Smirnov</option>
-                        <option value="dagostino">D'Agostino-Pearson</option>
                     </select>
-                    <button onclick="AnalysisPage._runNormality()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">Test</button>
+                    <button onclick="AnalysisPage._runNormality()" class="btn btn-sm btn-secondary">Test</button>
                 </div>
                 <div id="st-norm-result" class="mt-3"></div>
             </div>
@@ -945,14 +1002,18 @@ const AnalysisPage = {
                     <select id="st-hyp-b" class="border rounded p-2 dark:bg-gray-700 dark:border-gray-600">
                         <option value="">Column B...</option>
                     </select>
+                    <select id="st-hyp-group" class="border rounded p-2 dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Group column (optional)...</option>
+                    </select>
                     <select id="st-hyp-type" class="border rounded p-2 dark:bg-gray-700 dark:border-gray-600">
-                        <option value="auto">Auto</option>
-                        <option value="t-test">T-Test</option>
+                        <option value="ttest">T-Test</option>
+                        <option value="paired_ttest">Paired T-Test</option>
                         <option value="mannwhitney">Mann-Whitney U</option>
+                        <option value="pearsonr">Pearson Correlation</option>
                         <option value="anova">ANOVA</option>
                         <option value="chi2">Chi-Squared</option>
                     </select>
-                    <button onclick="AnalysisPage._runHypothesis()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm">Test</button>
+                    <button onclick="AnalysisPage._runHypothesis()" class="btn btn-sm btn-secondary">Test</button>
                 </div>
                 <div id="st-hyp-result" class="mt-3"></div>
             </div>
@@ -969,7 +1030,7 @@ const AnalysisPage = {
                         <option value="0.95" selected>95%</option>
                         <option value="0.99">99%</option>
                     </select>
-                    <button onclick="AnalysisPage._runCI()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">Compute</button>
+                    <button onclick="AnalysisPage._runCI()" class="btn btn-sm btn-secondary">Compute</button>
                 </div>
                 <div id="st-ci-result" class="mt-3"></div>
             </div>
@@ -993,6 +1054,9 @@ const AnalysisPage = {
                 const sel = document.getElementById(id);
                 if (sel) sel.innerHTML = '<option value="">Select column...</option>' + numCols.map(c => `<option value="${c}">${c}</option>`).join('');
             });
+            // Group column is a category column (ANOVA / Chi-Squared / grouped t-test).
+            const groupSel = document.getElementById('st-hyp-group');
+            if (groupSel) groupSel.innerHTML = '<option value="">Group column (optional)...</option>' + cols.map(c => `<option value="${c}">${c}</option>`).join('');
         } catch (e) { /* ignore */ }
     },
 
@@ -1000,57 +1064,104 @@ const AnalysisPage = {
         const col = document.getElementById('st-norm-col').value;
         const method = document.getElementById('st-norm-method').value;
         if (!col) return App.toast('Select a column', 'error');
+        const el = document.getElementById('st-norm-result');
         try {
             const data = await API.normality(this._selectedTable, col, method);
-            const pVal = data.p_value || data.pvalue;
-            document.getElementById('st-norm-result').innerHTML = `
+            if (!data || data.success === false) throw new Error((data && data.error) || 'Normality test failed');
+            // The backend nests the result under `normality`.
+            const n = data.normality || data;
+            // The verdict must follow the backend's `is_normal` flag.
+            const isNormal = n.is_normal === true;
+            const pVal = typeof n.p_value === 'number' ? n.p_value : null;
+            el.innerHTML = `
                 <div class="bg-white dark:bg-gray-700 p-3 rounded border dark:border-gray-600 text-sm">
-                    <p><strong>Test:</strong> ${data.method || method}</p>
-                    <p><strong>Statistic:</strong> ${data.statistic?.toFixed(4) || '-'}</p>
-                    <p><strong>p-value:</strong> ${pVal?.toFixed(4) || '-'}</p>
-                    <p class="mt-1 font-medium ${pVal > 0.05 ? 'text-green-500' : 'text-red-500'}">
-                        ${pVal > 0.05 ? 'Data appears normally distributed (p > 0.05)' : 'Data is NOT normally distributed (p <= 0.05)'}
+                    <p><strong>Test:</strong> ${App.escapeHtml(n.test_name || method)}</p>
+                    <p><strong>Statistic:</strong> ${typeof n.statistic === 'number' ? n.statistic.toFixed(4) : '-'}</p>
+                    <p><strong>p-value:</strong> ${pVal != null ? pVal.toFixed(4) : '-'}</p>
+                    <p><strong>Sample size:</strong> ${typeof n.sample_size === 'number' ? n.sample_size : '-'}</p>
+                    <p class="mt-1 font-medium ${isNormal ? 'text-green-500' : 'text-red-500'}">
+                        ${isNormal ? 'Data appears normally distributed' : 'Data is NOT normally distributed'}
                     </p>
+                    ${n.interpretation ? `<p class="mt-1 text-gray-500">${App.escapeHtml(n.interpretation)}</p>` : ''}
                 </div>`;
-        } catch (e) { App.toast('Normality test failed', 'error'); }
+        } catch (e) {
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-circle mr-1"></i>${App.escapeHtml(e.message || 'Normality test failed')}</div>`;
+        }
     },
 
     async _runHypothesis() {
         const colA = document.getElementById('st-hyp-a').value;
         const colB = document.getElementById('st-hyp-b').value;
+        const groupCol = document.getElementById('st-hyp-group').value;
         const testType = document.getElementById('st-hyp-type').value;
-        if (!colA || !colB) return App.toast('Select both columns', 'error');
+        // Column B is only needed by the two-column tests; ANOVA / Chi-Squared
+        // need a group column instead.
+        const needsColumnB = testType === 'paired_ttest' || testType === 'pearsonr';
+        const needsGroup = testType === 'anova' || testType === 'chi2';
+        if (!colA) return App.toast('Select a column', 'error');
+        if (needsColumnB && !colB) return App.toast('Select column B', 'error');
+        if (needsGroup && !groupCol) return App.toast('Select a group column', 'error');
+        const el = document.getElementById('st-hyp-result');
         try {
-            const data = await API.hypothesis(this._selectedTable, colA, colB, testType);
-            const pVal = data.p_value || data.pvalue;
-            document.getElementById('st-hyp-result').innerHTML = `
+            const data = await API.hypothesis(this._selectedTable, colA, colB, testType, groupCol);
+            // The backend nests the result under `hypothesis_test` and flags a
+            // failed test with success:false / ok:false / error. A failed test
+            // must never be rendered as a verdict.
+            const h = (data && data.hypothesis_test) || data;
+            if (!data || data.success === false || h.ok === false || h.error) {
+                throw new Error((h && h.error) || (data && data.error) || 'Hypothesis test failed');
+            }
+            const significant = h.significant === true;
+            const alpha = typeof h.alpha === 'number' ? h.alpha : 0.05;
+            const pVal = typeof h.p_value === 'number' ? h.p_value : null;
+            el.innerHTML = `
                 <div class="bg-white dark:bg-gray-700 p-3 rounded border dark:border-gray-600 text-sm">
-                    <p><strong>Test:</strong> ${data.test_name || data.test || testType}</p>
-                    <p><strong>Statistic:</strong> ${data.statistic?.toFixed(4) || '-'}</p>
-                    <p><strong>p-value:</strong> ${pVal?.toFixed(4) || '-'}</p>
-                    ${data.interpretation ? `<p class="mt-1"><strong>Interpretation:</strong> ${App.escapeHtml(data.interpretation)}</p>` : ''}
-                    <p class="mt-1 font-medium ${pVal > 0.05 ? 'text-green-500' : 'text-red-500'}">
-                        ${pVal > 0.05 ? 'No significant difference (p > 0.05)' : 'Significant difference found (p <= 0.05)'}
+                    <p><strong>Test:</strong> ${App.escapeHtml(h.test_name || testType)}</p>
+                    <p><strong>Statistic:</strong> ${typeof h.statistic === 'number' ? h.statistic.toFixed(4) : '-'}</p>
+                    <p><strong>p-value:</strong> ${pVal != null ? pVal.toFixed(4) : '-'}</p>
+                    <p><strong>Effect size:</strong> ${typeof h.effect_size === 'number' ? h.effect_size.toFixed(4) : '-'}${h.effect_size_name ? ` (${App.escapeHtml(h.effect_size_name)})` : ''}</p>
+                    <p class="mt-1 font-medium ${significant ? 'text-red-500' : 'text-green-500'}">
+                        ${significant ? `Significant difference found (p <= ${alpha})` : `No significant difference (p > ${alpha})`}
                     </p>
+                    ${h.interpretation ? `<p class="mt-1 text-gray-500">${App.escapeHtml(h.interpretation)}</p>` : ''}
                 </div>`;
-        } catch (e) { App.toast('Hypothesis test failed', 'error'); }
+        } catch (e) {
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-circle mr-1"></i>${App.escapeHtml(e.message || 'Hypothesis test failed')}</div>`;
+        }
     },
 
     async _runCI() {
         const col = document.getElementById('st-ci-col').value;
         const confidence = parseFloat(document.getElementById('st-ci-level').value);
         if (!col) return App.toast('Select a column', 'error');
+        const el = document.getElementById('st-ci-result');
         try {
             const data = await API.confidenceInterval(this._selectedTable, col, confidence);
-            document.getElementById('st-ci-result').innerHTML = `
+            if (!data || data.success === false) throw new Error((data && data.error) || 'CI computation failed');
+            // The backend nests the result under `confidence_interval` and does
+            // not return a margin of error — derive it from the interval width.
+            const ci = data.confidence_interval || data;
+            const mean = typeof ci.mean === 'number' ? ci.mean : null;
+            const lower = typeof ci.ci_lower === 'number' ? ci.ci_lower : null;
+            const upper = typeof ci.ci_upper === 'number' ? ci.ci_upper : null;
+            const margin = (lower != null && upper != null) ? (upper - lower) / 2 : null;
+            el.innerHTML = `
                 <div class="bg-white dark:bg-gray-700 p-3 rounded border dark:border-gray-600 text-sm">
                     <p><strong>Confidence Level:</strong> ${(confidence * 100).toFixed(0)}%</p>
-                    <p><strong>Mean:</strong> ${data.mean?.toFixed(4) || '-'}</p>
-                    <p><strong>Lower Bound:</strong> ${data.lower?.toFixed(4) || data.ci_lower?.toFixed(4) || '-'}</p>
-                    <p><strong>Upper Bound:</strong> ${data.upper?.toFixed(4) || data.ci_upper?.toFixed(4) || '-'}</p>
-                    <p><strong>Margin of Error:</strong> ${data.margin_of_error?.toFixed(4) || data.moe?.toFixed(4) || '-'}</p>
+                    <p><strong>Mean:</strong> ${mean != null ? mean.toFixed(4) : '-'}</p>
+                    <p><strong>Lower Bound:</strong> ${lower != null ? lower.toFixed(4) : '-'}</p>
+                    <p><strong>Upper Bound:</strong> ${upper != null ? upper.toFixed(4) : '-'}</p>
+                    <p><strong>Margin of Error:</strong> ${margin != null ? margin.toFixed(4) : '-'}</p>
+                    <p><strong>Method:</strong> ${App.escapeHtml(ci.method || '-')}</p>
+                    <p><strong>Sample size:</strong> ${typeof ci.sample_size === 'number' ? ci.sample_size : '-'}</p>
+                    ${ci.interpretation ? `<p class="mt-1 text-gray-500">${App.escapeHtml(ci.interpretation)}</p>` : ''}
                 </div>`;
-        } catch (e) { App.toast('CI computation failed', 'error'); }
+        } catch (e) {
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-circle mr-1"></i>${App.escapeHtml(e.message || 'CI computation failed')}</div>`;
+        }
     },
 
     /* ════════════════════════════════════════════════════════════════
@@ -1291,33 +1402,49 @@ const AnalysisPage = {
         const groupB = document.getElementById('ab-b').value;
         if (!groupCol || !metricCol || !groupA || !groupB) return App.toast('Fill in all fields', 'error');
 
+        const el = document.getElementById('ab-result');
         try {
             const data = await API.abTest(this._selectedTable, groupCol, metricCol, groupA, groupB);
-            const el = document.getElementById('ab-result');
+            if (!data || data.success === false) throw new Error((data && data.error) || 'A/B test failed');
+            // The backend nests the result under `ab_test`.
+            const r = data.ab_test || data;
+            const significant = r.significant === true;
+            const pVal = typeof r.p_value === 'number' ? r.p_value : null;
+            const aStats = r.group_a_stats || {};
+            const bStats = r.group_b_stats || {};
             el.innerHTML = `
                 <div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
                     <h4 class="font-semibold mb-2">A/B Test Results</h4>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div><span class="text-gray-500">Test:</span><br><strong>${data.test_name || data.test || '-'}</strong></div>
-                        <div><span class="text-gray-500">Statistic:</span><br><strong>${data.statistic?.toFixed(4) || '-'}</strong></div>
-                        <div><span class="text-gray-500">p-value:</span><br><strong>${(data.p_value || data.pvalue || 0).toFixed(4)}</strong></div>
+                        <div><span class="text-gray-500">Test:</span><br><strong>${App.escapeHtml(r.test_name || '-')}</strong></div>
+                        <div><span class="text-gray-500">Statistic:</span><br><strong>${typeof r.statistic === 'number' ? r.statistic.toFixed(4) : '-'}</strong></div>
+                        <div><span class="text-gray-500">p-value:</span><br><strong>${pVal != null ? pVal.toFixed(4) : '-'}</strong></div>
                         <div><span class="text-gray-500">Significant:</span><br>
-                            <strong class="${(data.p_value || data.pvalue || 1) < 0.05 ? 'text-green-500' : 'text-gray-500'}">
-                                ${(data.p_value || data.pvalue || 1) < 0.05 ? 'Yes' : 'No'}
+                            <strong class="${significant ? 'text-green-500' : 'text-gray-500'}">
+                                ${significant ? 'Yes' : 'No'}
                             </strong>
                         </div>
                     </div>
-                    ${data.group_a_stats ? `<div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-3">
+                        <div><span class="text-gray-500">Effect size:</span><br><strong>${typeof r.effect_size === 'number' ? r.effect_size.toFixed(4) : '-'}</strong></div>
+                        <div><span class="text-gray-500">Winner:</span><br><strong>${App.escapeHtml(r.winner || '-')}</strong></div>
+                        <div><span class="text-gray-500">Power:</span><br><strong>${typeof r.power === 'number' ? r.power.toFixed(4) : '-'}</strong></div>
+                        <div><span class="text-gray-500">Sample size needed:</span><br><strong>${typeof r.sample_size_needed === 'number' ? r.sample_size_needed : '-'}</strong></div>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
                         <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                            <strong>Group A (${App.escapeHtml(groupA)}):</strong> n=${data.group_a_stats.count || '-'}, mean=${data.group_a_stats.mean?.toFixed(2) || '-'}
+                            <strong>Group A (${App.escapeHtml(groupA)}):</strong> n=${aStats.n != null ? aStats.n : '-'}, mean=${typeof aStats.mean === 'number' ? aStats.mean.toFixed(2) : '-'}
                         </div>
                         <div class="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
-                            <strong>Group B (${App.escapeHtml(groupB)}):</strong> n=${data.group_b_stats.count || '-'}, mean=${data.group_b_stats.mean?.toFixed(2) || '-'}
+                            <strong>Group B (${App.escapeHtml(groupB)}):</strong> n=${bStats.n != null ? bStats.n : '-'}, mean=${typeof bStats.mean === 'number' ? bStats.mean.toFixed(2) : '-'}
                         </div>
-                    </div>` : ''}
-                    ${data.interpretation ? `<p class="mt-3 text-sm">${App.escapeHtml(data.interpretation)}</p>` : ''}
+                    </div>
+                    ${r.interpretation ? `<p class="mt-3 text-sm">${App.escapeHtml(r.interpretation)}</p>` : ''}
                 </div>`;
-        } catch (e) { App.toast('A/B test failed', 'error'); }
+        } catch (e) {
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                <i class="fas fa-exclamation-circle mr-1"></i>${App.escapeHtml(e.message || 'A/B test failed')}</div>`;
+        }
     },
 
     async _runConversionTest() {
@@ -1445,12 +1572,12 @@ const AnalysisPage = {
         try {
             const data = await API.qualityScore(this._selectedTable);
             const quality = data.quality || data;
-            const score = quality.overall_score || quality.score || 0;
+            const score = numericValue(quality, 'overall_score', numericValue(quality, 'score', 0));
             const dimensions = quality.dimension_scores || quality.dimensions || {};
             const dimEntries = Array.isArray(dimensions) ? dimensions :
                 Object.entries(dimensions).map(([name, val]) => ({
                     name: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                    score: typeof val === 'number' ? val : (val.score || val.value || 0),
+                    score: typeof val === 'number' ? val : numericValue(val, 'score', numericValue(val, 'value', 0)),
                 }));
 
             el.innerHTML = `
@@ -1470,7 +1597,7 @@ const AnalysisPage = {
                 <!-- Dimension Bars -->
                 <div class="space-y-3">
                     ${dimEntries.map(d => {
-                        const val = typeof d === 'object' ? (d.score || d.value || 0) : 0;
+                        const val = typeof d === 'object' ? numericValue(d, 'score', numericValue(d, 'value', 0)) : 0;
                         const name = typeof d === 'object' ? (d.name || d.dimension || '') : d;
                         const color = val >= 80 ? 'bg-green-500' : val >= 50 ? 'bg-yellow-500' : 'bg-red-500';
                         return `<div>
@@ -1504,8 +1631,8 @@ const AnalysisPage = {
         <div class="space-y-4">
             <h3 class="text-lg font-semibold">PII Detection — ${App.escapeHtml(this._selectedTable)}</h3>
             <p class="text-sm text-gray-500">Scan columns for personally identifiable information.</p>
-            <button onclick="AnalysisPage._runPIIScan()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm">
-                <i class="fas fa-user-secret mr-1"></i>Scan for PII
+            <button onclick="AnalysisPage._runPIIScan()" class="btn btn-sm btn-secondary">
+                <i class="fas fa-user-secret"></i>Scan for PII
             </button>
             <div id="pii-results"></div>
         </div>`;
@@ -1519,7 +1646,7 @@ const AnalysisPage = {
             const data = await API.piiScan(this._selectedTable);
             const pii = data.pii_scan || data;
             const columnsDetected = pii.columns_detected || pii.findings || pii.columns || [];
-            const totalDetected = pii.total_detected || columnsDetected.length;
+            const totalDetected = numericValue(pii, 'total_detected', columnsDetected.length);
             const riskLevel = pii.risk_level || 'low';
             const recs = pii.recommendations || [];
 
@@ -1529,7 +1656,7 @@ const AnalysisPage = {
                         <i class="fas fa-shield-alt text-green-500 text-2xl"></i>
                     </div>
                     <p class="text-green-600 dark:text-green-400 font-medium">No PII detected</p>
-                    <p class="text-sm text-gray-500 mt-1">Scanned ${pii.total_columns || 0} columns</p>
+                    <p class="text-sm text-gray-500 mt-1">Scanned ${numericValue(pii, 'total_columns', 0)} columns</p>
                     ${recs.length ? `<div class="mt-3 text-sm text-gray-500">${recs.map(r => `<p>${App.escapeHtml(r)}</p>`).join('')}</div>` : ''}
                 </div>`;
                 return;
@@ -1568,62 +1695,193 @@ const AnalysisPage = {
         el.innerHTML = `
         <div class="space-y-4">
             <h3 class="text-lg font-semibold">Data Insights — ${App.escapeHtml(this._selectedTable)}</h3>
-            <p class="text-sm text-gray-500">Generate AI-powered narrative insights about your data.</p>
-            <button onclick="AnalysisPage._generateInsights()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg text-sm">
-                <i class="fas fa-lightbulb mr-1"></i>Generate Insights
-            </button>
+            <p class="text-sm text-gray-500">Ask the AI analyst for a narrative about your data — the language
+                model call usually takes 30–90 seconds. The rule-based summary is instant and needs no model.</p>
+            <div class="flex items-center gap-3 flex-wrap">
+                <input id="insights-question" type="text" placeholder="Optional question for the AI analyst..."
+                    class="flex-1 min-w-[200px] border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
+                <button id="insights-ai-btn" onclick="AnalysisPage._generateInsights()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-2 rounded-lg text-sm">
+                    <i class="fas fa-robot mr-1"></i>Generate AI Insights
+                </button>
+                <button id="insights-auto-btn" onclick="AnalysisPage._generateRuleInsights()" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-list mr-1"></i>Rule-based Summary
+                </button>
+            </div>
             <div id="insights-output"></div>
         </div>`;
     },
 
     async _generateInsights() {
         const el = document.getElementById('insights-output');
-        el.innerHTML = '<div class="flex items-center justify-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-amber-500"></i><span class="ml-3 text-gray-500">Generating insights...</span></div>';
+        const btn = document.getElementById('insights-ai-btn');
+        const question = (document.getElementById('insights-question')?.value || '').trim();
+        if (!el) return;
+        // The LLM call takes 30-90s — show an explicit loading state so the
+        // button does not look broken while the model is thinking.
+        el.innerHTML = `<div class="flex flex-col items-center justify-center py-10 text-center">
+            <i class="fas fa-spinner fa-spin text-3xl text-amber-500"></i>
+            <p class="mt-3 text-gray-600 dark:text-gray-300 font-medium">Asking the AI analyst...</p>
+            <p class="mt-1 text-sm text-gray-500">The language model call usually takes 30–90 seconds.</p>
+        </div>`;
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
+        try {
+            const data = await API.llmInsights(this._selectedTable, question, { silent: true });
+            if (!data || data.success === false) throw new Error((data && data.error) || 'The AI insights request failed');
+            const insights = data.insights || data;
+            el.innerHTML = this._renderLLMInsights(insights);
+        } catch (e) {
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <p class="text-red-600 dark:text-red-400 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Could not generate AI insights</p>
+                <p class="text-sm text-red-500 dark:text-red-300 mt-1">${App.escapeHtml(e.message || 'Unknown error')}</p>
+                <p class="text-xs text-gray-500 mt-2">Use "Rule-based Summary" for an instant, non-model summary.</p>
+            </div>`;
+        } finally {
+            if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
+        }
+    },
 
+    async _generateRuleInsights() {
+        const el = document.getElementById('insights-output');
+        const btn = document.getElementById('insights-auto-btn');
+        if (!el) return;
+        el.innerHTML = '<div class="flex items-center justify-center py-6"><i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i></div>';
+        if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); }
         try {
             const data = await API.insights(this._selectedTable);
-            if (!data.success) throw new Error(data.error || 'Failed');
+            if (!data || data.success === false) throw new Error((data && data.error) || 'Failed to generate the summary');
             const insights = data.insights || data;
-
-            // Backend returns: {summary, key_findings: [], metrics_summary: [], ...}
-            let html = '<div class="space-y-4">';
-
-            if (insights.summary) {
-                html += `<div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2"><i class="fas fa-lightbulb text-amber-500 mr-1"></i>Summary</h4>
-                    <p class="text-sm leading-relaxed">${App.mdInline(insights.summary)}</p>
-                </div>`;
-            }
-
-            const findings = insights.key_findings || [];
-            if (findings.length > 0) {
-                html += `<div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
-                    <h4 class="font-semibold mb-2">Key Findings</h4>
-                    <ul class="space-y-1 text-sm">${findings.map(f => `<li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5"></i><span>${App.mdInline(f)}</span></li>`).join('')}</ul>
-                </div>`;
-            }
-
-            const corrHighlights = insights.correlation_highlights || [];
-            if (corrHighlights.length > 0) {
-                html += `<div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2"><i class="fas fa-link text-blue-500 mr-1"></i>Correlations</h4>
-                    <ul class="space-y-1 text-sm">${corrHighlights.map(c => `<li>${App.mdInline(c)}</li>`).join('')}</ul>
-                </div>`;
-            }
-
-            const recs = insights.recommendations || [];
-            if (recs.length > 0) {
-                html += `<div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                    <h4 class="font-semibold mb-2"><i class="fas fa-arrow-right text-purple-500 mr-1"></i>Recommendations</h4>
-                    <ul class="space-y-1 text-sm">${recs.map(r => `<li>• ${App.mdInline(r)}</li>`).join('')}</ul>
-                </div>`;
-            }
-
-            html += '</div>';
-            el.innerHTML = html;
+            el.innerHTML = this._renderRuleInsights(insights);
         } catch (e) {
-            el.innerHTML = '<p class="text-center text-red-500 py-4">Failed to generate insights.</p>';
+            el.innerHTML = `<div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <p class="text-red-600 dark:text-red-400 font-medium"><i class="fas fa-exclamation-circle mr-1"></i>Could not generate the summary</p>
+                <p class="text-sm text-red-500 dark:text-red-300 mt-1">${App.escapeHtml(e.message || 'Unknown error')}</p>
+            </div>`;
+        } finally {
+            if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); }
         }
+    },
+
+    // Where the text came from: the language model, or the rule-based
+    // template (which is not AI and must never be badged as such).
+    _insightBadge(fromLlm) {
+        return fromLlm
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"><i class="fas fa-robot mr-1"></i>Generated by LLM</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"><i class="fas fa-table mr-1"></i>Rule-based summary</span>';
+    },
+
+    _renderLLMInsights(insights) {
+        // `source` is "llm" when the model answered and "rule-based" when the
+        // backend had to fall back because the LLM was unavailable.
+        const fromLlm = insights.source === 'llm';
+        const narrative = insights.narrative || insights.summary || '';
+        const corr = insights.correlation_highlights || [];
+        let html = '<div class="space-y-3">';
+        html += `<div class="flex items-center gap-2 flex-wrap">${this._insightBadge(fromLlm)}
+            ${insights.confidence ? `<span class="text-xs text-gray-500">Confidence: ${App.escapeHtml(insights.confidence)}</span>` : ''}</div>`;
+        if (narrative) {
+            html += this._renderNarrative(narrative);
+        } else {
+            html += '<div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600 text-sm text-gray-500">The model returned an empty narrative.</div>';
+        }
+        if (corr.length > 0) {
+            html += `<div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h4 class="font-semibold mb-2"><i class="fas fa-link text-blue-500 mr-1"></i>Correlations</h4>
+                <ul class="space-y-1 text-sm">${corr.map(c => `<li>${App.mdInline(c)}</li>`).join('')}</ul>
+            </div>`;
+        }
+        html += '</div>';
+        return html;
+    },
+
+    _renderRuleInsights(insights) {
+        let html = '<div class="space-y-3">';
+        html += `<div class="flex items-center gap-2 flex-wrap">${this._insightBadge(false)}</div>`;
+        if (insights.summary) {
+            html += `<div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                <h4 class="font-semibold mb-2"><i class="fas fa-table text-amber-500 mr-1"></i>Summary</h4>
+                <p class="text-sm leading-relaxed">${App.mdInline(insights.summary)}</p>
+            </div>`;
+        }
+        const findings = insights.key_findings || [];
+        if (findings.length > 0) {
+            html += `<div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
+                <h4 class="font-semibold mb-2">Key Findings</h4>
+                <ul class="space-y-1 text-sm">${findings.map(f => `<li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5"></i><span>${App.mdInline(f)}</span></li>`).join('')}</ul>
+            </div>`;
+        }
+        const corr = insights.correlation_highlights || [];
+        if (corr.length > 0) {
+            html += `<div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h4 class="font-semibold mb-2"><i class="fas fa-link text-blue-500 mr-1"></i>Correlations</h4>
+                <ul class="space-y-1 text-sm">${corr.map(c => `<li>${App.mdInline(c)}</li>`).join('')}</ul>
+            </div>`;
+        }
+        const dists = insights.distributions || [];
+        if (dists.length > 0) {
+            html += `<div class="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                <h4 class="font-semibold mb-2"><i class="fas fa-chart-bar text-indigo-500 mr-1"></i>Distributions</h4>
+                <ul class="space-y-1 text-sm">${dists.map(d => `<li>${App.mdInline(d)}</li>`).join('')}</ul>
+            </div>`;
+        }
+        const recs = insights.recommendations || [];
+        if (recs.length > 0) {
+            html += `<div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                <h4 class="font-semibold mb-2"><i class="fas fa-arrow-right text-purple-500 mr-1"></i>Recommendations</h4>
+                <ul class="space-y-1 text-sm">${recs.map(r => `<li>• ${App.mdInline(r)}</li>`).join('')}</ul>
+            </div>`;
+        }
+        html += '</div>';
+        return html;
+    },
+
+    // Split the LLM narrative into its labelled sections so each one renders
+    // as its own block instead of one wall of text.
+    _narrativeSections(narrative) {
+        const labels = {
+            EXECUTIVE_OVERVIEW: 'Executive Overview',
+            KEY_FINDINGS: 'Key Findings',
+            ANOMALIES_AND_CONCERNS: 'Anomalies & Concerns',
+            RECOMMENDATIONS: 'Recommendations',
+        };
+        const sections = [];
+        let current = { title: null, lines: [] };
+        String(narrative || '').split(/\r?\n/).forEach(line => {
+            // The label may stand alone ("**KEY_FINDINGS**") or start the line
+            // with its content behind it ("KEY_FINDINGS: - ...").
+            const m = /^\s*\*{0,2}\s*([A-Z][A-Z_]{3,})\s*\*{0,2}\s*:?\s*(.*)$/.exec(line);
+            if (m && labels[m[1]]) {
+                if (current.title || current.lines.length) sections.push(current);
+                current = { title: labels[m[1]], lines: [] };
+                if (m[2].trim()) current.lines.push(m[2].trim());
+                return;
+            }
+            if (line.trim()) current.lines.push(line.trim());
+        });
+        if (current.title || current.lines.length) sections.push(current);
+        return sections;
+    },
+
+    _renderNarrative(narrative) {
+        const sections = this._narrativeSections(narrative);
+        if (sections.length === 0) {
+            return `<div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600 text-sm leading-relaxed">${App.mdInline(narrative)}</div>`;
+        }
+        const isBullet = l => /^\s*[-*•]/.test(l) || /^\s*\d+[.)]\s/.test(l);
+        return sections.map(s => {
+            const bullets = s.lines.filter(isBullet);
+            const paras = s.lines.filter(l => !isBullet(l));
+            let body = '';
+            if (paras.length > 0) body += `<p class="text-sm leading-relaxed">${paras.map(l => App.mdInline(l)).join('<br>')}</p>`;
+            if (bullets.length > 0) {
+                body += `<ul class="mt-2 space-y-1 text-sm">${bullets.map(l =>
+                    `<li class="flex items-start gap-2"><i class="fas fa-check text-green-500 mt-0.5"></i><span>${App.mdInline(l.replace(/^\s*[-*•]\s*/, '').replace(/^\s*\d+[.)]\s*/, ''))}</span></li>`
+                ).join('')}</ul>`;
+            }
+            return `<div class="bg-white dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600">
+                ${s.title ? `<h5 class="font-semibold text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-2">${App.escapeHtml(s.title)}</h5>` : ''}
+                ${body}
+            </div>`;
+        }).join('');
     },
 
     /* ════════════════════════════════════════════════════════════════
@@ -1634,7 +1892,7 @@ const AnalysisPage = {
         <div class="space-y-4">
             <h3 class="text-lg font-semibold">Report Generation — ${App.escapeHtml(this._selectedTable)}</h3>
             <p class="text-sm text-gray-500">Generate a comprehensive HTML report for this table.</p>
-            <button onclick="AnalysisPage._generateReport()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm">
+            <button onclick="AnalysisPage._generateReport()" class="btn btn-sm btn-primary">
                 <i class="fas fa-file-alt mr-1"></i>Generate Report
             </button>
             <div id="report-output"></div>
@@ -1709,14 +1967,14 @@ const AnalysisPage = {
         this._loadStorytelling();
     },
 
-    async _loadStorytelling() {
+    async _loadStorytelling(force) {
         const el = document.getElementById('storytelling-container');
         if (!el) return;
         el.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-primary-400 text-lg"></i><p class="text-xs text-gray-400 mt-2">Generating AI narratives (can take ~60–90s)...</p></div>';
         try {
             const [autoData, jobData] = await Promise.all([
                 API.insights(this._selectedTable).catch(() => null),
-                API.storytelling(this._selectedTable).catch(() => null),
+                API.storytelling(this._selectedTable, "", !!force).catch(() => null),
             ]);
             if (!jobData || !jobData.job_id) {
                 if (jobData && jobData.error) {
@@ -1731,7 +1989,7 @@ const AnalysisPage = {
                 // Fallback: show rule-based insights only.
                 var fallback = (autoData && autoData.stories) || [];
                 if (autoData && autoData.summary) fallback.unshift({ title: "Data Overview", narrative: autoData.summary, type: "trend", confidence: "high", source: "auto" });
-                if (window.StoryFeed) StoryFeed.render(el, { stories: fallback, tableName: this._selectedTable, onRegenerate: function() { AnalysisPage._loadStorytelling(); } });
+                if (window.StoryFeed) StoryFeed.render(el, { stories: fallback, tableName: this._selectedTable, onRegenerate: function() { AnalysisPage._loadStorytelling(true); } });
                 else el.innerHTML = '<div class="text-center py-4 text-gray-400 text-xs">StoryFeed component not loaded</div>';
                 return;
             }
@@ -1755,7 +2013,7 @@ const AnalysisPage = {
             });
         }
         if (window.StoryFeed) {
-            StoryFeed.render(el, { stories: stories, tableName: this._selectedTable, onRegenerate: function() { AnalysisPage._loadStorytelling(); } });
+            StoryFeed.render(el, { stories: stories, tableName: this._selectedTable, onRegenerate: function() { AnalysisPage._loadStorytelling(true); } });
         } else {
             el.innerHTML = '<div class="text-center py-4 text-gray-400 text-xs">StoryFeed component not loaded</div>';
         }

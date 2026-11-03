@@ -23,7 +23,7 @@
         '<div class="animate-fade-in max-w-6xl mx-auto">' +
         // ── Hero Section ──
         '<div class="home-hero">' +
-          '<div class="hero-icon"><i class="fas fa-chart-network"></i></div>' +
+          '<div class="hero-icon"><i class="fas fa-network-wired"></i></div>' +
           '<h1 class="hero-title">DataAgent</h1>' +
           '<p class="hero-subtitle">AI-powered data analytics — ask questions, explore data, build dashboards</p>' +
           '<div class="hero-badges">' +
@@ -37,21 +37,21 @@
         // ── KPI Stats Row ──
         '<div class="kpi-row" id="home-kpi-row">' +
           '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-table"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-tables">—</span><span class="kpi-label">Tables</span></div></div>' +
-          '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-rows"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-rows">—</span><span class="kpi-label">Total Rows</span></div></div>' +
-          '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-status">—</span><span class="kpi-label">API Status</span></div></div>' +
+          '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-table-list"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-rows">—</span><span class="kpi-label">Total Rows</span></div></div>' +
+          '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-status"><span class="kpi-status-dot" id="kpi-status-dot"></span><span id="kpi-status-text">—</span></span><span class="kpi-label">API Status</span></div></div>' +
           '<div class="kpi-card"><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-info"><span class="kpi-value" id="kpi-queries">—</span><span class="kpi-label">Queries</span></div></div>' +
         '</div>' +
         // ── Quick Action Cards ──
         '<h2 class="section-title"><i class="fas fa-bolt mr-2"></i>Quick Actions</h2>' +
         '<div class="home-cards" id="home-action-cards">' +
-          '<a href="#upload" class="home-card card-accent-purple" onclick="App.navigate(\'#upload\');return false"><div class="home-card-icon" style="background:#f3e8ff"><i class="fas fa-cloud-arrow-up" style="color:#8b5cf6"></i></div><div class="home-card-title">Upload Data</div><div class="home-card-desc">Import CSV, Excel, Parquet files</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#chat" class="home-card card-accent-blue" onclick="App.navigate(\'#chat\');return false"><div class="home-card-icon" style="background:#dbeafe"><i class="fas fa-wand-magic-sparkles" style="color:#3b82f6"></i></div><div class="home-card-title">AI Chat</div><div class="home-card-desc">Ask questions in natural language</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#sql" class="home-card card-accent-green" onclick="App.navigate(\'#sql\');return false"><div class="home-card-icon" style="background:#d1fae5"><i class="fas fa-terminal" style="color:#22c55e"></i></div><div class="home-card-title">SQL Explorer</div><div class="home-card-desc">Run queries directly on your data</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#analysis" class="home-card card-accent-orange" onclick="App.navigate(\'#analysis\');return false"><div class="home-card-icon" style="background:#ffedd5"><i class="fas fa-chart-line" style="color:#f97316"></i></div><div class="home-card-title">Analysis</div><div class="home-card-desc">Trend projection, anomalies, segment breakdowns</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#export" class="home-card card-accent-teal" onclick="App.navigate(\'#export\');return false"><div class="home-card-icon" style="background:#ccfbf1"><i class="fas fa-file-export" style="color:#14b8a6"></i></div><div class="home-card-title">Export</div><div class="home-card-desc">CSV, Parquet, Excel, Power BI</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#warehouse" class="home-card card-accent-pink" onclick="App.navigate(\'#warehouse\');return false"><div class="home-card-icon" style="background:#fce7f3"><i class="fas fa-warehouse" style="color:#ec4899"></i></div><div class="home-card-title">Warehouse</div><div class="home-card-desc">Browse tables and schema</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#compare" class="home-card card-accent-red" onclick="App.navigate(\'#compare\');return false"><div class="home-card-icon" style="background:#fee2e2"><i class="fas fa-code-compare" style="color:#ef4444"></i></div><div class="home-card-title">Compare</div><div class="home-card-desc">Period-over-period & diff analysis</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
-          '<a href="#forecast" class="home-card card-accent-indigo" onclick="App.navigate(\'#forecast\');return false"><div class="home-card-icon" style="background:#eef2ff"><i class="fas fa-chart-simple" style="color:#6366f1"></i></div><div class="home-card-title">Trend Forecast</div><div class="home-card-desc">Linear trend projection &amp; seasonality</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#upload" class="home-card card-accent-purple" onclick="App.navigate(\'#upload\');return false"><div class="home-card-icon"><i class="fas fa-cloud-arrow-up"></i></div><div class="home-card-title">Upload Data</div><div class="home-card-desc">Import CSV, Excel, Parquet files</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#chat" class="home-card card-accent-blue" onclick="App.navigate(\'#chat\');return false"><div class="home-card-icon"><i class="fas fa-wand-magic-sparkles"></i></div><div class="home-card-title">AI Chat</div><div class="home-card-desc">Ask questions in natural language</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#sql" class="home-card card-accent-green" onclick="App.navigate(\'#sql\');return false"><div class="home-card-icon"><i class="fas fa-terminal"></i></div><div class="home-card-title">SQL Explorer</div><div class="home-card-desc">Run queries directly on your data</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#analysis" class="home-card card-accent-orange" onclick="App.navigate(\'#analysis\');return false"><div class="home-card-icon"><i class="fas fa-chart-line"></i></div><div class="home-card-title">Analysis</div><div class="home-card-desc">Trend projection, anomalies, segment breakdowns</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#export" class="home-card card-accent-teal" onclick="App.navigate(\'#export\');return false"><div class="home-card-icon"><i class="fas fa-file-export"></i></div><div class="home-card-title">Export</div><div class="home-card-desc">CSV, Parquet, Excel, Power BI</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#warehouse" class="home-card card-accent-pink" onclick="App.navigate(\'#warehouse\');return false"><div class="home-card-icon"><i class="fas fa-warehouse"></i></div><div class="home-card-title">Warehouse</div><div class="home-card-desc">Browse tables and schema</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#compare" class="home-card card-accent-red" onclick="App.navigate(\'#compare\');return false"><div class="home-card-icon"><i class="fas fa-code-compare"></i></div><div class="home-card-title">Compare</div><div class="home-card-desc">Period-over-period & diff analysis</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
+          '<a href="#forecast" class="home-card card-accent-indigo" onclick="App.navigate(\'#forecast\');return false"><div class="home-card-icon"><i class="fas fa-chart-simple"></i></div><div class="home-card-title">Trend Forecast</div><div class="home-card-desc">Linear trend projection &amp; seasonality</div><div class="home-card-arrow"><i class="fas fa-arrow-right"></i></div></a>' +
         '</div>' +
         // ── Data Tables Section ──
         '<h2 class="section-title"><i class="fas fa-database mr-2"></i>Data Tables</h2>' +
@@ -59,7 +59,7 @@
           '<div class="text-center py-8 text-gray-400" id="home-tables-content"><i class="fas fa-spinner fa-spin text-lg"></i><p class="mt-2 text-sm">Loading tables...</p></div>' +
         '</div>' +
         // ── Recent Queries ──
-        '<h2 class="section-title"><i class="fas fa-clock-rotate mr-2"></i>Recent Activity</h2>' +
+        '<h2 class="section-title"><i class="fas fa-clock-rotate-left mr-2"></i>Recent Activity</h2>' +
         '<div class="card" id="home-queries-section">' +
           '<div class="text-center py-8 text-gray-400" id="home-queries-content"><p class="text-sm">No recent queries</p></div>' +
         '</div>' +
@@ -82,9 +82,17 @@
         var isHealthy = health && (health.status === "healthy" || health.status === "ok" || health.healthy === true);
         _data.apiHealthy = isHealthy;
         var statusEl = document.getElementById("kpi-status");
+        var statusText = document.getElementById("kpi-status-text");
+        var statusDot = document.getElementById("kpi-status-dot");
+        var statusTone = isHealthy ? "is-success" : "is-danger";
+        if (statusText) statusText.textContent = isHealthy ? "Online" : "Offline";
         if (statusEl) {
-          statusEl.textContent = isHealthy ? "Online" : "Offline";
-          statusEl.style.color = isHealthy ? "#22c55e" : "#ef4444";
+          statusEl.classList.remove("is-success", "is-warning", "is-danger");
+          statusEl.classList.add(statusTone);
+        }
+        if (statusDot) {
+          statusDot.classList.remove("is-success", "is-warning", "is-danger");
+          statusDot.classList.add(statusTone);
         }
 
         // Tables info

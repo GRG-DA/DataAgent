@@ -1,6 +1,6 @@
 # Website launch checklist — `website/`
 
-**Scope:** the marketing site (`website/`), 16 static pages, no build step, no server, no
+**Scope:** the marketing site (`website/`), 17 static pages, no build step, no server, no
 framework. The desktop app has its own checklist in `docs/RELEASE-CHECKLIST.md`.
 
 **Date:** 2026-10-21 · **Decision record:** `docs/decisions/ADR-013-no-analytics-on-the-marketing-site.md`
@@ -20,19 +20,19 @@ this site, that is said plainly rather than quietly ignored.
 | 4 | Contact page | **done** | `contact.html` — now states response time, what to include, the three log files, the never-send list, and the security-report policy. |
 | 5 | Privacy policy | **done** | `web/legal/privacy.html`, served through `api/routes/legal.py`. **This was silently broken**: the marker lookup derived config keys from their last path segment, so all 38 markers rendered as *"to be completed by the operator"* even with a filled config. The mapping is now explicit and tested. |
 | 6 | Terms and conditions | **done** | `web/legal/terms.html` — same fix. |
-| 7 | Cookie consent banner | **not needed, deliberately** | The site sets **no cookies** and runs **no trackers** (ADR-013), so there is nothing to consent to. A consent banner on a page that tracks nothing is noise, and would weaken the "no telemetry" claim. The privacy page states the position plainly instead. |
-| 8 | Navigation menu | **done** | All 16 pages; the link checker proves every internal link and anchor resolves. |
-| 9 | Mobile responsiveness | **done** | `<meta name="viewport">` on all 16 pages; verified at 390×844; no fixed widths in the flow (the remaining `width:NNNpx` are on decorative elements, not on content). |
+| 7 | Cookie consent banner | **not needed, deliberately** | The marketing site sets **no analytics cookies** and runs **no trackers** (ADR-013); the optional billing account sets one HttpOnly session cookie on the billing API domain only when you sign in, so there is no consent banner for tracking. A consent banner on a page that tracks nothing is noise, and would weaken the "no telemetry" claim. The privacy page states the position plainly instead. |
+| 8 | Navigation menu | **done** | All 17 pages; the link checker proves every internal link and anchor resolves. |
+| 9 | Mobile responsiveness | **done** | `<meta name="viewport">` on all 17 pages; verified at 390×844; no fixed widths in the flow (the remaining `width:NNNpx` are on decorative elements, not on content). |
 | 10 | Cross-browser testing | **partial** | The CSS avoids browser-specific hacks; the checker covers markup. **Real Safari/Firefox/Edge testing needs a device farm** — not something a headless Chromium run can prove. |
 | 11 | Page speed optimization | **done** | Measured: FCP 396 ms, load 762 ms, **CLS 0**, no resource over 150 ms, 24 same-origin requests and **0 third-party** (was 5). The vendored fonts removed the last cross-origin round trip. |
-| 12 | **SEO** (meta, sitemap, robots) | **done** | Every page has a unique `<title>` and meta description. `website/sitemap.xml` (14 non-error pages, with `<lastmod>`/`<changefreq>`/`<priority>`) and `website/robots.txt` (allows crawling, points at the sitemap, disallows `/legal/`, `/share/`, `/auth/`, `/static/`) were **missing** and are now created. The deployed domain is one clearly-marked placeholder to change in each file. |
-| 13 | Favicon | **done** | 7 files in `website/favicon_io/`, linked from all 16 pages. |
+| 12 | **SEO** (meta, sitemap, robots) | **done** | Every page has a unique `<title>` and meta description. `website/sitemap.xml` (15 non-error pages, with `<lastmod>`/`<changefreq>`/`<priority>`) and `website/robots.txt` (allows crawling, points at the sitemap, disallows `/legal/`, `/share/`, `/auth/`, `/static/`) were **missing** and are now created. The deployed domain is `data-agent.me` and is named consistently in each file. |
+| 13 | Favicon | **done** | 7 files in `website/favicon_io/`, linked from all 17 pages. |
 | 14 | Image optimization / alt text | **done** | The site's own surfaces are CSS and SVG. The only raster files are `website/og-image.png` (the social card, 1200?630) and `website/media/hero-poster.jpg` (the first frame of the hero film); both are local, both carry alt text, and neither is a decorative background. |
 | 15 | **404 error page** | **done** | `website/404.html` — on-brand (the site's own CSS, nav and footer), `noindex`, a link home, and links to the three pages a lost visitor most wanted. `403.html` too. |
 | 16 | Contact form testing | **partial** | The form exists and validates client-side. **It has no backend** — it is a mailto/placeholder flow. A real destination is an operator decision (see §4). |
 | 17 | **Analytics (Google Analytics)** | **deliberately not done** | **ADR-013.** GA would send every visitor's IP, a cookie and a persistent identifier to a third party on every page view — on the site of a product whose own pages say *"no telemetry"* — and would require a consent banner and a DPA to be lawful. It also buys the wrong metric: **installer downloads** are already reported by the GitHub Release the site links to, with no script, no cookie and no third party. `tests/test_launch_site_privacy.py` fails the build if any new third-party origin appears. |
 | 18 | Search Console setup | **operator** | The plumbing is done (robots.txt, sitemap.xml, absolute `<loc>`s). **You** need the Google account and the property. |
-| 19 | **Social media links and sharing tags** | **done** | Open Graph and Twitter card tags on all 16 pages, with `website/og-image.png` ? a 1200?630 card rendered from the site's own palette. This was on the checklist as "done" while **no page had a single sharing tag**: a link pasted into a chat rendered as a bare URL. |
+| 19 | **Social media links and sharing tags** | **done** | Open Graph and Twitter card tags on all 17 pages, with `website/og-image.png` ? a 1200?630 card rendered from the site's own palette. This was on the checklist as "done" while **no page had a single sharing tag**: a link pasted into a chat rendered as a bare URL. |
 | 20 | Backup system | **n/a for the site** | The site is static: there is no server state to back up. The **app's** data has `scripts/backup.ps1` and `scripts/hosted_backup.py`, and `scripts/ci/support_bundle.ps1` collects the three log files a support request needs. |
 | 21 | Security measures | **done** | CSP, HSTS, nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP, CORP — identical across all three host configs, and a test asserts the three sets are **identical** so a host change cannot silently drop one. The app's `nginx.conf` carries its own set. |
 | 22 | Accessibility check | **partial, tooled** | `scripts/ci/check_site_a11y.py` checks alt text, form labels, accessible names, one `<h1>` per page, no skipped heading level, `lang`, iframe titles and the viewport. The **17 findings it reports are real and still open** — see §3. A static checker is not an audit: colour contrast, focus order and screen-reader flow still need a human. |
@@ -49,7 +49,7 @@ this site, that is said plainly rather than quietly ignored.
 | Light grey text on white | **did not apply** | The site is **dark-only** (`prefers-color-scheme: light` appears 0 times). Measured contrast: body text 18.3:1, secondary 9.4:1, muted 5.6:1. A light theme was deliberately **not** added — it is out of scope and would not solve a problem this site has. |
 | Low-contrast dark mode | **did not apply** | Every text colour clears 4.5:1 on all 8 surface steps. The muted tone was *raised* from 4.30:1 to 5.01:1. |
 | Neon colours on dark background | **fixed** | Muted variants added for large fills (`--accent-soft`, `--emphasis-soft`, `--pink-soft`); the hero aurora went from 4 coloured blobs to one radial; the WebGL particles read the palette from the CSS custom properties instead of hard-coding five saturated hues. **Then the whole site went monochrome**: every decorative colour became a neutral grey of the same relative luminance, and the only colours left are the four status hues. |
-| Too many colours, no fixed palette | **fixed** | 5 accent hues + 11 near-blacks ? 1 primary ramp, 1 accent, 1 rare emphasis, 1 rose, and an 8-step named surface ramp. **Then monochrome**: every decorative value is now a true neutral (R = G = B) separated by LIGHTNESS, and the four status hues are the only colours on the site. The palette is documented at the top of the canonical `:root`, and `scripts/ci/check_site_pixels.py` checks the RENDERED pixels of all 16 pages. |
+| Too many colours, no fixed palette | **fixed** | 5 accent hues + 11 near-blacks ? 1 primary ramp, 1 accent, 1 rare emphasis, 1 rose, and an 8-step named surface ramp. **Then monochrome**: every decorative value is now a true neutral (R = G = B) separated by LIGHTNESS, and the four status hues are the only colours on the site. The palette is documented at the top of the canonical `:root`, and `scripts/ci/check_site_pixels.py` checks the RENDERED pixels of all 17 pages. |
 | Pure black on pure white | **fixed** | 23 pure-white fills in a near-black design → **0**. A light card on a dark page, not a hole in it. |
 | Rainbow / multi-gradient backgrounds | **fixed** | 12 shared gradient tokens, each with a stated purpose, and every stop in every one of them is grey. |
 | Gradient text overuse | **fixed** | 20 `background-clip:text` rules → **4** (the site name and the one hero word). |
@@ -118,23 +118,23 @@ of the interactive components.
 ## 4. Still the operator's job
 
 1. **The certificate.** The configs are ready; the cert is not.
-2. **The deployed domain.** The placeholder `dataagent.example` is in **eighteen**
-   files, not two: all sixteen HTML pages (in their `og:url` and `og:image`
-   tags — these are the links a visitor sees when a page is shared), plus
-   `website/robots.txt` and `website/sitemap.xml`. One command replaces all
-   of them:
+2. **The deployed domain.** The site names `data-agent.me` in **twenty-one**
+   files: all seventeen HTML pages (in their `og:url` and `og:image` tags —
+   these are the links a visitor sees when a page is shared), plus
+   `website/robots.txt` and `website/sitemap.xml`. If the domain changes,
+   update all of them together:
 
    ```sh
-   grep -rl "dataagent\.example" website | xargs sed -i "s/dataagent\.example/YOUR-DOMAIN/g"
+   grep -rl "data-agent\.me" website | xargs sed -i "s/data-agent\.me/NEW-DOMAIN/g"
    ```
 
    `tests/test_launch_site_release_claims.py` asserts that the `og:url`
    hosts, the sitemap and the `robots.txt` `Sitemap:` line all name the
    same host, so a partial replacement fails the build rather than
    shipping a broken preview card.
-3. **The release repository.** One constant: `window.DATAAGENT_REPO_URL` in
-   `website/js/main.js`. Until it points at a real repo, the download buttons
-   404 and the site-wide toast is a lie.
+3. **The release repository.** It is `java22113344/grg-dataagent`, set through
+   one constant: `window.DATAAGENT_REPO_URL` in `website/js/main.js`. The
+   download buttons 404 if the constant names a repo with no published release.
 4. **The contact form's destination.** It has no backend.
 5. **Search Console.** The property needs your Google account.
 6. **The 13 legal values** in `config/legal.yaml` — the legal pages still publish

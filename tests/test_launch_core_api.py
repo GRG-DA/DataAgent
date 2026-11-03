@@ -100,6 +100,49 @@ def test_bootstrap_gate_helper_follows_the_bind_host(monkeypatch):
     assert _bootstrap_gate_required() is True
 
 
+def test_bootstrap_gate_sees_through_a_loopback_reverse_proxy(monkeypatch):
+    """A loopback bind behind Caddy must still gate: check forwarded/client info."""
+    from starlette.requests import Request
+
+    from api.main import _bootstrap_gate_required
+    from config import settings
+
+    monkeypatch.setattr(settings.app, "env", "development")
+    monkeypatch.setattr(settings.app, "host", "127.0.0.1")
+
+    forwarded = Request({
+        "type": "http",
+        "headers": [(b"x-forwarded-for", b"203.0.113.9")],
+        "client": ("127.0.0.1", 50000),
+    })
+    assert _bootstrap_gate_required(forwarded) is True
+
+    direct = Request({
+        "type": "http",
+        "headers": [],
+        "client": ("203.0.113.9", 50000),
+    })
+    assert _bootstrap_gate_required(direct) is True
+
+    local = Request({
+        "type": "http",
+        "headers": [],
+        "client": ("127.0.0.1", 50000),
+    })
+    assert _bootstrap_gate_required(local) is False
+
+    mapped = Request({
+        "type": "http",
+        "headers": [],
+        "client": ("::ffff:127.0.0.1", 50000),
+    })
+    assert _bootstrap_gate_required(mapped) is False
+
+    # Unknown/staging environments are gated even on loopback.
+    monkeypatch.setattr(settings.app, "env", "staging")
+    assert _bootstrap_gate_required(local) is True
+
+
 def test_local_install_registers_first_admin_without_token(client, monkeypatch):
     """A loopback-only desktop install must not be locked out of its own app."""
     resp, username = _register(

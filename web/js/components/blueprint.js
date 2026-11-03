@@ -69,7 +69,7 @@
     analysis: {
       label: 'Analysis',
       icon: 'fa-microscope',
-      color: '#6366f1', // indigo
+      color: '#2563eb', // brand blue
       inputs: 1,
       outputs: 1,
       defaultConfig: {
@@ -185,7 +185,7 @@
     ml_model: {
       label: 'Regression Explorer',
       icon: 'fa-robot',
-      color: '#6366f1', // indigo
+      color: '#2563eb', // brand blue
       inputs: 1,
       outputs: 1,
       defaultConfig: { target_col: '', task: 'auto' },
@@ -306,21 +306,22 @@
       const marker = document.createElementNS(this._svgNS, 'marker');
       marker.setAttribute('id', 'bp-arrowhead');
       Object.entries(mkAttrs).forEach(([k, v]) => marker.setAttribute(k, v));
-      marker.innerHTML = mkPoly.replace('/>', 'fill="#94a3b8" />');
+      marker.innerHTML = mkPoly.replace('/>', 'fill="var(--color-text-muted)" />');
       defs.appendChild(marker);
 
-      // Hover state arrowhead (indigo accent)
+      // Hover state arrowhead (brand accent — an inline SVG in the DOM, so the
+      // design token resolves here)
       const markerHover = document.createElementNS(this._svgNS, 'marker');
       markerHover.setAttribute('id', 'bp-arrowhead-hover');
       Object.entries(mkAttrs).forEach(([k, v]) => markerHover.setAttribute(k, v));
-      markerHover.innerHTML = mkPoly.replace('/>', 'fill="#6366f1" />');
+      markerHover.innerHTML = mkPoly.replace('/>', 'fill="var(--color-primary)" />');
       defs.appendChild(markerHover);
 
       // Error state arrowhead (red accent)
       const markerError = document.createElementNS(this._svgNS, 'marker');
       markerError.setAttribute('id', 'bp-arrowhead-error');
       Object.entries(mkAttrs).forEach(([k, v]) => markerError.setAttribute(k, v));
-      markerError.innerHTML = mkPoly.replace('/>', 'fill="#ef4444" />');
+      markerError.innerHTML = mkPoly.replace('/>', 'fill="var(--color-danger)" />');
       defs.appendChild(markerError);
 
       // Running state arrowhead (green accent)
@@ -564,7 +565,7 @@
       const icon = status === 'ok' ? 'fa-check' : status === 'err' ? 'fa-xmark' : 'fa-clock';
       badge.innerHTML = `<i class="fas ${icon}"></i>${meta || ''}`;
       el.appendChild(badge);
-      el.style.boxShadow = status === 'ok' ? '0 0 0 2px #10b981' : status === 'err' ? '0 0 0 2px #ef4444' : '0 0 0 2px #f59e0b';
+      el.style.boxShadow = status === 'ok' ? '0 0 0 2px var(--color-success)' : status === 'err' ? '0 0 0 2px var(--color-danger)' : '0 0 0 2px var(--color-warning)';
     }
 
     clearNodeStatus() {
@@ -769,7 +770,7 @@
       pathEl.setAttribute('class', 'bp-edge-path');
       pathEl.setAttribute('data-edge-id', edge.id);
       pathEl.setAttribute('fill', 'none');
-      pathEl.setAttribute('stroke', '#64748b');
+      pathEl.setAttribute('stroke', 'var(--color-text-muted)');
       pathEl.setAttribute('stroke-width', '2.5');
       pathEl.setAttribute('marker-end', 'url(#bp-arrowhead)');
       this._edgesGroup.appendChild(pathEl);
@@ -819,8 +820,8 @@
         bg.setAttribute('width', '60');
         bg.setAttribute('height', '16');
         bg.setAttribute('rx', '4');
-        bg.setAttribute('fill', '#fff');
-        bg.setAttribute('stroke', '#e2e8f0');
+        bg.setAttribute('fill', 'var(--color-surface)');
+        bg.setAttribute('stroke', 'var(--color-border)');
         bg.setAttribute('stroke-width', '1');
         bg.setAttribute('class', 'bp-edge-label-bg');
         this._edgesGroup.appendChild(bg);
@@ -1192,7 +1193,7 @@
       // Create temp SVG path
       const path = document.createElementNS(this._svgNS, 'path');
       path.setAttribute('fill', 'none');
-      path.setAttribute('stroke', '#6366f1');
+      path.setAttribute('stroke', 'var(--color-primary)');
       path.setAttribute('stroke-width', '2');
       path.setAttribute('stroke-dasharray', '5,5');
       path.setAttribute('class', 'bp-temp-edge');
@@ -1431,7 +1432,9 @@
       const def = NODE_TYPES[n.type];
       const x = (n.x - minX) * scale, y = (n.y - minY) * scale;
       const w = 220 * scale, h = 80 * scale;
-      ctx.fillStyle = def && def.color ? def.color : '#6366f1';
+      // Canvas 2D: a custom property cannot be used as a fillStyle, so the
+      // brand hue stays a literal here.
+      ctx.fillStyle = def && def.color ? def.color : '#2563eb';
       ctx.fillRect(x, y, Math.max(w, 4), Math.max(h, 4));
     }
 

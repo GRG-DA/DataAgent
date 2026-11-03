@@ -166,7 +166,7 @@ const CatalogPage = {
                 ${a.description ? `<div class="text-xs text-secondary mb-2">${App.escapeHtml(a.description)}</div>` : ''}
                 <div class="flex gap-3 text-xs text-secondary mt-2">
                     <span><i class="fas fa-layer-group mr-1"></i>${a.domain || 'general'}</span>
-                    <span><i class="fas fa-rows mr-1"></i>${(a.row_count || 0).toLocaleString()} rows</span>
+                    <span><i class="fas fa-table-list mr-1"></i>${(a.row_count || 0).toLocaleString()} rows</span>
                     ${a.quality_score ? `<span><i class="fas fa-star mr-1"></i>${a.quality_score}/100</span>` : ''}
                 </div>
             </div>`;

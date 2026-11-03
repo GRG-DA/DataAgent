@@ -189,6 +189,19 @@
   var _lastSnap = null; // last-known widget state, used to record pre-change snapshots
   function gap() { return _GAP; }
   function _toPx(cols, rows) { return { width: cols * _UNIT_W, height: rows * _UNIT_H }; }
+  /* First NON-EMPTY string among the arguments ("" / null / undefined are
+     skipped). The chart-recommendation API returns the explanation under
+     `reasoning` (both /llm/chart-recommend and the rule-based
+     /analysis/chart-recommend), so the card must read that key — reading
+     `why`/`reason` alone showed every recommendation as a bare title.
+     `||` is wrong here too: an empty string would shadow a real value. */
+  function _firstNonEmptyString() {
+    for (var i = 0; i < arguments.length; i++) {
+      var v = arguments[i];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return "";
+  }
   /* Convert a legacy grid widget ({col,row,cols,rows}) into a free-form pixel widget in-place */
   function _migrateFreeForm(list) {
     /* Layout-less widgets (only cols/rows, e.g. template builds) flow into a tiled grid that fits the canvas width */
@@ -398,89 +411,89 @@
 
   /* ── Widget catalogue ── */
   var _CATALOGUE = [
-    { type: "kpi",          label: "KPI Card",         icon: "fa-chart-simple",           color: "#7B61FF", size: [3,2],  cat: "Basics" },
+    { type: "kpi",          label: "KPI Card",         icon: "fa-chart-simple",           color: "#2563eb", size: [3,2],  cat: "Basics" },
     { type: "table",        label: "Data Table",       icon: "fa-table",                  color: "#64748B", size: [12,3], cat: "Basics" },
     { type: "text",         label: "Text Box",         icon: "fa-font",                   color: "#4F46E5", size: [12,2], cat: "Basics" },
-    { type: "line",         label: "Line Chart",       icon: "fa-chart-line",             color: "#3B82F6", size: [6,3],  cat: "Standard Charts" },
+    { type: "line",         label: "Line Chart",       icon: "fa-chart-line",             color: "#2563eb", size: [6,3],  cat: "Standard Charts" },
     { type: "bar",          label: "Bar Chart",        icon: "fa-chart-bar",              color: "#10B981", size: [6,3],  cat: "Standard Charts" },
-    { type: "column",       label: "Column Chart",     icon: "fa-chart-column",           color: "#F59E0B", size: [6,3],  cat: "Standard Charts" },
-    { type: "area",         label: "Area Chart",       icon: "fa-chart-area",             color: "#14B8A6", size: [6,3],  cat: "Standard Charts" },
-    { type: "pie",          label: "Pie Chart",        icon: "fa-chart-pie",              color: "#EC4899", size: [4,3],  cat: "Standard Charts" },
-    { type: "doughnut",     label: "Doughnut",         icon: "fa-circle-notch",           color: "#8B5CF6", size: [4,3],  cat: "Standard Charts" },
-    { type: "scatter",      label: "Scatter Plot",     icon: "fa-braille",                color: "#06B6D4", size: [6,3],  cat: "Advanced Charts" },
-    { type: "bubble",       label: "Bubble Chart",     icon: "fa-circle",                 color: "#0EA5E9", size: [6,3],  cat: "Advanced Charts" },
-    { type: "radar",        label: "Radar Chart",      icon: "fa-spider",                 color: "#6366F1", size: [6,3],  cat: "Advanced Charts" },
+    { type: "column",       label: "Column Chart",     icon: "fa-chart-column",           color: "#b45309", size: [6,3],  cat: "Standard Charts" },
+    { type: "area",         label: "Area Chart",       icon: "fa-chart-area",             color: "#0d9488", size: [6,3],  cat: "Standard Charts" },
+    { type: "pie",          label: "Pie Chart",        icon: "fa-chart-pie",              color: "#be123c", size: [4,3],  cat: "Standard Charts" },
+    { type: "doughnut",     label: "Doughnut",         icon: "fa-circle-notch",           color: "#7c3aed", size: [4,3],  cat: "Standard Charts" },
+    { type: "scatter",      label: "Scatter Plot",     icon: "fa-braille",                color: "#1d4ed8", size: [6,3],  cat: "Advanced Charts" },
+    { type: "bubble",       label: "Bubble Chart",     icon: "fa-circle",                 color: "#1d4ed8", size: [6,3],  cat: "Advanced Charts" },
+    { type: "radar",        label: "Radar Chart",      icon: "fa-spider",                 color: "#2563eb", size: [6,3],  cat: "Advanced Charts" },
     { type: "combo",        label: "Combo Chart",      icon: "fa-chart-line fa-chart-bar",color: "#7C3AED", size: [6,3],  cat: "Advanced Charts" },
     { type: "horizontalbar",label: "Horizontal Bar",   icon: "fa-bars",                   color: "#059669", size: [6,3],  cat: "Advanced Charts" },
-    { type: "stackedbar",   label: "Stacked Bar",      icon: "fa-layer-group",            color: "#DC2626", size: [6,3],  cat: "Advanced Charts" },
+    { type: "stackedbar",   label: "Stacked Bar",      icon: "fa-layer-group",            color: "#b91c1c", size: [6,3],  cat: "Advanced Charts" },
     { type: "stackedarea",  label: "Stacked Area",     icon: "fa-layer-group",            color: "#0891B2", size: [6,3],  cat: "Advanced Charts" },
     { type: "percentbar",   label: "100% Stacked Bar", icon: "fa-percent",                color: "#9333EA", size: [6,3],  cat: "Advanced Charts" },
-    { type: "sparkline",    label: "Sparkline",        icon: "fa-wave-square",            color: "#0D9488", size: [6,2],  cat: "Advanced Charts" },
+    { type: "sparkline",    label: "Sparkline",        icon: "fa-wave-square",            color: "#0d9488", size: [6,2],  cat: "Advanced Charts" },
     { type: "heatmap",      label: "Heatmap",          icon: "fa-border-all",             color: "#D946EF", size: [6,4],  cat: "Data Viz" },
     { type: "gauge",        label: "Gauge",            icon: "fa-gauge-high",             color: "#F97316", size: [3,3],  cat: "Data Viz" },
-    { type: "funnel",       label: "Funnel",           icon: "fa-filter",                 color: "#EF4444", size: [6,3],  cat: "Data Viz" },
+    { type: "funnel",       label: "Funnel",           icon: "fa-filter",                 color: "#b91c1c", size: [6,3],  cat: "Data Viz" },
     { type: "treemap",      label: "Treemap",          icon: "fa-table-cells-large",      color: "#0891B2", size: [6,4],  cat: "Data Viz" },
     { type: "waterfall",    label: "Waterfall",        icon: "fa-water",                  color: "#2563EB", size: [6,3],  cat: "Data Viz" },
     { type: "polar",        label: "Polar Area",       icon: "fa-compass",                color: "#EA580C", size: [6,3],  cat: "Data Viz" },
     { type: "boxplot",      label: "Box Plot",         icon: "fa-square",                 color: "#475569", size: [6,3],  cat: "Statistical" },
-    { type: "histogram",    label: "Histogram",        icon: "fa-chart-bar",              color: "#6366F1", size: [6,3],  cat: "Statistical" },
+    { type: "histogram",    label: "Histogram",        icon: "fa-chart-bar",              color: "#2563eb", size: [6,3],  cat: "Statistical" },
     { type: "bullet",       label: "Bullet Chart",     icon: "fa-bullseye",               color: "#B91C1C", size: [6,3],  cat: "Statistical" },
-    { type: "pyramid",      label: "Pyramid",          icon: "fa-caret-down",             color: "#D97706", size: [6,4],  cat: "Specialized" },
+    { type: "pyramid",      label: "Pyramid",          icon: "fa-caret-down",             color: "#b45309", size: [6,4],  cat: "Specialized" },
     { type: "sunburst",     label: "Sunburst",         icon: "fa-sun",                    color: "#E11D48", size: [6,4],  cat: "Specialized" },
     { type: "wordcloud",    label: "Word Cloud",       icon: "fa-cloud",                  color: "#7C3AED", size: [6,3],  cat: "Specialized" },
     { type: "progress",     label: "Progress Ring",    icon: "fa-circle-half-stroke",     color: "#10B981", size: [3,3],  cat: "Specialized" },
     { type: "slicer",       label: "Dropdown Slicer",  icon: "fa-list-check",             color: "#2563EB", size: [3,2],  cat: "Filters" },
     { type: "daterange",    label: "Date Range",       icon: "fa-calendar-days",          color: "#7C3AED", size: [3,2],  cat: "Filters" },
-    { type: "searchbox",    label: "Search Filter",    icon: "fa-magnifying-glass",       color: "#0D9488", size: [3,2],  cat: "Filters" },
-    { type: "image",        label: "Image",            icon: "fa-image",                  color: "#16A34A", size: [4,3],  cat: "Media" },
-    { type: "shape",        label: "Shape",            icon: "fa-shapes",                 color: "#6366F1", size: [3,2],  cat: "Media" },
+    { type: "searchbox",    label: "Search Filter",    icon: "fa-magnifying-glass",       color: "#0d9488", size: [3,2],  cat: "Filters" },
+    { type: "image",        label: "Image",            icon: "fa-image",                  color: "#15803d", size: [4,3],  cat: "Media" },
+    { type: "shape",        label: "Shape",            icon: "fa-shapes",                 color: "#2563eb", size: [3,2],  cat: "Media" },
     { type: "divider",      label: "Divider",          icon: "fa-minus",                  color: "#94A3B8", size: [12,1], cat: "Media" },
     { type: "custom",       label: "Custom HTML",      icon: "fa-code",                   color: "#0F766E", size: [6,3],  cat: "Media" },
-    { type: "page",         label: "Page Link",        icon: "fa-arrow-right-to-bracket", color: "#0EA5E9", size: [3,2],  cat: "Navigation" },
+    { type: "page",         label: "Page Link",        icon: "fa-arrow-right-to-bracket", color: "#1d4ed8", size: [3,2],  cat: "Navigation" },
     { type: "button",       label: "Action Button",    icon: "fa-circle-play",            color: "#7C3AED", size: [3,2],  cat: "Navigation" },
     { type: "radial",       label: "Radial Progress",  icon: "fa-circle-dot",             color: "#10B981", size: [3,3],  cat: "Basics" },
     { type: "status",       label: "Status Indicator", icon: "fa-circle-check",           color: "#2563EB", size: [3,3],  cat: "Basics" },
     { type: "comparison",   label: "Comparison KPI",   icon: "fa-scale-balanced",         color: "#7C3AED", size: [4,3],  cat: "Basics" },
-    { type: "targetactual", label: "Target vs Actual", icon: "fa-crosshairs",             color: "#F59E0B", size: [3,3],  cat: "Basics" },
-    { type: "stepline",     label: "Step Line Chart",  icon: "fa-step-forward",           color: "#3B82F6", size: [6,3],  cat: "Standard Charts" },
-    { type: "smoothline",   label: "Smooth Line",      icon: "fa-wave-sine",              color: "#0EA5E9", size: [6,3],  cat: "Standard Charts" },
-    { type: "splinearea",   label: "Smooth Area",      icon: "fa-mountain-sun",           color: "#14B8A6", size: [6,3],  cat: "Standard Charts" },
+    { type: "targetactual", label: "Target vs Actual", icon: "fa-crosshairs",             color: "#b45309", size: [3,3],  cat: "Basics" },
+    { type: "stepline",     label: "Step Line Chart",  icon: "fa-step-forward",           color: "#2563eb", size: [6,3],  cat: "Standard Charts" },
+    { type: "smoothline",   label: "Smooth Line",      icon: "fa-wave-sine",              color: "#1d4ed8", size: [6,3],  cat: "Standard Charts" },
+    { type: "splinearea",   label: "Smooth Area",      icon: "fa-mountain-sun",           color: "#0d9488", size: [6,3],  cat: "Standard Charts" },
     { type: "lollipop",     label: "Lollipop Chart",   icon: "fa-candy-cane",             color: "#DB2777", size: [6,3],  cat: "Advanced Charts" },
     { type: "pareto",       label: "Pareto Chart",     icon: "fa-bars-progress",          color: "#F97316", size: [6,3],  cat: "Statistical" },
-    { type: "rose",         label: "Rose Chart",       icon: "fa-asterisk",               color: "#EC4899", size: [6,4],  cat: "Specialized" },
-    { type: "radialbar",    label: "Radial Bar Chart", icon: "fa-record-vinyl",           color: "#8B5CF6", size: [6,4],  cat: "Specialized" },
-    { type: "waffle",       label: "Waffle Chart",     icon: "fa-table-cells",            color: "#0D9488", size: [6,4],  cat: "Data Viz" },
-    { type: "calendar",     label: "Calendar Heatmap",icon: "fa-calendar",               color: "#14B8A6", size: [6,4],  cat: "Data Viz" },
-    { type: "bubblegrid",   label: "Bubble Grid",     icon: "fa-atom",                   color: "#16A34A", size: [6,4],  cat: "Data Viz" },
-    { type: "watertank",    label: "Water Tank",      icon: "fa-glass-water",            color: "#0EA5E9", size: [3,3],  cat: "Data Viz" },
+    { type: "rose",         label: "Rose Chart",       icon: "fa-asterisk",               color: "#be123c", size: [6,4],  cat: "Specialized" },
+    { type: "radialbar",    label: "Radial Bar Chart", icon: "fa-record-vinyl",           color: "#7c3aed", size: [6,4],  cat: "Specialized" },
+    { type: "waffle",       label: "Waffle Chart",     icon: "fa-table-cells",            color: "#0d9488", size: [6,4],  cat: "Data Viz" },
+    { type: "calendar",     label: "Calendar Heatmap",icon: "fa-calendar",               color: "#0d9488", size: [6,4],  cat: "Data Viz" },
+    { type: "bubblegrid",   label: "Bubble Grid",     icon: "fa-atom",                   color: "#15803d", size: [6,4],  cat: "Data Viz" },
+    { type: "watertank",    label: "Water Tank",      icon: "fa-glass-water",            color: "#1d4ed8", size: [3,3],  cat: "Data Viz" },
     { type: "ranking",      label: "Leaderboard",     icon: "fa-ranking-star",           color: "#EAB308", size: [6,3],  cat: "Specialized" },
-    { type: "gantt",        label: "Gantt Timeline",  icon: "fa-timeline",               color: "#6366F1", size: [6,3],  cat: "Specialized" },
-    { type: "diverging",    label: "Diverging Bar",   icon: "fa-bars-staggered",         color: "#EF4444", size: [6,3],  cat: "Statistical" },
-    { type: "trendkpi",     label: "Trend KPI",       icon: "fa-arrow-trend-up",         color: "#22C55E", size: [3,2],  cat: "Basics" },
-    { type: "percentagekpi",label: "% Change KPI",    icon: "fa-percent",                color: "#06B6D4", size: [3,2],  cat: "Basics" },
-    { type: "prevkpi",      label: "Prev Period KPI", icon: "fa-clock-rotate-left",      color: "#F59E0B", size: [3,2],  cat: "Basics" },
+    { type: "gantt",        label: "Gantt Timeline",  icon: "fa-timeline",               color: "#2563eb", size: [6,3],  cat: "Specialized" },
+    { type: "diverging",    label: "Diverging Bar",   icon: "fa-bars-staggered",         color: "#b91c1c", size: [6,3],  cat: "Statistical" },
+    { type: "trendkpi",     label: "Trend KPI",       icon: "fa-arrow-trend-up",         color: "#15803d", size: [3,2],  cat: "Basics" },
+    { type: "percentagekpi",label: "% Change KPI",    icon: "fa-percent",                color: "#1d4ed8", size: [3,2],  cat: "Basics" },
+    { type: "prevkpi",      label: "Prev Period KPI", icon: "fa-clock-rotate-left",      color: "#b45309", size: [3,2],  cat: "Basics" },
     { type: "iconkpi",      label: "Icon KPI",        icon: "fa-star",                   color: "#EAB308", size: [3,2],  cat: "Basics" },
-    { type: "multikpi",     label: "Multi-Value KPI", icon: "fa-cubes",                  color: "#8B5CF6", size: [4,2],  cat: "Basics" },
+    { type: "multikpi",     label: "Multi-Value KPI", icon: "fa-cubes",                  color: "#7c3aed", size: [4,2],  cat: "Basics" },
     { type: "metriccard",   label: "Metric Card",    icon: "fa-th-large",               color: "#7C3AED", size: [8,2],  cat: "Basics" },
-    { type: "sparkkpi",     label: "Sparkline KPI",   icon: "fa-wave-square",            color: "#0D9488", size: [3,2],  cat: "Basics" },
+    { type: "sparkkpi",     label: "Sparkline KPI",   icon: "fa-wave-square",            color: "#0d9488", size: [3,2],  cat: "Basics" },
     { type: "sparkbarkpi",  label: "Mini Bar KPI",    icon: "fa-signal",                 color: "#10B981", size: [3,2],  cat: "Basics" },
-    { type: "minilinekpi",  label: "Mini Line KPI",   icon: "fa-chart-line",             color: "#3B82F6", size: [3,2],  cat: "Basics" },
-    { type: "sparkdeltakpi", label: "Sparkline Delta KPI", icon: "fa-wave-square",       color: "#0D9488", size: [3,2],  cat: "Basics" },
-    { type: "donutkpi",      label: "Donut KPI",       icon: "fa-circle-notch",           color: "#8B5CF6", size: [3,2],  cat: "Basics" },
+    { type: "minilinekpi",  label: "Mini Line KPI",   icon: "fa-chart-line",             color: "#2563eb", size: [3,2],  cat: "Basics" },
+    { type: "sparkdeltakpi", label: "Sparkline Delta KPI", icon: "fa-wave-square",       color: "#0d9488", size: [3,2],  cat: "Basics" },
+    { type: "donutkpi",      label: "Donut KPI",       icon: "fa-circle-notch",           color: "#7c3aed", size: [3,2],  cat: "Basics" },
     { type: "slope",        label: "Slope Chart",     icon: "fa-arrow-trend-up",         color: "#228BE6", size: [6,3],  cat: "Specialized" },
-    { type: "sankey",       label: "Sankey Diagram",  icon: "fa-code-branch",           color: "#14B8A6", size: [6,4],  cat: "Specialized" },
-    { type: "chord",        label: "Chord Diagram",  icon: "fa-circle-nodes",          color: "#8B5CF6", size: [6,4],  cat: "Specialized" },
-    { type: "ridgeline",    label: "Ridgeline Plot", icon: "fa-water-ladder",          color: "#0EA5E9", size: [6,4],  cat: "Statistical" },
-    { type: "beeswarm",     label: "Beeswarm Plot",  icon: "fa-braille",               color: "#F59E0B", size: [6,4],  cat: "Statistical" },
-    { type: "stream",       label: "Stream Graph",    icon: "fa-wind",                   color: "#06B6D4", size: [6,4],  cat: "Advanced Charts" },
-    { type: "population",   label: "Population Pyramid", icon: "fa-people-roof",         color: "#F59E0B", size: [6,4],  cat: "Statistical" },
-    { type: "venn",         label: "Venn Diagram",    icon: "fa-circle-nodes",           color: "#8B5CF6", size: [5,4],  cat: "Data Viz" },
-    { type: "numrange",     label: "Number Range",    icon: "fa-sliders",                color: "#06B6D4", size: [4,2],  cat: "Filters" },
-    { type: "hierarchy",    label: "Hierarchy Slicer",icon: "fa-sitemap",                color: "#F59E0B", size: [4,3],  cat: "Filters" },
+    { type: "sankey",       label: "Sankey Diagram",  icon: "fa-code-branch",           color: "#0d9488", size: [6,4],  cat: "Specialized" },
+    { type: "chord",        label: "Chord Diagram",  icon: "fa-circle-nodes",          color: "#7c3aed", size: [6,4],  cat: "Specialized" },
+    { type: "ridgeline",    label: "Ridgeline Plot", icon: "fa-water-ladder",          color: "#1d4ed8", size: [6,4],  cat: "Statistical" },
+    { type: "beeswarm",     label: "Beeswarm Plot",  icon: "fa-braille",               color: "#b45309", size: [6,4],  cat: "Statistical" },
+    { type: "stream",       label: "Stream Graph",    icon: "fa-wind",                   color: "#1d4ed8", size: [6,4],  cat: "Advanced Charts" },
+    { type: "population",   label: "Population Pyramid", icon: "fa-people-roof",         color: "#b45309", size: [6,4],  cat: "Statistical" },
+    { type: "venn",         label: "Venn Diagram",    icon: "fa-circle-nodes",           color: "#7c3aed", size: [5,4],  cat: "Data Viz" },
+    { type: "numrange",     label: "Number Range",    icon: "fa-sliders",                color: "#1d4ed8", size: [4,2],  cat: "Filters" },
+    { type: "hierarchy",    label: "Hierarchy Slicer",icon: "fa-sitemap",                color: "#b45309", size: [4,3],  cat: "Filters" },
     { type: "relativedate", label: "Relative Date",   icon: "fa-clock",                  color: "#10B981", size: [3,2],  cat: "Filters" },
-    { type: "topn",         label: "Top N Filter",    icon: "fa-ranking-star",           color: "#DC2626", size: [3,3],  cat: "Filters" },
+    { type: "topn",         label: "Top N Filter",    icon: "fa-ranking-star",           color: "#b91c1c", size: [3,3],  cat: "Filters" },
     { type: "filterpane",   label: "Filter Pane",     icon: "fa-filter",                 color: "#2563EB", size: [4,4],  cat: "Filters" },
-    { type: "globalsearch", label: "Global Search",   icon: "fa-magnifying-glass",       color: "#0D9488", size: [4,2],  cat: "Filters" },
+    { type: "globalsearch", label: "Global Search",   icon: "fa-magnifying-glass",       color: "#0d9488", size: [4,2],  cat: "Filters" },
   ];
 
   var _TITLES = {};
@@ -491,8 +504,8 @@
     { type: "geomap",   label: "Marker Map",   icon: "fa-location-dot",    color: "#2563EB", size: [6,4], cat: "Maps" },
     { type: "countrymap", label: "Bubble Sizing Map", icon: "fa-earth-americas", color: "#7C3AED", size: [6,4], cat: "Maps" },
     { type: "shapemap", label: "Shape Map",   icon: "fa-draw-polygon",    color: "#0EA5A4", size: [6,4], cat: "Maps" },
-    { type: "dotmap",   label: "Dot Distribution Map", icon: "fa-circle-dot", color: "#F59E0B", size: [6,4], cat: "Maps" },
-    { type: "heatmapmap", label: "Heatmap Map", icon: "fa-temperature-high", color: "#EF4444", size: [6,4], cat: "Maps" },
+    { type: "dotmap",   label: "Dot Distribution Map", icon: "fa-circle-dot", color: "#b45309", size: [6,4], cat: "Maps" },
+    { type: "heatmapmap", label: "Heatmap Map", icon: "fa-temperature-high", color: "#b91c1c", size: [6,4], cat: "Maps" },
     { type: "flowmap",  label: "Flow Map",    icon: "fa-right-left",     color: "#10B981", size: [6,4], cat: "Maps" },
     { type: "glmap",    label: "GL Map (mapcn)", icon: "fa-map",         color: "#FF6B6B", size: [6,4], cat: "Maps" },
   ];
@@ -513,7 +526,7 @@
     for (var i = 0; i < all.length; i++) {
       if (all[i].type === type) return all[i];
     }
-    return { type: type, label: _TITLES[type] || _capitalize(type), icon: "fa-chart-simple", color: "#7B61FF", size: [6,3], cat: "Other" };
+    return { type: type, label: _TITLES[type] || _capitalize(type), icon: "fa-chart-simple", color: "#2563eb", size: [6,3], cat: "Other" };
   }
 
   /* ── Chart sub-types (rendered by bundle via type="chart") ── */
@@ -2572,8 +2585,8 @@ if (Math.abs(want - oldH) < 4) { w.height = oldH; el.style.height = oldH + "px";
       var w = _findWidget(id);
       if (!w) return null;
       var html =
-        '<div style="padding:6px 10px;font-size:11px;color:#94a3b8;border-bottom:1px solid var(--color-card-border,#e2e8f0);margin-bottom:4px;">' + _esc(w.title || w.type) + "</div>" +
-        (this._isDataWidget(w) ? '<button data-act="recreate-ai"><i class="fas fa-wand-magic-sparkles" style="color:#8b5cf6"></i> Recreate with AI</button>' : "") +
+        '<div style="padding:6px 10px;font-size:11px;color:var(--color-text-muted);border-bottom:1px solid var(--color-card-border,var(--color-border));margin-bottom:4px;">' + _esc(w.title || w.type) + "</div>" +
+        (this._isDataWidget(w) ? '<button data-act="recreate-ai"><i class="fas fa-wand-magic-sparkles" style="color:var(--color-accent-purple)"></i> Recreate with AI</button>' : "") +
         '<button data-act="edit"><i class="fas fa-cog"></i> Settings</button>' +
         '<button data-act="refresh"><i class="fas fa-sync"></i> Refresh data</button>' +
         '<button data-act="duplicate"><i class="fas fa-copy"></i> Duplicate</button>' +
@@ -2586,7 +2599,7 @@ if (Math.abs(want - oldH) < 4) { w.height = oldH; el.style.height = oldH + "px";
         '<button data-act="lock"><i class="fas ' + (w.locked ? "fa-lock-open" : "fa-lock") + '"></i> ' + (w.locked ? "Unlock" : "Lock") + '</button>' +
         '<button data-act="front"><i class="fas fa-arrow-up-wide-short"></i> Bring to front</button>' +
         '<button data-act="back"><i class="fas fa-arrow-down-wide-short"></i> Send to back</button>' +
-        '<div style="border-top:1px solid var(--color-card-border,#e2e8f0);margin:4px 0;"></div>' +
+        '<div style="border-top:1px solid var(--color-card-border,var(--color-border));margin:4px 0;"></div>' +
         '<button data-act="remove" class="ff-menu-danger"><i class="fas fa-trash"></i> Remove</button>';
       var menu = document.createElement("div");
       menu.className = "ff-widget-menu";
@@ -2649,7 +2662,7 @@ if (Math.abs(want - oldH) < 4) { w.height = oldH; el.style.height = oldH + "px";
         var modes = [["auto", "Auto"], ["full", "Full width"], ["half", "Half width"], ["hide", "Hide on small screens"]];
         var sub = document.createElement("div");
         sub.className = "ff-widget-menu";
-        sub.innerHTML = '<div style="padding:6px 10px;font-size:11px;color:#94a3b8;border-bottom:1px solid var(--color-card-border,#e2e8f0);margin-bottom:4px;">Responsive intent</div>' +
+        sub.innerHTML = '<div style="padding:6px 10px;font-size:11px;color:var(--color-text-muted);border-bottom:1px solid var(--color-card-border,var(--color-border));margin-bottom:4px;">Responsive intent</div>' +
           modes.map(function (mm) {
             var active = (wr2.responsive || "auto") === mm[0];
             return '<button data-m="' + mm[0] + '"' + (active ? ' class="ff-menu-active"' : "") + '>' +
@@ -2705,7 +2718,7 @@ if (Math.abs(want - oldH) < 4) { w.height = oldH; el.style.height = oldH + "px";
         var modes = [["none", "Value"], ["ytd", "YTD"], ["mtd", "MTD"], ["qtd", "QTD"], ["mom", "MoM"]];
         var sub = document.createElement("div");
         sub.className = "ff-widget-menu";
-        sub.innerHTML = '<div style="padding:6px 10px;font-size:11px;color:#94a3b8;border-bottom:1px solid var(--color-card-border,#e2e8f0);margin-bottom:4px;">Time period</div>' +
+        sub.innerHTML = '<div style="padding:6px 10px;font-size:11px;color:var(--color-text-muted);border-bottom:1px solid var(--color-card-border,var(--color-border));margin-bottom:4px;">Time period</div>' +
           modes.map(function (mm) {
             var active = (wm.config.timeIntel || "none") === mm[0];
             return '<button data-m="' + mm[0] + '"' + (active ? ' class="ff-menu-active"' : "") + '>' +
@@ -4865,7 +4878,7 @@ _growCanvas: function () {
       );
 
       /* ── Professional markers: halo + core, palette-tinted, ratio-proportional ── */
-      var acc = themeOpts.accent || "#6366f1";
+      var acc = themeOpts.accent || "#2563eb";
       var rampHex = function (t) {
         t = Math.max(0, Math.min(1, t));
         if (palette && palette.length > 1) {
@@ -4913,7 +4926,7 @@ _growCanvas: function () {
       legend.onAdd = function () {
         var div = L.DomUtil.create("div", "bd-map-legend");
         var stops = palette && palette.length ? palette.slice(0, Math.min(palette.length, 6))
-          : ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e"];
+          : ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
         var gradPos = stops.map(function (col, i) { return col + " " + Math.round(100 * i / Math.max(1, stops.length - 1)) + "%"; }).join(",");
         div.innerHTML =
           '<div class="bd-map-legend-title">Value scale</div>' +
@@ -5042,7 +5055,7 @@ _growCanvas: function () {
       try { map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left"); } catch (e3) {}
 
       var sizeScale = Math.max(0.2, Math.min(1.5, parseFloat(c.bubbleSize) || 0.5));
-      var acc = themeOpts.accent || "#6366f1";
+      var acc = themeOpts.accent || "#2563eb";
       var rampHex = function (t) {
         t = Math.max(0, Math.min(1, t));
         if (palette && palette.length > 1) {
@@ -5149,7 +5162,7 @@ _growCanvas: function () {
         var legend = document.createElement("div");
         legend.className = "bd-map-legend bd-glmap-legend";
         var stops = palette && palette.length ? palette.slice(0, Math.min(palette.length, 6))
-          : ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e"];
+          : ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
         var gradPos = stops.map(function (col, i) { return col + " " + Math.round(100 * i / Math.max(1, stops.length - 1)) + "%"; }).join(",");
         legend.innerHTML =
           '<div class="bd-map-legend-title">Value scale</div>' +
@@ -5304,9 +5317,9 @@ _growCanvas: function () {
       };
       // Diverging ramp: neutral in the middle, cool low, warm high.
       var divHex = function (t) { // t in [-1, 1]
-        var neg = (dark ? "#8b5cf6" : "#6366f1"); // below median
+        var neg = (dark ? "#7c3aed" : "#2563eb"); // below median
         var neu = dark ? "#334155" : "#e2e8f0";   // ~median
-        var pos = (dark ? "#f59e0b" : "#dc2626"); // above median
+        var pos = (dark ? "#b45309" : "#b91c1c"); // above median
         t = Math.max(-1, Math.min(1, t));
         if (t === 0) return neu;
         if (t < 0) return _mixHex(neu, neg, -t);
@@ -5407,7 +5420,7 @@ _growCanvas: function () {
           body = rows;
         } else {
           var stops = palette && palette.length ? palette.slice(0, Math.min(palette.length, 6))
-            : ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e"];
+            : ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
           var gradPos = stops.map(function (col, i) { return col + " " + Math.round(100 * i / Math.max(1, stops.length - 1)) + "%"; }).join(",");
           body = '<div class="bd-map-legend-strip" style="background:linear-gradient(90deg,' + gradPos + ')"></div>' +
             '<div class="bd-map-legend-row"><span>' + fmtNum(1) + '</span><span>' + fmtNum(max) + '</span></div>';
@@ -5492,7 +5505,7 @@ _growCanvas: function () {
       var cssBg = "";
       try { cssBg = getComputedStyle(document.documentElement).getPropertyValue("--color-card-bg").trim(); } catch (e) {}
       var dark = _isDarkHex(themeBag.cardBg || themeBag.background) || (cssBg && _isDarkHex(cssBg));
-      var acc = pinColor || themeOpts.accent || "#F59E0B";
+      var acc = pinColor || themeOpts.accent || "#b45309";
 
       var tiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         subdomains: "abc", maxZoom: 19,
@@ -5622,7 +5635,7 @@ _growCanvas: function () {
       // Classic heat ramp blue(0) -> cyan -> yellow -> red(max), or theme palette.
       var heatStops = (palette && palette.length >= 2)
         ? palette.slice(0, Math.min(palette.length, 5))
-        : ["#2563eb", "#22d3ee", "#facc15", "#f97316", "#ef4444"];
+        : ["#2563eb", "#22d3ee", "#facc15", "#f97316", "#b91c1c"];
       var heatColor = function (t) {
         t = Math.max(0, Math.min(1, t));
         var seg = t * (heatStops.length - 1);
@@ -5899,8 +5912,8 @@ _growCanvas: function () {
 
       // Color scale across hose measure.
       var maxV = edgeCoords[0] ? edgeCoords[0].v : 1;
-      var cA = (palette && palette.length >= 2) ? palette[0] : "#0ea5e9";
-      var cB = (palette && palette.length >= 3) ? palette[1] : "#ef4444";
+      var cA = (palette && palette.length >= 2) ? palette[0] : "#1d4ed8";
+      var cB = (palette && palette.length >= 3) ? palette[1] : "#b91c1c";
       var flowColor = function (t) { return _mixHex(cA, cB, t); };
 
       // Build flow arcs (weighted width/opacity by value). Arcs are drawn
@@ -7251,12 +7264,12 @@ _growCanvas: function () {
       menu.className = "ff-widget-menu";
       menu.style.minWidth = "170px";
       menu.innerHTML =
-        '<div style="padding:6px 10px;font-size:11px;color:#94a3b8;border-bottom:1px solid var(--color-card-border,#e2e8f0);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(pg.name || ("Page " + (idx + 1))) + "</div>" +
+        '<div style="padding:6px 10px;font-size:11px;color:var(--color-text-muted);border-bottom:1px solid var(--color-card-border,var(--color-border));margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(pg.name || ("Page " + (idx + 1))) + "</div>" +
         '<button data-a="rename"><i class="fas fa-pen"></i> Rename</button>' +
         '<button data-a="dup"><i class="fas fa-copy"></i> Duplicate</button>' +
         '<button data-a="left"' + (idx > 0 ? "" : " disabled") + '><i class="fas fa-arrow-left"></i> Move left</button>' +
         '<button data-a="right"' + (idx < len - 1 ? "" : " disabled") + '><i class="fas fa-arrow-right"></i> Move right</button>' +
-        '<div style="border-top:1px solid var(--color-card-border,#e2e8f0);margin:4px 0;"></div>' +
+        '<div style="border-top:1px solid var(--color-card-border,var(--color-border));margin:4px 0;"></div>' +
         '<button data-a="del" class="ff-menu-danger"' + (len > 1 ? "" : " disabled") + '><i class="fas fa-trash"></i> Delete page</button>';
       var self = this;
       menu.addEventListener("click", function (e) {
@@ -7360,7 +7373,7 @@ _growCanvas: function () {
         type: w.type, title: w.title || info.label || w.type,
         width: w.width, height: w.height,
         config: JSON.parse(JSON.stringify(w.config || {})),
-        icon: info.icon || "fa-chart-simple", color: info.color || "#7B61FF", time: Date.now()
+        icon: info.icon || "fa-chart-simple", color: info.color || "#2563eb", time: Date.now()
       };
       var list = this._listTemplates();
       list.push(t);
@@ -7456,7 +7469,7 @@ _growCanvas: function () {
               '<select id="bd-meas-col" onchange="BlankDash._measureExprSync()">' + (colOpts || '<option value="">—</option>') + '</select></div>' +
             '<div class="bd-props-field" style="display:grid;gap:4px"><label class="bd-props-label">Expression</label>' +
               '<textarea id="bd-meas-expr" rows="2" style="font-family:monospace;font-size:12px" placeholder="SUM(revenue)" oninput="BlankDash._measureExprDirty()">' + _esc(existing ? existing.expression : "") + '</textarea></div>' +
-            '<div class="bd-props-field" style="display:grid;gap:4px"><label class="bd-props-label">Date column <span style="font-weight:400;color:#94a3b8">(enables YTD/MTD/QTD/MoM)</span></label>' +
+            '<div class="bd-props-field" style="display:grid;gap:4px"><label class="bd-props-label">Date column <span style="font-weight:400;color:var(--color-text-muted)">(enables YTD/MTD/QTD/MoM)</span></label>' +
               '<select id="bd-meas-date">' + dateOpts + '</select></div>' +
             '<div class="bd-props-field" style="display:grid;gap:4px"><label class="bd-props-label">Format</label><select id="bd-meas-fmt">' + fmtOpts + '</select></div>' +
             '<div class="bd-props-field" style="display:grid;gap:4px"><label class="bd-props-label">Description</label>' +
@@ -7466,10 +7479,10 @@ _growCanvas: function () {
                   '<div style="display:flex;gap:6px;align-items:center">' +
                   '<select id="bd-meas-prev-mode" style="flex:1">' + ["none", "ytd", "mtd", "qtd", "mom"].map(function (mm) { return '<option value="' + mm + '">' + mm.toUpperCase() + '</option>'; }).join("") + '</select>' +
                   '<button type="button" class="btn btn-sm btn-secondary" onclick="BlankDash._previewMeasure(\'' + _esc(id) + '\')"><i class="fas fa-play"></i> Run</button></div>' +
-                  '<div id="bd-meas-preview" style="margin-top:8px;font-size:12px;color:#64748b"></div></div>'
+                  '<div id="bd-meas-preview" style="margin-top:8px;font-size:12px;color:var(--color-text-muted)"></div></div>'
               : '') +
           '</div>' +
-          '<div class="bd-gal-foot" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div class="bd-gal-foot" style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-ghost" onclick="this.closest(\'.bd-gal-overlay\').remove()">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" onclick="BlankDash._saveMeasure(\'' + _esc(id || "") + '\')"><i class="fas fa-check"></i> Save</button>' +
           '</div>' +
@@ -7561,7 +7574,7 @@ _growCanvas: function () {
         var p = await API.previewMeasure(id, mode);
         out.innerHTML = _measurePreviewHtml(p);
       } catch (e) {
-        out.innerHTML = '<span style="color:#ef4444">' + _esc((e && e.message) || "preview failed") + "</span>";
+        out.innerHTML = '<span style="color:var(--color-danger)">' + _esc((e && e.message) || "preview failed") + "</span>";
       }
     },
     /* Drop a registered measure onto the canvas as a time-intelligence KPI */
@@ -7748,7 +7761,7 @@ _growCanvas: function () {
             var n = (b.widgets || []).length;
             var when = new Date(b.at).toLocaleString();
             return '<div class="bd-tpl-item">' +
-              '<div class="bd-tpl-icon" style="background:#1e293b"><i class="fas fa-bookmark"></i></div>' +
+              '<div class="bd-tpl-icon" style="background:var(--color-text)"><i class="fas fa-bookmark"></i></div>' +
               '<div class="bd-tpl-info">' +
                 '<div class="bd-tpl-name">' + _esc(b.name) + '</div>' +
                 '<div class="bd-tpl-meta">' + n + " widget" + (n === 1 ? "" : "s") + " · " + _esc(when) + "</div>" +
@@ -8125,7 +8138,7 @@ _growCanvas: function () {
       if (!_copilotHistory.length) {
         b.innerHTML =
           '<div class="bd-copilot-empty">' +
-            '<i class="fas fa-sparkles" style="color:#6366f1;font-size:20px;display:block;margin:0 auto 10px;text-align:center"></i>' +
+            '<i class="fas fa-wand-magic-sparkles" style="color:var(--color-primary);font-size:20px;display:block;margin:0 auto 10px;text-align:center"></i>' +
             'Ask anything about your data, get it explained, or let AI design your dashboard. Say it in your own words.' +
             '<div class="bd-copilot-suggs">' +
               '<button class="bd-copilot-chip" data-q="Summarize this dataset with the key numbers">Summarize dataset</button>' +
@@ -8476,7 +8489,7 @@ _growCanvas: function () {
           out += '<p class="bd-copilot-hint">Based on the columns in <b>' + _esc(table) + '</b>. Click <b>Add</b> to drop a visual on the canvas:</p><ul class="bd-copilot-list">';
           recs.forEach(function (r, i) {
             var label = r.title || r.label || r.name || r.type || "Visual";
-            var why = r.why || r.reason || "";
+            var why = _firstNonEmptyString(r.reasoning, r.why, r.reason);
             out += '<li><div class="bd-copilot-rec"><div><b>' + _esc(label) + '</b>' + (why ? '<span class="bd-copilot-why"> — ' + _esc(why) + '</span>' : '') + '</div>' +
               '<button class="bd-copilot-add" onclick="BlankDash._copilotAddChart(' + i + ')"><i class="fas fa-plus"></i> Add</button></div></li>';
           });
@@ -8577,10 +8590,10 @@ _growCanvas: function () {
       ov.innerHTML =
         '<div class="modal-content" style="max-width:520px">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-            '<h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-wand-magic-sparkles" style="color:#6366f1;margin-right:6px;"></i>AI Generate Charts</h3>' +
+            '<h3 style="margin:0;font-size:18px;font-weight:700;"><i class="fas fa-wand-magic-sparkles" style="color:var(--color-primary);margin-right:6px;"></i>AI Generate Charts</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button>' +
           '</div>' +
-          '<p style="font-size:12px;color:var(--color-content-text-secondary,#64748b);margin:0 0 8px;">Data source: <b>' + _esc(_dash.table) + '</b>. ' +
+          '<p style="font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted));margin:0 0 8px;">Data source: <b>' + _esc(_dash.table) + '</b>. ' +
             'Describe what you want to visualize (optional) and AI will add recommended chart widgets to the canvas.</p>' +
           '<textarea class="form-input" id="bd-ai-prompt" rows="3" placeholder="e.g. monthly revenue trend, top products by sales, regional breakdown..."></textarea>' +
           '<div class="bd-ai-hints" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' +
@@ -8593,7 +8606,7 @@ _growCanvas: function () {
               '<input type="checkbox" id="bd-ai-insights" checked> Also add an AI narrative insights widget' +
             '</label>' +
           '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;border-top:1px solid var(--color-card-border,#e2e8f0);padding-top:12px">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;border-top:1px solid var(--color-card-border,var(--color-border));padding-top:12px">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-gen="1" id="bd-ai-gen-btn"><i class="fas fa-wand-magic-sparkles"></i> Generate</button>' +
           '</div>' +
@@ -8950,7 +8963,7 @@ _growCanvas: function () {
       var hintDate = (cls && cls.date) || "date";
       var title = 'Recreate with AI' + (w.title ? ' — ' + w.title : '');
       var html =
-        '<div style="font-size:12px;color:var(--color-content-text-secondary,#64748b);margin-bottom:10px;">' +
+        '<div style="font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted));margin-bottom:10px;">' +
           'Data source: <b>' + _esc(table) + '</b>. Describe the visual you want and AI will rebuild this widget ' +
           '<i>in place</i> (its position, size and links are kept).</div>' +
         '<textarea class="form-input" id="bd-ai-recreate-input" rows="3" placeholder="e.g. monthly revenue trend, top products by sales, regional breakdown..."></textarea>' +
@@ -8960,7 +8973,7 @@ _growCanvas: function () {
           '<button type="button" class="bd-ai-hint" data-hint="' + _esc('pie chart showing the share of ' + hintDim) + '">Pie by category</button>' +
           '<button type="button" class="bd-ai-hint" data-img="1" title="Describe the visual from a screenshot"><i class="fas fa-image"></i> Upload image</button>' +
         '</div>' +
-        '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;border-top:1px solid var(--color-card-border,#e2e8f0);padding-top:12px">' +
+        '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;border-top:1px solid var(--color-card-border,var(--color-border));padding-top:12px">' +
           '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
           '<button type="button" class="btn btn-sm btn-primary" data-gen="1" id="bd-ai-recreate-gen"><i class="fas fa-wand-magic-sparkles"></i> Recreate</button>' +
         '</div>';
@@ -9383,7 +9396,7 @@ _growCanvas: function () {
       ordered.forEach(function (w) {
         var x = w.x * k, y = w.y * k, ww = Math.max(4, w.width * k), hh = Math.max(4, w.height * k);
         var info = _lookup(w.type) || {};
-        var col = info.color || "#7B61FF";
+        var col = info.color || "#2563eb";
         var rad = Math.round(6 * k);
         roundRect(x, y, ww, hh, rad);
         ctx2.fillStyle = col + "26";
@@ -9417,15 +9430,15 @@ _growCanvas: function () {
         menu.className = "dash-widget-menu";
         menu.style.cssText = "position:fixed;z-index:10000;min-width:190px;background:var(--color-card-bg,#fff);border:1px solid var(--color-card-border,#e2e8f0);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);padding:4px;";
         menu.innerHTML =
-          '<div style="padding:6px 10px;font-size:11px;color:#94a3b8;border-bottom:1px solid var(--color-card-border,#e2e8f0);margin-bottom:4px;">Export dashboard</div>' +
-          '<button data-fmt="pbix" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-chart-column" style="width:14px;color:#e8a80c;"></i>Power BI (.pbix)</button>' +
-          '<button data-fmt="pptx" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-file-powerpoint" style="width:14px;color:#d04423;"></i>PowerPoint (.pptx)</button>' +
-          '<button data-fmt="xlsx" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-file-excel" style="width:14px;color:#1d6f42;"></i>Excel (.xlsx)</button>' +
-          '<div style="height:1px;background:var(--color-card-border,#e2e8f0);margin:4px 0;"></div>' +
-          '<button data-fmt="json" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-file-code" style="width:14px;color:#f59e0b;"></i>JSON file</button>' +
-          '<button data-fmt="copy" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-clipboard" style="width:14px;color:#8b5cf6;"></i>Copy config (JSON)</button>' +
-          '<button data-fmt="png" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-image" style="width:14px;color:#3b82f6;"></i>Screenshot (PNG)</button>' +
-          '<button data-fmt="print" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,#0f172a);text-align:left;border-radius:6px;"><i class="fas fa-print" style="width:14px;color:#64748b;"></i>Print / PDF</button>';
+          '<div style="padding:6px 10px;font-size:11px;color:var(--color-text-muted);border-bottom:1px solid var(--color-card-border,var(--color-border));margin-bottom:4px;">Export dashboard</div>' +
+          '<button data-fmt="pbix" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-chart-column" style="width:14px;color:var(--color-warning);"></i>Power BI (.pbix)</button>' +
+          '<button data-fmt="pptx" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-file-powerpoint" style="width:14px;color:var(--color-danger);"></i>PowerPoint (.pptx)</button>' +
+          '<button data-fmt="xlsx" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-file-excel" style="width:14px;color:var(--color-success);"></i>Excel (.xlsx)</button>' +
+          '<div style="height:1px;background:var(--color-card-border,var(--color-border));margin:4px 0;"></div>' +
+          '<button data-fmt="json" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-file-code" style="width:14px;color:var(--color-warning);"></i>JSON file</button>' +
+          '<button data-fmt="copy" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-clipboard" style="width:14px;color:var(--color-accent-purple);"></i>Copy config (JSON)</button>' +
+          '<button data-fmt="png" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-image" style="width:14px;color:var(--color-primary);"></i>Screenshot (PNG)</button>' +
+          '<button data-fmt="print" style="display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;cursor:pointer;padding:7px 10px;font-size:12px;color:var(--color-text,var(--color-text));text-align:left;border-radius:6px;"><i class="fas fa-print" style="width:14px;color:var(--color-text-muted);"></i>Print / PDF</button>';
         document.body.appendChild(menu);
         var r = { width: window.innerWidth, height: window.innerHeight };
         menu.style.top = Math.max(4, r.height - 210) + "px";
@@ -9601,7 +9614,7 @@ _growCanvas: function () {
         if (!list || !list.length) { listEl.innerHTML = '<div class="bd-gal-empty">No saved dashboards yet.</div>'; return; }
         listEl.innerHTML = list.map(function (d, i) {
           var id = _esc(String(d.id));
-          var active = _dash.id === String(d.id) ? ' style="outline:2px solid #7B61FF"' : "";
+          var active = _dash.id === String(d.id) ? ' style="outline:2px solid var(--color-primary)"' : "";
           var table = d.table || "";
           var time = d.time || (d.updated_at ? new Date(d.updated_at).getTime() : 0);
           return '<div class="bd-gal-item" data-id="' + id + '"' + active + '>' +
@@ -9787,7 +9800,7 @@ _growCanvas: function () {
         var top = Math.round((w.y / ch) * 100 * 100) / 100;
         var wPct = Math.round((w.width / cw) * 100 * 100) / 100;
         var hPct = Math.round((w.height / ch) * 100 * 100) / 100;
-        var color = (_lookup(w.type) || {}).color || "#7B61FF";
+        var color = (_lookup(w.type) || {}).color || "#2563eb";
         return '<div class="bd-pv-widget" style="left:' + left + '%;top:' + top + '%;width:' + wPct + '%;height:' + hPct + '%;background:' + color + ';" title="' + _esc(w.title || w.type) + '"></div>';
       }).join("");
       box.innerHTML = '<div class="bd-pv-page-name">' + _esc(next.name || ("Page " + (_dash.currentPage + 2))) + '</div>' + items;
@@ -10055,7 +10068,7 @@ _growCanvas: function () {
         ["arrow", "arrow-right", "Arrow (3)"], ["box", "square", "Box (4)"],
         ["text", "font", "Text (5)"], ["eraser", "eraser", "Eraser (6)"]
       ];
-      var colors = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#7B61FF", "#ffffff"];
+      var colors = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#2563eb", "#ffffff"];
       var h = '<div class="bd-ann-toolbar" id="bd-ann-toolbar">';
       tools.forEach(function (t) {
         h += '<button class="bd-ann-btn' + (_annTool === t[0] ? ' active' : '') + '" onclick="BlankDash._setAnnTool(\'' + t[0] + '\')" title="' + t[2] + '"><i class="fas fa-' + t[1] + '"></i></button>';
@@ -10718,7 +10731,7 @@ _growCanvas: function () {
       var html = '<div class="modal-overlay" onclick="if(event.target===this)this.remove()">' +
         '<div class="modal-content" style="max-width:520px;">' +
           '<h3 style="margin:0 0 14px;font-size:18px;font-weight:700;"><i class="fas fa-keyboard"></i> Keyboard shortcuts</h3>' +
-          '<div style="font-size:11px;font-weight:700;color:#7B61FF;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Editing</div>' +
+          '<div style="font-size:11px;font-weight:700;color:var(--color-primary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Editing</div>' +
           '<div class="bd-shortcuts-grid">' +
             row("Move selection (1px)", "← ↑ ↓ →") +
             row("Move selection (10px)", "Shift + arrows") +
@@ -10731,7 +10744,7 @@ _growCanvas: function () {
             row("Toggle navigator minimap", "M") +
             row("Deselect / close menu", "Esc") +
           '</div>' +
-          '<div style="font-size:11px;font-weight:700;color:#7B61FF;text-transform:uppercase;letter-spacing:0.06em;margin:14px 0 4px;">Presentation</div>' +
+          '<div style="font-size:11px;font-weight:700;color:var(--color-primary);text-transform:uppercase;letter-spacing:0.06em;margin:14px 0 4px;">Presentation</div>' +
           '<div class="bd-shortcuts-grid">' +
             row("Previous / Next page", "← / →") +
             row("First / Last page", "Home / End") +
@@ -10812,8 +10825,8 @@ _growCanvas: function () {
       var on = !!(document.getElementById("bd-set-shine") || {}).checked;
       var c1El = document.getElementById("bd-set-shine-c1");
       var c2El = document.getElementById("bd-set-shine-c2");
-      var c1 = c1El && _hexOk(c1El.value) ? c1El.value : "#6366f1";
-      var c2 = c2El && _hexOk(c2El.value) ? c2El.value : "#8b5cf6";
+      var c1 = c1El && _hexOk(c1El.value) ? c1El.value : "#2563eb";
+      var c2 = c2El && _hexOk(c2El.value) ? c2El.value : "#7c3aed";
       document.querySelectorAll(".ff-widget").forEach(function (el) {
         var id = el.getAttribute && el.getAttribute("data-id");
         var w = id ? _findWidget(id) : null;
@@ -11075,7 +11088,7 @@ _growCanvas: function () {
         s.setProperty("--color-content-text-secondary", patch.text2 || "#999999");
         s.setProperty("--color-text", patch.text || "#ffffff");
         s.setProperty("--color-text-secondary", patch.text2 || "#999999");
-        s.setProperty("--color-primary", patch.primary || "#7B61FF");
+        s.setProperty("--color-primary", patch.primary || "#2563eb");
         s.setProperty("--color-surface-hover", _mixHex(patch.cardbg, patch.text || "#ffffff", 0.08));
       }
     },
@@ -11708,14 +11721,14 @@ _growCanvas: function () {
     if (!p) return "";
     var mode = (p.mode && p.mode !== "none") ? p.mode.toUpperCase() : "TOTAL";
     var out = '<div style="font-size:12px;line-height:1.6">' +
-      '<div><b>' + _esc(mode) + '</b> <span style="color:#94a3b8">(' + _esc(p.cur_label || "Value") + ')</span>: ' +
+      '<div><b>' + _esc(mode) + '</b> <span style="color:var(--color-text-muted)">(' + _esc(p.cur_label || "Value") + ')</span>: ' +
       '<b>' + _esc(p.value == null ? "—" : _fmtNumShort(p.value)) + '</b></div>';
     if (p.mode && p.mode !== "none") {
       out += '<div id="bd-prevline">Prior: ' + _esc(p.previous == null ? "—" : _fmtNumShort(p.previous)) +
         ' · Full prev: ' + _esc(p.comparison == null ? "—" : _fmtNumShort(p.comparison)) +
         ' · Δ ' + _esc(p.delta == null ? "—" : _fmtNumShort(p.delta)) +
-        ' <span style="color:' + ((p.delta_pct || 0) < 0 ? "#ef4444" : "#10b981") + '">(' + _fmtPct(p.delta_pct) + ')</span></div>';
-      if (p.anchor) out += '<div style="color:#94a3b8">anchored to ' + _esc(p.anchor) + '</div>';
+        ' <span style="color:' + ((p.delta_pct || 0) < 0 ? "var(--color-danger)" : "var(--color-success)") + '">(' + _fmtPct(p.delta_pct) + ')</span></div>';
+      if (p.anchor) out += '<div style="color:var(--color-text-muted)">anchored to ' + _esc(p.anchor) + '</div>';
     }
     if (p.trend && p.trend.labels && p.trend.labels.length) {
       var vals = p.trend.values.map(function (v) { return Number(v) || 0; });
@@ -11727,7 +11740,7 @@ _growCanvas: function () {
         var y = h - 3 - ((v - min) / span) * (h - 6);
         return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
       }).join(" ");
-      out += '<svg width="' + w + '" height="' + h + '" style="margin-top:6px;max-width:100%"><polyline points="' + pts + '" fill="none" stroke="#7B61FF" stroke-width="1.5"/></svg>';
+      out += '<svg width="' + w + '" height="' + h + '" style="margin-top:6px;max-width:100%"><polyline points="' + pts + '" fill="none" stroke="var(--color-primary)" stroke-width="1.5"/></svg>';
     }
     return out + "</div>";
   }
@@ -11985,7 +11998,7 @@ _growCanvas: function () {
     }
     _currentWidgets().forEach(function (w) {
       var c = _lookup(w.type) || {};
-      var col = w.borderColor || c.color || "#7B61FF";
+      var col = w.borderColor || c.color || "#2563eb";
       var x = Math.max(0, Math.round(w.x * scale));
       var y = Math.max(0, Math.round(w.y * scale));
       var wd = Math.max(2, Math.round(w.width * scale));
@@ -12007,7 +12020,7 @@ _growCanvas: function () {
     var vx = (mw - vw) * fracX, vy = (mh - vh) * fracY;
     ctx.fillStyle = "rgba(123,97,255,0.10)";
     ctx.fillRect(vx, vy, vw, vh);
-    ctx.strokeStyle = "#7B61FF";
+    ctx.strokeStyle = "#2563eb";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(vx, vy, vw, vh);
   }
@@ -12098,7 +12111,7 @@ _growCanvas: function () {
   }
 
   function _interpColor(t) {
-    var stops = ["#6366f1", "#8b5cf6", "#ec4899", "#f43f5e"];
+    var stops = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)"];
     t = Math.max(0, Math.min(1, t));
     var seg = t * (stops.length - 1);
     var i = Math.min(Math.floor(seg), stops.length - 2);
@@ -12166,7 +12179,7 @@ _growCanvas: function () {
   function _colorsOf(c) {
     if (window.StyleEngine && StyleEngine.colors && StyleEngine.colors(c)) return StyleEngine.colors(c);
     if (c && c.style && Array.isArray(c.style.colors) && c.style.colors.length) return c.style.colors;
-    return (window.D3Charts && D3Charts._palette) || ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
+    return (window.D3Charts && D3Charts._palette) || ["#2563eb", "#0d9488", "#b45309", "#7c3aed", "#be123c", "#0369a1", "#4d7c0f", "#64748b"];
   }
 
   /* Canvas-backed text measurer so d3 figure labels fit without overlapping or wrapping. */
@@ -12203,7 +12216,7 @@ _growCanvas: function () {
       var g = t.gradient || (t.primary && t.secondary ? [t.primary, t.secondary] : null);
       if (Array.isArray(g) && g.length === 2 && _hexOk(g[0]) && _hexOk(g[1])) return [g[0], g[1]];
     }
-    return ["#6366f1", "#8b5cf6"];
+    return ["#2563eb", "#7c3aed"];
   }
 
   /* White-ish values are treated as "no custom background" so the shine
@@ -12251,7 +12264,7 @@ _growCanvas: function () {
     _ov.style.cssText = "position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;";
     var _box = document.createElement("div");
     _box.style.cssText = "background:#fff;border-radius:12px;max-width:600px;width:90%;max-height:80vh;overflow:auto;padding:24px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,.25);";
-    _box.innerHTML = '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;">&times;</button>' + html;
+    _box.innerHTML = '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--color-text-muted);">&times;</button>' + html;
     _ov.appendChild(_box);
     _ov.addEventListener("click", function (e) { if (e.target === _ov) _ov.remove(); });
     document.body.appendChild(_ov);
@@ -12369,10 +12382,10 @@ _growCanvas: function () {
     if (_c.bgType && _c.bgType !== "solid" && _c.bgType !== "transparent") {
       if (_c.bgType === "linear-gradient") {
         var _a = _c.bgAngle || 135;
-        var _c2 = _c.bgColor2 || "#3b82f6";
+        var _c2 = _c.bgColor2 || "var(--color-primary)";
         el.style.background = "linear-gradient(" + _a + "deg, " + (_c.bgColor || "#ffffff") + ", " + _c2 + ")";
       } else if (_c.bgType === "radial-gradient") {
-        el.style.background = "radial-gradient(circle, " + (_c.bgColor || "#ffffff") + ", " + (_c.bgColor2 || "#3b82f6") + ")";
+        el.style.background = "radial-gradient(circle, " + (_c.bgColor || "#ffffff") + ", " + (_c.bgColor2 || "var(--color-primary)") + ")";
       } else if (_c.bgType === "image" && _c.bgImageUrl) {
         el.style.backgroundImage = "url('" + _c.bgImageUrl + "')";
         el.style.backgroundSize = _c.bgSize || "cover";
@@ -12409,7 +12422,7 @@ _growCanvas: function () {
       el.style.webkitBackdropFilter = el.style.backdropFilter;
     }
     if (_c.glow) {
-      var _glCol = _c.glowColor || "#3b82f6";
+      var _glCol = _c.glowColor || "var(--color-primary)";
       var _glSize = _c.glowSize || 8;
       el.style.boxShadow = (el.style.boxShadow ? el.style.boxShadow + ", " : "") + "0 0 " + _glSize + "px " + _glCol;
     }
@@ -12421,7 +12434,7 @@ _growCanvas: function () {
         var _oc = (w.config || {});
         var _baseShadow = el.getAttribute("data-base-shadow") || el.style.boxShadow || "";
         if (_oc.hoverShadow) {
-          var _hsCol = _oc.hoverShadowColor || "#3b82f6";
+          var _hsCol = _oc.hoverShadowColor || "var(--color-primary)";
           var _hsBlur = _oc.hoverShadowBlur || 20;
           el.style.boxShadow = (_baseShadow ? _baseShadow + ", " : "") + "0 4px " + _hsBlur + "px " + _hsCol;
         }
@@ -12599,7 +12612,7 @@ _growCanvas: function () {
      present — keeps blankdash's theme chrome working on the main SPA pages.
      Values mirror web/ts/charts/theme.ts. */
   var _BUILTIN_THEMES = {
-    light: { name: "Light", primary: "#7B61FF", secondary: "#00D4AA", accent: "#FF6B6B", palette: ["#7B61FF", "#00D4AA", "#FF6B6B", "#FFB347", "#4FC3F7", "#AB47BC", "#26A69A", "#EF5350", "#FFA726", "#42A5F5"], gradient: ["#7B61FF", "#00D4AA"], background: "#F5F5F5", cardBg: "#FFFFFF", text: "#333333", textSecondary: "#666666", gridLine: "#E8E8E8", axisColor: "#CCCCCC" },
+    light: { name: "Light", primary: "#2563eb", secondary: "#00D4AA", accent: "#FF6B6B", palette: ["#2563eb", "#00D4AA", "#FF6B6B", "#FFB347", "#4FC3F7", "#AB47BC", "#26A69A", "#EF5350", "#FFA726", "#42A5F5"], gradient: ["#2563eb", "#00D4AA"], background: "#F5F5F5", cardBg: "#FFFFFF", text: "#333333", textSecondary: "#666666", gridLine: "#E8E8E8", axisColor: "#CCCCCC" },
     dark: { name: "Dark", primary: "#9B8AFF", secondary: "#33E0BB", accent: "#FF8A8A", palette: ["#9B8AFF", "#33E0BB", "#FF8A8A", "#FFC56B", "#6DD4FF", "#C06AE0", "#3DB8A9", "#FF6B6B", "#FFB84D", "#5EB8FF"], gradient: ["#9B8AFF", "#33E0BB"], background: "#1A1A2E", cardBg: "#252540", text: "#E0E0E0", textSecondary: "#999999", gridLine: "#3A3A5C", axisColor: "#555577" },
     midnight: { name: "Midnight", primary: "#8B5CF6", secondary: "#22D3EE", accent: "#F472B6", palette: ["#8B5CF6", "#22D3EE", "#F472B6", "#60A5FA", "#34D399", "#FBBF24", "#A78BFA", "#F87171", "#2DD4BF", "#C084FC"], gradient: ["#8B5CF6", "#22D3EE"], background: "#0B0F19", cardBg: "#141B2D", text: "#E2E8F0", textSecondary: "#7C89A3", gridLine: "#223049", axisColor: "#2E3D59", backgroundGradient: ["#0B0F19", "#1E1B4B"] },
     ocean: { name: "Ocean", primary: "#38BDF8", secondary: "#2DD4BF", accent: "#F59E0B", palette: ["#38BDF8", "#2DD4BF", "#60A5FA", "#22D3EE", "#F59E0B", "#F87171", "#34D399", "#A78BFA", "#38BDF8", "#E0F2FE"], gradient: ["#38BDF8", "#2DD4BF"], background: "#042C40", cardBg: "#0B3B54", text: "#E6F7FF", textSecondary: "#8FC3D9", gridLine: "#155E82", axisColor: "#21708F", backgroundGradient: ["#042C40", "#0E5A83"] },
@@ -12641,9 +12654,9 @@ _growCanvas: function () {
      AI-generated header/insight/chart widgets inherit the chosen theme. */
   function _aiThemeOpts() {
     var t = _themeDef(_dash && _dash.theme);
-    if (!t) return { accent: "#6366f1", accent2: "#1e293b", palette: null, theme: null };
+    if (!t) return { accent: "#2563eb", accent2: "#1e3a8a", palette: null, theme: null };
     var cfg = {
-      accent: t.accent || t.primary || "#6366f1",
+      accent: t.accent || t.primary || "#2563eb",
       accent2: (t.gradient && t.gradient[1]) || t.secondary || t.accent2 || "#1e293b",
       text: t.text, textSecondary: t.textSecondary, cardBg: t.cardBg,
       gridLine: t.gridLine, palette: Array.isArray(t.palette) ? t.palette.slice() : null
@@ -12658,7 +12671,7 @@ _growCanvas: function () {
     var st = (w && w.config && w.config.style && typeof w.config.style === "object") ? w.config.style : {};
     var t = (st.themeId && _themeDef(st.themeId)) || _themeDef(_dash && _dash.theme);
     if (!t) return _aiThemeOpts();
-    var acc = st.accent || t.accent || t.primary || "#6366f1";
+    var acc = st.accent || t.accent || t.primary || "#2563eb";
     var acc2 = st.accent2 || (t.gradient && t.gradient[1]) || t.secondary || t.accent2 || "#1e293b";
     var cfg = {
       accent: acc, accent2: acc2,
@@ -12806,7 +12819,7 @@ _growCanvas: function () {
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
       var cx = W / 2, cy = H / 2, R = Math.min(cx, cy) - 40;
       var maxVal = Math.max.apply(null, data) || 1;
-      var colors = (window.D3Charts && D3Charts._palette) || ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316"];
+      var colors = (window.D3Charts && D3Charts._palette) || ["#2563eb","#0d9488","#b45309","#7c3aed","#be123c","#0369a1","#4d7c0f","#64748b"];
       var arc = d3.arc().innerRadius(0);
       var pie = d3.pie().value(function(d) { return d; }).sort(null);
       var g = svg.append("g").attr("transform", "translate(" + cx + "," + cy + ")");
@@ -12876,12 +12889,12 @@ _growCanvas: function () {
       var cx = w / 2, bw = Math.max(8, Math.min(w * 0.4, 60));
       g.append("line").attr("x1", cx - bw * 0.3).attr("x2", cx + bw * 0.3).attr("y1", y(lo)).attr("y2", y(lo)).attr("stroke", theme.textSecondary).attr("stroke-width", 2);
       g.append("line").attr("x1", cx).attr("x2", cx).attr("y1", y(lo)).attr("y2", y(q1)).attr("stroke", theme.textSecondary).attr("stroke-width", 1.5).attr("stroke-dasharray", "3,3");
-      g.append("rect").attr("x", cx - bw / 2).attr("y", y(q3)).attr("width", bw).attr("height", y(q1) - y(q3)).attr("fill", "#3B82F6").attr("opacity", 0.8).attr("rx", 4);
+      g.append("rect").attr("x", cx - bw / 2).attr("y", y(q3)).attr("width", bw).attr("height", y(q1) - y(q3)).attr("fill", "var(--chart-1)").attr("opacity", 0.8).attr("rx", 4);
       g.append("line").attr("x1", cx - bw / 2).attr("x2", cx + bw / 2).attr("y1", y(med)).attr("y2", y(med)).attr("stroke", "#fff").attr("stroke-width", 2.5);
       g.append("line").attr("x1", cx).attr("x2", cx).attr("y1", y(q3)).attr("y2", y(hi)).attr("stroke", theme.textSecondary).attr("stroke-width", 1.5).attr("stroke-dasharray", "3,3");
       g.append("line").attr("x1", cx - bw * 0.3).attr("x2", cx + bw * 0.3).attr("y1", y(hi)).attr("y2", y(hi)).attr("stroke", theme.textSecondary).attr("stroke-width", 2);
       var outliers = sorted.filter(function(v) { return v < lo || v > hi; });
-      g.selectAll(".outlier").data(outliers).enter().append("circle").attr("cx", cx).attr("cy", function(d) { return y(d); }).attr("r", 3).attr("fill", "#EF4444").attr("opacity", 0.7);
+      g.selectAll(".outlier").data(outliers).enter().append("circle").attr("cx", cx).attr("cy", function(d) { return y(d); }).attr("r", 3).attr("fill", "var(--color-danger)").attr("opacity", 0.7);
       g.append("text").attr("x", cx).attr("y", h + 36).attr("text-anchor", "middle").attr("fill", theme.textSecondary).attr("font-size", "11px").text("Q1=" + q1.toFixed(1) + " Med=" + med.toFixed(1) + " Q3=" + q3.toFixed(1));
     });
     /* Histogram */
@@ -12903,7 +12916,7 @@ _growCanvas: function () {
       g.append("g").call(d3.axisLeft(y).ticks(5)).call(function(g2) { g2.select(".domain").attr("stroke", theme.axisColor); g2.selectAll(".tick text").attr("fill", theme.textSecondary).attr("font-size", "10px"); });
       g.selectAll(".bar").data(bins).enter().append("rect").attr("x", function(b) { return x(b.x0) + 1; }).attr("y", function(b) { return y(b.length); })
         .attr("width", function(b) { return Math.max(0, x(b.x1) - x(b.x0) - 2); }).attr("height", function(b) { return h - y(b.length); })
-        .attr("fill", "#6366F1").attr("opacity", 0.8).attr("rx", 2)
+        .attr("fill", "var(--chart-1)").attr("opacity", 0.8).attr("rx", 2)
         .on("mouseenter", function(ev, b) { d3.select(this).attr("opacity", 1); Tooltip.show(Tooltip.multi([["Range", b.x0.toFixed(1) + " - " + b.x1.toFixed(1)], ["Count", String(b.length)]]), ev); })
         .on("mousemove", function(ev) { Tooltip.move(ev); })
         .on("mouseleave", function() { d3.select(this).attr("opacity", 0.8); Tooltip.hide(); });
@@ -12926,14 +12939,14 @@ _growCanvas: function () {
       var x = d3.scaleLinear().domain([0, maxVal]).range([0, w]);
       g.append("g").call(d3.axisLeft(y).tickFormat(function(d) { return _clipText(d, 84, 11); })).call(function(g2) { g2.select(".domain").remove(); g2.selectAll(".tick text").attr("fill", theme.textSecondary).attr("font-size", "11px"); });
       g.selectAll(".bar-bg").data(data).enter().append("rect").attr("x", 0).attr("y", function(_, i) { return y(labels[i]); }).attr("width", w).attr("height", y.bandwidth()).attr("fill", "rgba(255,255,255,0.05)").attr("rx", 4);
-      g.selectAll(".bar-val").data(data).enter().append("rect").attr("x", 0).attr("y", function(_, i) { return y(labels[i]); }).attr("width", function(d) { return x(d); }).attr("height", y.bandwidth()).attr("fill", "#3B82F6").attr("opacity", 0.85).attr("rx", 4)
+      g.selectAll(".bar-val").data(data).enter().append("rect").attr("x", 0).attr("y", function(_, i) { return y(labels[i]); }).attr("width", function(d) { return x(d); }).attr("height", y.bandwidth()).attr("fill", "var(--chart-1)").attr("opacity", 0.85).attr("rx", 4)
         .on("mouseenter", function(ev, d) { d3.select(this).attr("opacity", 1); var i = data.indexOf(d); if (window.BlankDash && BlankDash._chartHover) BlankDash._chartHover(widget, labels[i], d, ev); Tooltip.show(Tooltip.multi([[labels[i], d.toLocaleString()], ["Target", (target[i] || 0).toLocaleString()]]), ev); })
         .on("mousemove", function(ev) { Tooltip.move(ev); })
         .on("mouseleave", function() { d3.select(this).attr("opacity", 0.85); Tooltip.hide(); if (window.BlankDash && BlankDash._hideReportTooltip) BlankDash._hideReportTooltip(); })
         .on("click", function(ev, d) { var i = data.indexOf(d); if (window.BlankDash && BlankDash._chartClick) BlankDash._chartClick(widget, labels[i], ev); });
       g.selectAll(".target-mark").data(target).enter().append("line").attr("x1", function(d) { return x(d); }).attr("x2", function(d) { return x(d); })
         .attr("y", function(_, i) { return y(labels[i]) - 2; }).attr("height", y.bandwidth() + 4)
-        .attr("stroke", "#EF4444").attr("stroke-width", 2.5).attr("stroke-linecap", "round");
+        .attr("stroke", "var(--color-danger)").attr("stroke-width", 2.5).attr("stroke-linecap", "round");
     });
 
     /* Pyramid */
@@ -12947,7 +12960,7 @@ _growCanvas: function () {
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
       var maxVal = Math.max.apply(null, data) || 1;
       var barH = Math.min((H - 40) / data.length - 4, 36);
-      var colors = ["#EF4444", "#F97316", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#06B6D4"];
+      var colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)", "var(--chart-7)", "var(--chart-8)"];
       var g = svg.append("g").attr("transform", "translate(" + W / 2 + ",20)");
       data.forEach(function (val, i) {
         var bw = (val / maxVal) * (W * 0.8);
@@ -12968,7 +12981,7 @@ _growCanvas: function () {
       if (!data.length) return;
       container.innerHTML = "";
       var W = container.clientWidth || 400, H = container.clientHeight || 280;
-      var colors = ["#EF4444","#F97316","#F59E0B","#10B981","#3B82F6","#8B5CF6","#EC4899","#06B6D4","#14B8A6","#6366F1","#D946EF","#2563EB"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       var sSum = 0;
       for (var di = 0; di < data.length; di++) sSum += Math.abs(+data[di] || 0);
       var total = sSum || 1;
@@ -13038,7 +13051,7 @@ _growCanvas: function () {
       var W = container.clientWidth || 400, H = container.clientHeight || 280;
       container.innerHTML = "";
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       var list = words.slice(0, 40).sort(function (a, b) { return Math.abs(b.value || 0) - Math.abs(a.value || 0); });
       var values = list.map(function (w) { return Math.abs(w.value || 0); });
       var vMax = Math.max.apply(null, values) || 1, vMin = Math.min.apply(null, values);
@@ -13134,7 +13147,7 @@ _growCanvas: function () {
       var stacked = d3.stack().keys(keys)(stackData);
       var x = d3.scalePoint().domain(labels).range([0, w]).padding(0.1);
       var y = d3.scaleLinear().domain([0, d3.max(stacked[stacked.length - 1], function(d) { return d[1]; }) * 1.1 || 10]).range([h, 0]).nice();
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       g.append("g").attr("transform", "translate(0," + h + ")").call(d3.axisBottom(x)).call(function(g2) { g2.selectAll(".tick text").attr("fill", "#aaa").attr("font-size", "10px").attr("transform", "rotate(-35)").attr("text-anchor", "end"); });
       g.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s"))).call(function(g2) { g2.select(".domain").remove(); g2.selectAll(".tick text").attr("fill", "#aaa").attr("font-size", "10px"); g2.selectAll(".tick line").attr("stroke", "rgba(255,255,255,0.1)"); });
       var area = d3.area().x(function(_, i) { return x(labels[i]); }).y0(function(d) { return y(d[0]); }).y1(function(d) { return y(d[1]); }).curve(d3.curveMonotoneX);
@@ -13157,7 +13170,7 @@ _growCanvas: function () {
       var g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
       var y = d3.scaleBand().domain(labels).range([0, h]).padding(0.25);
       var x = d3.scaleLinear().domain([0, 100]).range([0, w]);
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       g.append("g").call(d3.axisLeft(y).tickFormat(function(d) { return _clipText(d, 84, 11); })).call(function(g2) { g2.select(".domain").remove(); g2.selectAll(".tick text").attr("fill", "#aaa").attr("font-size", "11px"); });
       g.append("g").attr("transform", "translate(0," + h + ")").call(d3.axisBottom(x).ticks(5).tickFormat(function(d) { return d + "%"; })).call(function(g2) { g2.selectAll(".tick text").attr("fill", "#aaa").attr("font-size", "10px"); });
       labels.forEach(function(label, li) {
@@ -13210,7 +13223,7 @@ _growCanvas: function () {
         g.append("circle").attr("cx", x0).attr("cy", y0).attr("r", 4).attr("fill", col);
         g.append("circle").attr("cx", x1).attr("cy", y1).attr("r", 4).attr("fill", col);
         var delta = e - s;
-        g.append("text").attr("x", x1 + 8).attr("y", y1 + 3).attr("fill", up ? "#10B981" : "#EF4444").attr("font-size", "10px").attr("font-weight", "600")
+        g.append("text").attr("x", x1 + 8).attr("y", y1 + 3).attr("fill", up ? "var(--color-success)" : "var(--color-danger)").attr("font-size", "10px").attr("font-weight", "600")
           .text((up ? "+" : "") +  _fmtNumShort(delta))
           .each(function (d) { var t = d3.select(this); var n = t.node(); if (n && n.getComputedTextLength && n.getComputedTextLength() > m.right - 14) t.text(_clipText(t.text(), m.right - 14, 10)); });
         lines.push({ lbl: lbl, s: s, e: e, sEnd: y0, eEnd: y1 });
@@ -13344,7 +13357,7 @@ _growCanvas: function () {
       g.append("line").attr("x1", mid).attr("x2", mid).attr("y1", 0).attr("y2", h).attr("stroke", theme.axisColor).attr("stroke-dasharray", "3,3");
       labels.forEach(function (lbl, i) {
         var mv = Math.abs(Number(male[i]) || 0), fv = Math.abs(Number(female[i]) || 0);
-        g.append("rect").attr("x", xc(-mv)).attr("y", y(lbl)).attr("width", Math.max(0, xc(0) - xc(-mv))).attr("height", y.bandwidth()).attr("rx", 3).attr("fill", "#3B82F6").attr("opacity", 0.85)
+        g.append("rect").attr("x", xc(-mv)).attr("y", y(lbl)).attr("width", Math.max(0, xc(0) - xc(-mv))).attr("height", y.bandwidth()).attr("rx", 3).attr("fill", "var(--chart-1)").attr("opacity", 0.85)
           .on("mouseenter", function (ev) { Tooltip.show(Tooltip.multi([[String(lbl) + " · Male",  _fmtNumShort(mv)]]), ev); if (window.BlankDash && BlankDash._chartHover) BlankDash._chartHover(widget, lbl + " (M)", mv, ev); })
           .on("mousemove", function (ev) { Tooltip.move(ev); })
           .on("mouseleave", function () { Tooltip.hide(); if (window.BlankDash && BlankDash._hideReportTooltip) BlankDash._hideReportTooltip(); });
@@ -13354,7 +13367,7 @@ _growCanvas: function () {
           .on("mouseleave", function () { Tooltip.hide(); if (window.BlankDash && BlankDash._hideReportTooltip) BlankDash._hideReportTooltip(); });
         g.append("text").attr("x", -6).attr("y", y(lbl) + y.bandwidth() / 2 + 3).attr("fill", theme.textSecondary).attr("font-size", "10px").attr("text-anchor", "end").text(_clipText(String(lbl), m.left - 12, 10));
       });
-      g.append("text").attr("x", w / 4).attr("y", -6).attr("fill", "#3B82F6").attr("font-size", "10px").attr("font-weight", "700").attr("text-anchor", "middle").text((datasets[0] && datasets[0].label) || "Male");
+      g.append("text").attr("x", w / 4).attr("y", -6).attr("fill", "var(--chart-1)").attr("font-size", "10px").attr("font-weight", "700").attr("text-anchor", "middle").text((datasets[0] && datasets[0].label) || "Male");
       g.append("text").attr("x", (3 * w) / 4).attr("y", -6).attr("fill", "#F472B6").attr("font-size", "10px").attr("font-weight", "700").attr("text-anchor", "middle").text((datasets[1] && datasets[1].label) || "Female");
     });
 
@@ -13375,7 +13388,7 @@ _growCanvas: function () {
       container.innerHTML = "";
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
       var g = svg.append("g").attr("transform", "translate(0,0)");
-      g.append("circle").attr("cx", cx - d / 2).attr("cy", cy).attr("r", R).attr("fill", "#3B82F6").attr("opacity", 0.4).attr("stroke", "#3B82F6").attr("stroke-width", 2)
+      g.append("circle").attr("cx", cx - d / 2).attr("cy", cy).attr("r", R).attr("fill", "var(--chart-1)").attr("opacity", 0.4).attr("stroke", "var(--chart-1)").attr("stroke-width", 2)
         .on("mouseenter", function (ev) { Tooltip.show(Tooltip.multi([[aName,  _fmtNumShort(aTot)], ["only " + aName,  _fmtNumShort(aOnly)]]), ev); })
         .on("mousemove", function (ev) { Tooltip.move(ev); })
         .on("mouseleave", function () { Tooltip.hide(); });
@@ -13383,7 +13396,7 @@ _growCanvas: function () {
         .on("mouseenter", function (ev) { Tooltip.show(Tooltip.multi([[bName,  _fmtNumShort(bTot)], ["only " + bName,  _fmtNumShort(bOnly)]]), ev); })
         .on("mousemove", function (ev) { Tooltip.move(ev); })
         .on("mouseleave", function () { Tooltip.hide(); });
-      g.append("circle").attr("cx", cx - d / 2).attr("cy", cy).attr("r", R).attr("fill", "none").attr("stroke", "#3B82F6").attr("stroke-width", 2);
+      g.append("circle").attr("cx", cx - d / 2).attr("cy", cy).attr("r", R).attr("fill", "none").attr("stroke", "var(--chart-1)").attr("stroke-width", 2);
       g.append("circle").attr("cx", cx + d / 2).attr("cy", cy).attr("r", R).attr("fill", "none").attr("stroke", "#F472B6").attr("stroke-width", 2);
       g.append("text").attr("x", cx - d / 2 - R * 0.7).attr("y", cy).attr("text-anchor", "middle").attr("fill", theme.text).attr("font-size", "12px").attr("font-weight", "700").text(_clipText(aName, R - 12, 12));
       g.append("text").attr("x", cx + d / 2 + R * 0.7).attr("y", cy).attr("text-anchor", "middle").attr("fill", theme.text).attr("font-size", "12px").attr("font-weight", "700").text(_clipText(bName, R - 12, 12));
@@ -13420,7 +13433,7 @@ _growCanvas: function () {
         if (si == null || ti == null) return;
         matrix[si][ti] += Math.abs(+f.value || 0) || 0;
       });
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316","#14B8A6","#6366F1","#D946EF","#2563EB"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       var chord = d3.chord().padAngle(0.03).sortSubgroups(d3.descending);
       var arcsGen = d3.arc().innerRadius(R * 0.72).outerRadius(R).cornerRadius(3);
       var ribbonGen = d3.ribbon().source(function (d) { return d.source; }).target(function (d) { return d.target; }).radius(R * 0.71);
@@ -13490,7 +13503,7 @@ _growCanvas: function () {
       container.innerHTML = "";
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
       var gAll = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316","#14B8A6","#6366F1"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       /* X axis */
       gAll.append("g").attr("transform", "translate(0," + h + ")").call(d3.axisBottom(x).ticks(6).tickFormat(d3.format("~s")))
         .call(function (g2) { g2.select(".domain").attr("stroke", theme.gridLine); g2.selectAll(".tick text").attr("fill", theme.textSecondary).attr("font-size", "10px"); });
@@ -13540,7 +13553,7 @@ _growCanvas: function () {
       container.innerHTML = "";
       var svg = d3.select(container).append("svg").attr("width", W).attr("height", H);
       var gAll = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-      var colors = ["#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6","#EC4899","#06B6D4","#F97316","#14B8A6","#6366F1","#D946EF","#2563EB"];
+      var colors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","var(--chart-6)","var(--chart-7)","var(--chart-8)"];
       gAll.append("g").attr("transform", "translate(0," + h + ")").call(d3.axisBottom(x).ticks(6).tickFormat(d3.format("~s")))
         .call(function (g2) { g2.select(".domain").attr("stroke", theme.gridLine); g2.selectAll(".tick text").attr("fill", theme.textSecondary).attr("font-size", "10px"); });
       groups.slice(0, nRows).forEach(function (grp, i) {
@@ -13634,7 +13647,7 @@ _growCanvas: function () {
         var neg = v < 0;
         var pct = Math.min(100, Math.round((Math.abs(v) / max) * 100));
         var st = c.style || {};
-        var colour = neg ? (st.negativeColor || c.negativeColor || "#F87171") : (st.positiveColor || c.positiveColor || "#3B82F6");
+        var colour = neg ? (st.negativeColor || c.negativeColor || "#F87171") : (st.positiveColor || c.positiveColor || "#2563eb");
         return '<div style="display:flex;align-items:center;gap:8px;margin:7px 0;font-size:11px;">' +
           '<div style="width:86px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--color-content-text-secondary);">' + _esc(String(lbl)) + '</div>' +
           '<div style="flex:1;position:relative;height:3px;background:var(--bd-chrome-border,rgba(15,23,42,0.10));border-radius:3px;">' +
@@ -13662,7 +13675,7 @@ _growCanvas: function () {
         var pcts = data.map(function (v) { cum += Math.abs(v) || 0; return total ? Math.round((cum / total) * 10000) / 100 : 0; });
         Charts.mixed(chartId, labels, [
           { type: "bar", label: c.label || "Count", data: data },
-          { type: "line", label: "Cumulative %", data: pcts, yAxisID: "y1", borderColor: ((so.colors && so.colors[1]) || "#F59E0B"), pointRadius: 2 }
+          { type: "line", label: "Cumulative %", data: pcts, yAxisID: "y1", borderColor: ((so.colors && so.colors[1]) || "#b45309"), pointRadius: 2 }
         ], so);
       }, 50);
     });
@@ -13837,7 +13850,7 @@ _growCanvas: function () {
         return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">' +
           medal +
           '<div style="flex:1;position:relative;height:14px;background:var(--bd-chrome-border,rgba(15,23,42,0.10));border-radius:5px;overflow:hidden;">' +
-            '<div style="position:absolute;top:0;left:0;height:100%;width:' + Math.min(100, Math.round((Math.abs(v) / max) * 100)) + '%;border-radius:5px;background:linear-gradient(90deg,' + (medals[(rank - 1) % 3] || "#3B82F6") + ',' + _adjustHex(medals[(rank - 1) % 3] || "#3B82F6", -20) + ');"></div>' +
+            '<div style="position:absolute;top:0;left:0;height:100%;width:' + Math.min(100, Math.round((Math.abs(v) / max) * 100)) + '%;border-radius:5px;background:linear-gradient(90deg,' + (medals[(rank - 1) % 3] || "#2563eb") + ',' + _adjustHex(medals[(rank - 1) % 3] || "#2563eb", -20) + ');"></div>' +
           '</div>' +
           '<div style="width:70px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;color:var(--color-content-text);font-weight:600;font-size:11px;">' + _esc(String(lbl)) + '</div>' +
           '<div style="width:56px;flex:none;color:var(--color-content-text);font-weight:700;font-size:11px;text-align:right;">' + v.toLocaleString() + '</div>' +
@@ -13854,7 +13867,7 @@ _growCanvas: function () {
       var max = 1; data.forEach(function (v) { if (Math.abs(v) > max) max = Math.abs(v); });
       var st4 = c.style || {};
       var posC = st4.positiveColor || c.positiveColor || "#10B981";
-      var negC = st4.negativeColor || c.negativeColor || "#EF4444";
+      var negC = st4.negativeColor || c.negativeColor || "#b91c1c";
       var rows = labels.map(function (lbl, i) {
         var v = Number(data[i]) || 0;
         var pos = v >= 0;
@@ -13926,13 +13939,13 @@ _growCanvas: function () {
       if (isNaN(actual)) actual = 0;
       if (isNaN(target) || target === 0) target = 100;
       var pct = Math.min(100, Math.max(0, Math.round((actual / target) * 100)));
-      var color = pct >= 100 ? "#10B981" : pct >= 50 ? "#0EA5E9" : "#3B82F6";
+      var color = pct >= 100 ? "#15803d" : pct >= 50 ? "#1d4ed8" : "#2563eb";
       var label = c.label || "";
       container.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:12px;">' +
-        '<div style="position:relative;width:64px;height:92px;border:2px solid ' + color + ';border-radius:12px 12px 16px 16px;overflow:hidden;background:var(--bd-workspace,#f1f5f9);">' +
+        '<div style="position:relative;width:64px;height:92px;border:2px solid ' + color + ';border-radius:12px 12px 16px 16px;overflow:hidden;background:var(--bd-workspace,var(--color-surface-2));">' +
           '<div style="position:absolute;left:0;right:0;bottom:0;height:' + pct + '%;background:linear-gradient(180deg,rgba(255,255,255,0.3),' + color + ' 40%);transition:height 0.5s ease;"></div>' +
           '<div style="position:absolute;left:0;right:0;top:' + Math.max(0, 100 - pct - 8) + '%;height:6px;background:rgba(255,255,255,0.55);border-radius:3px;"></div>' +
-          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#0f172a;font-weight:800;font-size:15px;">' + pct + '%</div>' +
+          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--color-text);font-weight:800;font-size:15px;">' + pct + '%</div>' +
         '</div>' +
         '<div style="text-align:left;">' +
           '<div style="color:var(--color-content-text);font-weight:700;font-size:22px;line-height:1.2;">' + _esc(fmtNum(actual)) + '</div>' +

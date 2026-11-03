@@ -100,12 +100,13 @@ def _patch_resolution(monkeypatch, tmp_path, bundled_v, runtime_v):
     from pathlib import Path
 
     monkeypatch.setattr(ob, "_runtime_bin_dir", lambda: tmp_path)
-    bundled = tmp_path / "bundled" / "opencode.exe"
+    exe = "opencode.exe" if os.name == "nt" else "opencode"
+    bundled = tmp_path / "bundled" / exe
     (tmp_path / "bundled").mkdir()
     bundled.write_bytes(b"x")
     versions = {str(bundled): bundled_v}
 
-    runtime = tmp_path / "opencode.exe"
+    runtime = tmp_path / exe
     if runtime_v is not None:
         runtime.write_bytes(b"x")
         versions[str(runtime)] = runtime_v

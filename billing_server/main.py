@@ -27,16 +27,26 @@ import logging
 import uuid
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 import billing_server.config as cfg
-from billing_server import emailer, famgateway_client, grants, keymint, razorpay_client, store
+from billing_server import emailer, famgateway_client, grants, keymint, razorpay_client, recovery, store
 
 logger = logging.getLogger("billing.main")
 
 app = FastAPI(title="DataAgent Billing", docs_url=None, redoc_url=None, openapi_url=None)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cfg.CORS_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=True,
+    max_age=600,
+)
 
 
 def _ready_or_503(**kwargs) -> None:
@@ -141,6 +151,13 @@ def _fam_create_order(req: CreateOrderRequest, plan: dict) -> dict:
     order_id = str(fg.get("order_id") or "").strip()
     if not order_id:
         raise HTTPException(status_code=502, detail="Payment provider unavailable")
+    if not (fg.get("checkout_url") or "").strip():
+        # Provider-response drift: without the hosted URL the storefront
+        # cannot start checkout (it surfaces "Checkout could not start").
+        # Log server-side so an operator can tell schema drift from a
+        # buyer-side error.
+        logger.warning("famgateway create_order: no checkout_url returned for %s",
+                       order_id)
     notes = {"plan": req.plan, "email": req.email.lower(), "provider": "famgateway"}
     store.record_order(
         order_id=order_id,
@@ -166,7 +183,13 @@ def _fam_create_order(req: CreateOrderRequest, plan: dict) -> dict:
 
 
 @app.post("/create-order")
-async def create_order(req: CreateOrderRequest) -> dict:
+async def create_order(req: CreateOrderRequest, request: Request) -> dict:
+    from billing_server import accounts as accounts_mod
+
+    # Per-IP cap: every call opens a provider-side order (a 5-minute UPI
+    # session + checkout page) — an unsupervised bucket is an easy way to
+    # burn a provider's patience. In-process, like the other buckets.
+    accounts_mod.check_rate_limit(request, "create-order")
     plan = cfg.PLANS[req.plan]
     if cfg.PAYMENTS_PROVIDER == "famgateway":
         return _fam_create_order(req, plan)
@@ -469,9 +492,6 @@ def _handle_subscription_event(event: dict, kind: str) -> JSONResponse:
 
 # ── 3b) FamGateway UPI webhooks (ADR-016: fail-closed HMAC rail) ──────
 
-_FAM_EVENTS = frozenset({"payment.success", "payment.verified"})
-_FAM_SUCCESS_STATUSES = frozenset({"success", "completed"})
-
 
 @app.post("/famgateway/webhook")
 async def famgateway_webhook(request: Request) -> JSONResponse:
@@ -483,6 +503,10 @@ async def famgateway_webhook(request: Request) -> JSONResponse:
       but ignored, so FamGateway never retries forever.
     - Idempotency: (order_id, utr) marker + the UTR owner check + a DB
       partial unique index as the race backstop.
+
+    The decision path lives in billing_server.recovery.process_fam_event —
+    the identical guards also settle missed webhooks via the /admin/reconcile
+    sweep, so webhook and sweep can never diverge.
     """
     raw = await request.body()
     signature = request.headers.get("X-FamGateway-Signature", "")
@@ -493,123 +517,8 @@ async def famgateway_webhook(request: Request) -> JSONResponse:
         event = json.loads(raw.decode("utf-8"))
     except ValueError:
         return JSONResponse({"ok": True, "ignored": "malformed body"}, status_code=200)
+    return JSONResponse(recovery.process_fam_event(event), status_code=200)
 
-    # The event decision comes from the signed BODY only. The X-FamGateway-
-    # Event header is unsigned metadata and must never decide a grant.
-    event_kind = str(event.get("event") or "").lower()
-    status = str(event.get("status") or "").lower()
-    if event_kind not in _FAM_EVENTS:
-        return JSONResponse({"ok": True, "ignored": event_kind or "unknown"},
-                            status_code=200)
-    if status not in _FAM_SUCCESS_STATUSES:
-        return JSONResponse({"ok": True, "ignored": f"status:{status or 'missing'}"},
-                            status_code=200)
-
-    order_id = str(event.get("order_id") or "").strip()
-    if not order_id:
-        return JSONResponse({"ok": True, "ignored": "no order id"}, status_code=200)
-
-    utr = str(event.get("utr") or "").strip()
-    transaction_id = str(event.get("transaction_id") or "").strip()
-    if not utr and not transaction_id:
-        # A success event with no bank reference is unverifiable: nobody can
-        # prove which payment it belongs to, so it must never grant. Checked
-        # BEFORE the idempotency marker so a later UTR-bearing redelivery
-        # still gets processed.
-        return JSONResponse({"ok": True, "ignored": "no payment reference"},
-                            status_code=200)
-    payment_id = utr or transaction_id
-    ref = f"{order_id}:{payment_id}"
-    if store.seen_event("fam.payment.success", ref):
-        return JSONResponse({"ok": True, "duplicate": True})
-
-    def _ignore_and_rollback(reason: str) -> JSONResponse:
-        # Roll the idempotency marker back so a later corrected event is not
-        # swallowed as a duplicate for something we refused.
-        store.record_event_failure("fam.payment.success", ref, reason)
-        return JSONResponse({"ok": True, "ignored": reason}, status_code=200)
-
-    try:
-        order = store.get_order(order_id)
-        if not order or str(order.get("provider") or "") != "famgateway":
-            return _ignore_and_rollback("unmatched order")
-
-        # Underpaid: FamGateway amounts arrive in RUPEES; our rows store paise.
-        try:
-            paid_paise = round(float(event.get("amount") or 0) * 100)
-        except (TypeError, ValueError, OverflowError):
-            # 1e400 amounts parse to inf and explode round() — never let a
-            # weird body 500 the endpoint; it just compares to nothing.
-            paid_paise = 0
-        try:
-            recorded = int(order.get("amount") or 0)
-        except (TypeError, ValueError):
-            recorded = 0
-        if recorded and paid_paise and paid_paise < recorded:
-            logger.warning("underpaid famgateway order ignored: %s < %s (%s)",
-                           paid_paise, recorded, order_id)
-            return _ignore_and_rollback("underpaid")
-
-        # UTR replay: another order already paid this exact bank reference.
-        # (Terminal: the marker stays, so the replay keeps being swallowed.)
-        owner = store.resolve_utr_owner(payment_id)
-        if owner and owner != order_id:
-            logger.warning("UTR replay blocked: %s already paid %s", payment_id, owner)
-            return JSONResponse({"ok": True, "duplicate": True}, status_code=200)
-
-        # Defense-in-depth confirm (never the trust boundary — the HMAC is):
-        # a mismatching verdict aborts; an unreachable verify endpoint falls
-        # back to the signed body so an outage cannot swallow real payments.
-        try:
-            confirmed = famgateway_client.verify_order(order_id)
-        except famgateway_client.FamGatewayError as exc:
-            logger.warning("famgateway verify endpoint unreachable for %s: %s",
-                           order_id, exc)
-            confirmed = None
-        if confirmed is not None:
-            confirmed_status = str(confirmed.get("status") or "").lower()
-            confirmed_utr = str(confirmed.get("utr") or "").strip()
-            # The verdict must be for THIS order, not a neighbouring one. A
-            # verdict with no order_id field at all passes — legacy FamGateway
-            # schemas omit it and verify_order() was already keyed to order_id.
-            confirmed_order = str(confirmed.get("order_id") or "").strip()
-            if confirmed_order and confirmed_order != order_id:
-                logger.warning("famgateway verify returned order %s for %s",
-                               confirmed_order, order_id)
-                return _ignore_and_rollback("verify mismatch")
-            if confirmed_status and confirmed_status not in _FAM_SUCCESS_STATUSES:
-                logger.warning("famgateway verify contradicts webhook for %s "
-                               "(%s != payment.success)", order_id, confirmed_status)
-                return _ignore_and_rollback("verify mismatch")
-            # The verdict is authoritative on AMOUNT too: it carries rupees,
-            # our rows store paise. A verdict below the order's price is a
-            # partial payment, whatever the signed event claimed.
-            confirmed_amount = confirmed.get("amount")
-            if confirmed_amount is not None:
-                try:
-                    verdict_paise = round(float(confirmed_amount) * 100)
-                except (TypeError, ValueError, OverflowError):
-                    verdict_paise = 0
-                recorded = int(order.get("amount") or 0)
-                if verdict_paise and verdict_paise < recorded:
-                    logger.warning("famgateway verify underpaid %s: %s < %s",
-                                   order_id, verdict_paise, recorded)
-                    return _ignore_and_rollback("underpaid")
-            if confirmed_utr and confirmed_utr != utr and utr:
-                return _ignore_and_rollback("verify mismatch")
-            if confirmed_utr and not utr:
-                utr = confirmed_utr
-                payment_id = utr
-
-        if order["status"] != "paid":
-            store.mark_paid(order_id, payment_id,
-                            grant_days=None)  # pre-recorded at create-order
-        return JSONResponse({"ok": True, "plan": order["plan"]})
-    except Exception as exc:  # noqa: BLE001
-        # Roll the idempotency marker back so FamGateway's retry reprocesses.
-        store.record_event_failure("fam.payment.success", ref, str(exc))
-        logger.exception("famgateway webhook processing failed for %s", ref)
-        raise HTTPException(status_code=500, detail="Processing failed") from exc
 
 
 def order_amount(event: dict) -> int:
@@ -805,6 +714,119 @@ async def entitlements(email: str, exp: str, sig: str) -> EntitlementsOut:
 # ── 5b) central accounts (ADR-002): email/password + session tokens ─
 
 
+SESSION_COOKIE = getattr(cfg, "SESSION_COOKIE_NAME", "da_session")
+
+
+def _cookie_kwargs() -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "path": "/",
+        "httponly": True,
+        "secure": bool(getattr(cfg, "SESSION_COOKIE_SECURE", True)),
+        "samesite": "lax",
+    }
+    domain = str(getattr(cfg, "SESSION_COOKIE_DOMAIN", "") or "").strip()
+    if domain:
+        kwargs["domain"] = domain
+    return kwargs
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    from billing_server import accounts as accounts_mod
+
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=accounts_mod.SESSION_TOKEN_DAYS * 24 * 60 * 60,
+        **_cookie_kwargs(),
+    )
+
+
+def _clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(SESSION_COOKIE, **_cookie_kwargs())
+
+
+def _start_website_session(response: Response, row: dict) -> None:
+    from billing_server import accounts as accounts_mod
+
+    token = accounts_mod.new_session_token()
+    store.create_account_session(
+        row["user_id"],
+        row["email"],
+        accounts_mod.hash_session_token(token),
+        accounts_mod.session_expires_at(),
+    )
+    _set_session_cookie(response, token)
+
+
+def _send_account_verification(row: dict) -> bool:
+    """Issue a fresh single-use link and send it. Never returns the token."""
+    from billing_server import accounts as accounts_mod
+
+    token = accounts_mod.new_email_verification_token()
+    store.create_email_verification(
+        row["user_id"],
+        row["email"],
+        accounts_mod.hash_email_verification_token(token),
+        accounts_mod.email_verification_expires_at(),
+    )
+    return emailer.send_verification_email(
+        row["email"], accounts_mod.email_verification_link(token)
+    )
+
+
+def _account_from_request(request: Request) -> dict:
+    """Bearer token first (desktop app), then the website cookie."""
+    from billing_server import accounts as accounts_mod
+
+    auth = request.headers.get("Authorization", "")
+    if auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        try:
+            payload = accounts_mod.verify_session_token(token)
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        row = store.get_account_by_id(str(payload.get("user_id", "")))
+        if not row or row.get("status") != "active":
+            raise HTTPException(status_code=401, detail="account not found or inactive")
+        return row
+
+    cookie = request.cookies.get(SESSION_COOKIE, "")
+    if cookie:
+        session = store.get_account_session(accounts_mod.hash_session_token(cookie))
+        if session:
+            row = store.get_account_by_id(str(session.get("user_id", "")))
+            if row and row.get("status") == "active":
+                return row
+        raise HTTPException(status_code=401, detail="session expired or invalid")
+
+    raise HTTPException(status_code=401, detail="missing session")
+
+
+def _safe_purchase(order: dict) -> dict:
+    """Only fields the buyer already knows; never keys or payment IDs."""
+    return {
+        "order_id": order.get("order_id"),
+        "plan": order.get("plan"),
+        "amount": order.get("amount"),
+        "currency": order.get("currency"),
+        "status": order.get("status"),
+        "provider": order.get("provider"),
+        "created_at": order.get("created_at"),
+        "paid_at": order.get("updated_at"),
+    }
+
+
+def _safe_subscription(sub: Optional[dict]) -> Optional[dict]:
+    if not sub:
+        return None
+    return {
+        "plan": sub.get("plan"),
+        "status": sub.get("status"),
+        "current_end": sub.get("current_end"),
+        "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
+    }
+
+
 class AccountRegisterRequest(BaseModel):
     email: str = Field(pattern=_EMAIL_RE, max_length=254)
     password: str = Field(min_length=1, max_length=256)
@@ -815,9 +837,19 @@ class AccountLoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=4096)
+
+
 @app.post("/v1/accounts/register")
-async def accounts_register(req: AccountRegisterRequest, request: Request) -> dict:
-    """Create the central account (email + bcrypt hash only)."""
+async def accounts_register(req: AccountRegisterRequest, request: Request,
+                            response: Response) -> dict:
+    """Create an unverified account, or claim an unverified email.
+
+    A buyer whose address was registered first by someone else can take the
+    still-unverified account over; until an email is confirmed, the summary
+    never reveals a plan or purchase history. A verified email is final.
+    """
     from billing_server import accounts as accounts_mod
 
     accounts_mod.check_rate_limit(request, "register")
@@ -826,16 +858,41 @@ async def accounts_register(req: AccountRegisterRequest, request: Request) -> di
         accounts_mod.validate_password(req.password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    row = store.create_account(email, accounts_mod.hash_password(req.password))
-    if row is None:
-        raise HTTPException(status_code=409, detail="email already registered")
+
+    password_hash = accounts_mod.hash_password(req.password)
+    row = store.get_account_by_email(email)
+    if row is not None:
+        if row.get("email_verified_at"):
+            raise HTTPException(status_code=409, detail="email already registered")
+        store.update_account_password(row["user_id"], password_hash)
+        store.delete_account_sessions_for_user(row["user_id"])
+        row = store.get_account_by_email(email) or row
+    else:
+        row = store.create_account(email, password_hash)
+        if row is None:
+            row = store.get_account_by_email(email)
+            if row is None or row.get("email_verified_at"):
+                raise HTTPException(status_code=409, detail="email already registered")
+            store.update_account_password(row["user_id"], password_hash)
+            store.delete_account_sessions_for_user(row["user_id"])
+            row = store.get_account_by_email(email) or row
+
+    verification_sent = _send_account_verification(row)
+    _start_website_session(response, row)
     logger.info("account registered: %s", accounts_mod.mask_email(email))
-    return {"ok": True, "user_id": row["user_id"], "email": row["email"]}
+    return {
+        "ok": True,
+        "user_id": row["user_id"],
+        "email": row["email"],
+        "email_verified": False,
+        "verification_sent": bool(verification_sent),
+    }
 
 
 @app.post("/v1/accounts/login")
-async def accounts_login(req: AccountLoginRequest, request: Request) -> dict:
-    """Authenticate and return an Ed25519-signed session token."""
+async def accounts_login(req: AccountLoginRequest, request: Request,
+                         response: Response) -> dict:
+    """Authenticate; set the website cookie and (when possible) return a token."""
     from billing_server import accounts as accounts_mod
 
     accounts_mod.check_rate_limit(request, "login")
@@ -852,30 +909,137 @@ async def accounts_login(req: AccountLoginRequest, request: Request) -> dict:
     try:
         token = accounts_mod.mint_session_token(email, row["user_id"])
     except FileNotFoundError as exc:
-        logger.error("session token mint failed: %s", exc)
-        raise HTTPException(status_code=503, detail="signing key unavailable") from exc
+        if not cfg.KEYLESS:
+            logger.error("session token mint failed: %s", exc)
+            raise HTTPException(status_code=503, detail="signing key unavailable") from exc
+        _start_website_session(response, row)
+        logger.info("account login without a session token (keyless): %s",
+                    accounts_mod.mask_email(email))
+        return {"ok": True, "email": email, "user_id": row["user_id"],
+                "email_verified": bool(row.get("email_verified_at"))}
+    _start_website_session(response, row)
     logger.info("account login: %s", accounts_mod.mask_email(email))
-    return {"ok": True, "token": token, "email": email, "user_id": row["user_id"]}
+    return {"ok": True, "token": token, "email": email, "user_id": row["user_id"],
+            "email_verified": bool(row.get("email_verified_at"))}
 
 
 @app.get("/v1/accounts/me")
 async def accounts_me(request: Request) -> dict:
-    """Profile for a Bearer session token (used by the app proxy to verify)."""
+    """Profile for the app's Bearer token or the website cookie."""
+    row = _account_from_request(request)
+    return {"ok": True, "user_id": row["user_id"], "email": row["email"],
+            "created_at": row["created_at"],
+            "email_verified": bool(row.get("email_verified_at"))}
+
+
+@app.get("/v1/accounts/summary")
+async def accounts_summary(request: Request) -> dict:
+    """Plan, renewal state, and safe purchase history for one account.
+
+    Unverified accounts get no plan or purchase data: proving control of the
+    email is the only thing that separates a buyer from someone who merely
+    typed their address into the registration form.
+    """
+    row = _account_from_request(request)
+    if not row.get("email_verified_at"):
+        return {
+            "ok": True,
+            "user": {
+                "user_id": row["user_id"],
+                "email": row["email"],
+                "created_at": row["created_at"],
+            },
+            "email_verified": False,
+            "plan": None,
+            "status": "unverified",
+            "expires_at": None,
+            "source": "none",
+            "auto_renew": None,
+            "cancel_at_period_end": None,
+            "purchases": [],
+            "subscription": None,
+        }
+    email = str(row["email"]).lower()
+    orders = store.paid_orders_for_email(email)
+    subscriptions = store.subscriptions_for_email(email)
+    grant = grants.current_grant(orders, subscriptions)
+    latest_subscription = subscriptions[0] if subscriptions else None
+
+    if grant:
+        plan = grant.plan
+        status = "active"
+        expires_at = grant.expires_at
+        source = "billing"
+        auto_renew = bool(grant.renews) if grant.source == "subscription" else None
+        cancel_at_period_end = (
+            bool(grant.cancel_at_period_end) if grant.source == "subscription" else None
+        )
+    else:
+        plan = "free"
+        status = "free"
+        expires_at = None
+        source = "none"
+        auto_renew = None
+        cancel_at_period_end = None
+
+    return {
+        "ok": True,
+        "user": {
+            "user_id": row["user_id"],
+            "email": row["email"],
+            "created_at": row["created_at"],
+        },
+        "email_verified": True,
+        "plan": plan,
+        "status": status,
+        "expires_at": expires_at,
+        "source": source,
+        "auto_renew": auto_renew,
+        "cancel_at_period_end": cancel_at_period_end,
+        "purchases": [_safe_purchase(order) for order in orders[:100]],
+        "subscription": _safe_subscription(latest_subscription),
+    }
+
+
+@app.post("/v1/accounts/verify-email")
+async def accounts_verify_email(req: VerifyEmailRequest, request: Request) -> dict:
+    """Consume a single-use link and unlock the account's plan/history."""
     from billing_server import accounts as accounts_mod
 
-    auth = request.headers.get("Authorization", "")
-    if not auth.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="missing bearer token")
-    token = auth.split(" ", 1)[1].strip()
-    try:
-        payload = accounts_mod.verify_session_token(token)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    row = store.get_account_by_id(str(payload.get("user_id", "")))
-    if not row or row.get("status") != "active":
-        raise HTTPException(status_code=401, detail="account not found or inactive")
-    return {"ok": True, "user_id": row["user_id"], "email": row["email"],
-            "created_at": row["created_at"]}
+    accounts_mod.check_rate_limit(request, "verify-email")
+    row = store.consume_email_verification(
+        accounts_mod.hash_email_verification_token(req.token)
+    )
+    if row is None:
+        raise HTTPException(status_code=400, detail="invalid or expired verification link")
+    logger.info("account email verified: %s", accounts_mod.mask_email(row["email"]))
+    return {"ok": True, "email_verified": True}
+
+
+@app.post("/v1/accounts/resend-verification")
+async def accounts_resend_verification(request: Request) -> dict:
+    """Issue a fresh link for the signed-in account. Old links stop working."""
+    from billing_server import accounts as accounts_mod
+
+    row = _account_from_request(request)
+    if row.get("email_verified_at"):
+        return {"ok": True, "email_verified": True, "already_verified": True}
+    accounts_mod.check_rate_limit(request, "resend-verification")
+    sent = _send_account_verification(row)
+    logger.info("verification email resent: %s", accounts_mod.mask_email(row["email"]))
+    return {"ok": True, "email_verified": False, "verification_sent": bool(sent)}
+
+
+@app.post("/v1/accounts/logout")
+async def accounts_logout(request: Request, response: Response) -> dict:
+    """Revoke the website session and always clear the cookie."""
+    from billing_server import accounts as accounts_mod
+
+    cookie = request.cookies.get(SESSION_COOKIE, "")
+    if cookie:
+        store.delete_account_session(accounts_mod.hash_session_token(cookie))
+    _clear_session_cookie(response)
+    return {"ok": True}
 
 
 @app.post("/v1/subscriptions/cancel")
@@ -1148,11 +1312,18 @@ def _mask_key(key: Optional[str]) -> str:
     return f"{key[:14]}…{key[-6:]}"
 
 
-def _require_admin(token: str) -> None:
-    """Fail-closed: no token configured → disabled; wrong token → 401."""
+def _require_admin(token: str, request: Optional[Request] = None) -> None:
+    """Fail-closed: no token configured → disabled; wrong token → 401.
+
+    Prefer the ``X-Admin-Token`` header so the token never lands in access
+    logs; the query parameter remains for backward compatibility.
+    """
     if not cfg.ADMIN_TOKEN:
         raise HTTPException(status_code=503, detail="Admin view is not configured")
-    if not token or not hmac.compare_digest(token, cfg.ADMIN_TOKEN):
+    supplied = token or (
+        request.headers.get("X-Admin-Token", "") if request is not None else ""
+    )
+    if not supplied or not hmac.compare_digest(supplied, cfg.ADMIN_TOKEN):
         raise HTTPException(status_code=401, detail="Invalid admin token")
 
 
@@ -1187,7 +1358,10 @@ def _registry_row(order: dict) -> str:
     return (
         "<tr>"
         f'<td><code>{html.escape(str(order.get("order_id") or ""))}</code>'
-        f'<br><span class="muted">{html.escape(str(order.get("payment_id") or ""))}</span></td>'
+        f'<br><span class="muted">{html.escape(str(order.get("payment_id") or ""))}</span>'
+        # Which rail issued it (ADR-016): reconciliations and manual refunds
+        # target the right provider.
+        f'<br><span class="muted">{html.escape(str(order.get("provider") or "razorpay"))}</span></td>'
         f'<td>{html.escape(str(order.get("email") or ""))}</td>'
         f'<td>{html.escape(str(order.get("plan") or ""))}</td>'
         f'<td>{html.escape(amount)}</td>'
@@ -1201,13 +1375,14 @@ def _registry_row(order: dict) -> str:
 
 
 @app.get("/admin/registry", response_class=HTMLResponse)
-async def admin_registry(token: str = "", limit: int = 200) -> HTMLResponse:
+async def admin_registry(request: Request, token: str = "",
+                         limit: int = 200) -> HTMLResponse:
     """Support view: orders, one-time-use key owner, refund status.
 
     Full keys are never rendered — masked key + key hash only; the key can be
     re-shown to the buyer via /success?order_id=.
     """
-    _require_admin(token)
+    _require_admin(token, request)
     rows = store.list_registry(limit)
     counts = store.registry_counts()
     rows_html = "".join(_registry_row(r) for r in rows) or (
@@ -1245,6 +1420,76 @@ async def admin_registry(token: str = "", limit: int = 200) -> HTMLResponse:
     return resp
 
 
+# ── 7b) fam-rail recovery + lifecycle admin (ADR-016 follow-ups) ───────
+
+
+@app.post("/admin/reconcile")
+async def admin_reconcile(request: Request, token: str = "", limit: int = 50,
+                          older_than_minutes: int = 5) -> dict:
+    """Grant fam orders the webhook never reached (verify-order sweep).
+
+    FamGateway documents NO webhook retry guarantees — a lost delivery
+    leaves a real payment ungranted forever. This sweep re-questions the
+    provider's authoritative verify-order endpoint for every fam order
+    still 'created' and runs the verdict through the SAME guards as
+    /famgateway/webhook (see billing_server.recovery). Wire to a daily
+    cron (curl POST) or run manually after an outage.
+    """
+    _require_admin(token, request)
+    return recovery.run_reconcile(limit=limit,
+                                  older_than_minutes=older_than_minutes)
+
+
+@app.post("/admin/expiry-nudge")
+async def admin_expiry_nudge(request: Request, token: str = "",
+                             window_days: int = 3) -> dict:
+    """Email one reminder per live Pro window ending within window_days.
+
+    FamGateway cannot auto-renew, so renewal is pay-again (ADR-016): the
+    nudge replaces the subscription-renewal email cycle. Markers make it
+    idempotent per (email, window end date) — daily cron friendly.
+    """
+    _require_admin(token, request)
+    return recovery.run_expiry_nudges(window_days=window_days)
+
+
+@app.post("/admin/orders/refund")
+async def admin_refund_order(request: Request, token: str = "",
+                             order_id: str = "") -> dict:
+    """Revoke one order by hand (FamGateway refunds have no webhook).
+
+    A refunded order can never be granted again — entitlement folding and
+    key redemption both skip status='refunded'. Idempotent.
+    """
+    _require_admin(token, request)
+    order = store.get_order((order_id or "").strip())
+    if not order:
+        raise HTTPException(status_code=404, detail="Unknown order")
+    if order["status"] == "refunded":
+        return {"ok": True, "already_refunded": True, "order_id": order_id}
+    updated = store.refund_order_by_id(order_id)
+    logger.info("admin refund: order %s (%s)", order_id,
+                (updated or {}).get("payment_id") or "?")
+    return {"ok": True, "revoked": True, "order_id": order_id}
+
+
+@app.get("/admin/webhook-failures")
+async def admin_webhook_failures(request: Request, token: str = "",
+                                 window_hours: int = 24,
+                                 limit: int = 50) -> dict:
+    """Webhook rollback visibility: underpaid / mismatch / processing rows.
+
+    Every ignored grant is logged only — this is the glance-at endpoint for
+    'why did this buyer not get their plan'.
+    """
+    _require_admin(token, request)
+    return {
+        "ok": True,
+        "kinds": store.event_failure_counts(window_minutes=max(1, window_hours) * 60),
+        "entries": store.list_recent_event_failures(limit=limit),
+    }
+
+
 # ── 8) abuse signals + enforcement (P5) ──────────────────────────
 
 
@@ -1265,9 +1510,9 @@ def _abuse_thresholds() -> tuple[int, int, int]:
 
 
 @app.get("/admin/abuse")
-async def admin_abuse(token: str = "") -> dict:
+async def admin_abuse(request: Request, token: str = "") -> dict:
     """Sharing/abuse signals + active blocks (support view, JSON)."""
-    _require_admin(token)
+    _require_admin(token, request)
     hours, min_users, min_ips = _abuse_thresholds()
     return {
         "ok": True,
@@ -1278,7 +1523,7 @@ async def admin_abuse(token: str = "") -> dict:
 
 
 @app.post("/admin/abuse/enforce")
-async def admin_abuse_enforce(token: str = "") -> dict:
+async def admin_abuse_enforce(request: Request, token: str = "") -> dict:
     """Block abusive vectors found by the signals scan.
 
     Wire to a scheduler (cron/Render cron) or run manually after reviewing
@@ -1286,7 +1531,7 @@ async def admin_abuse_enforce(token: str = "") -> dict:
     plan resolution is untouched (fail-safe: a bad block never bricks a
     paying install offline, it just forces re-review).
     """
-    _require_admin(token)
+    _require_admin(token, request)
     hours, min_users, min_ips = _abuse_thresholds()
     signals = store.abuse_signals(hours, min_users, min_ips)
     blocked: list = []
@@ -1300,10 +1545,10 @@ async def admin_abuse_enforce(token: str = "") -> dict:
 
 
 @app.post("/admin/abuse/unblock")
-async def admin_abuse_unblock(token: str = "", kind: str = "email",
-                              value: str = "") -> dict:
+async def admin_abuse_unblock(request: Request, token: str = "",
+                              kind: str = "email", value: str = "") -> dict:
     """Remove a block after review (support tool)."""
-    _require_admin(token)
+    _require_admin(token, request)
     try:
         removed = store.unblock_grant(kind, value)
     except ValueError as exc:
@@ -1318,7 +1563,8 @@ async def healthz() -> dict:
              "razorpay": bool(cfg.RAZORPAY_KEY_ID and cfg.RAZORPAY_KEY_SECRET),
              "razorpay_webhook": bool(cfg.RAZORPAY_WEBHOOK_SECRET),
              "famgateway": fam_ready,
-             "license_key": True, "sync": bool(cfg.ENTITLEMENTS_SYNC_SECRET),
+             "license_key": True, "keyless": bool(cfg.KEYLESS),
+             "sync": bool(cfg.ENTITLEMENTS_SYNC_SECRET),
              "email": bool(cfg.RESEND_API_KEY),
              "subscription_plan": bool(cfg.RAZORPAY_PLAN_ID_PRO)}
     try:
@@ -1329,5 +1575,5 @@ async def healthz() -> dict:
         payments_ok = ready["famgateway"]
     else:
         payments_ok = ready["razorpay"] and ready["razorpay_webhook"]
-    return {"ok": all([payments_ok, ready["license_key"]]),
+    return {"ok": all([payments_ok, ready["license_key"] or ready["keyless"]]),
             "components": ready}

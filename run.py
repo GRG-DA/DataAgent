@@ -7,6 +7,8 @@ Run the LLM Data Analytics Agent
 import sys
 import os
 import argparse
+import json
+import re
 import subprocess
 import logging
 from pathlib import Path
@@ -14,6 +16,8 @@ from pathlib import Path
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+import numpy.core.multiarray
 
 # Load .env into os.environ so JWT_SECRET / APP_* / LLM_* work for bare-metal
 # runs too (docker compose already does this itself). No-op when .env is absent.
@@ -277,6 +281,153 @@ def load_yaml_config(path: str) -> dict:
     return {}
 
 
+_BILLING_FILL_KEYS = ("external_url", "sync_url", "sync_secret")
+_BILLING_BACKFILL_MARKER = ".billing_sync_defaults_applied"
+
+
+def _bundled_billing_defaults(src_cfg: Path) -> dict:
+    src = Path(src_cfg) / "settings.yaml"
+    if not src.exists():
+        return {}
+    try:
+        import yaml
+
+        data = yaml.safe_load(src.read_text(encoding="utf-8")) or {}
+    except Exception:  # noqa: BLE001 - a bad bundle must not block launch
+        return {}
+    billing = data.get("billing") if isinstance(data, dict) else None
+    if not isinstance(billing, dict):
+        return {}
+    values = {}
+    for key in _BILLING_FILL_KEYS:
+        value = billing.get(key)
+        if isinstance(value, str) and value.strip():
+            values[key] = value.strip()
+    return values
+
+
+def _billing_block_bounds(lines: list[str]) -> tuple[int, int, str] | None:
+    for i, line in enumerate(lines):
+        if re.match(r"^billing\s*:\s*(?:#.*)?(?:\r?\n)?$", line):
+            base_indent = re.match(r"^(\s*)", line).group(1)
+            end = len(lines)
+            for j in range(i + 1, len(lines)):
+                stripped = lines[j].strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                indent = re.match(r"^(\s*)", lines[j]).group(1)
+                if len(indent) <= len(base_indent):
+                    end = j
+                    break
+            return i, end, base_indent
+    return None
+
+
+def _patch_billing_block(text: str, values: dict) -> str:
+    if text and not text.endswith(("\n", "\r")):
+        text += "\n"
+    lines = text.splitlines(keepends=True)
+    bounds = _billing_block_bounds(lines)
+    if bounds is None:
+        if text and not text.endswith(("\n", "\r")):
+            text += "\n"
+        block = "billing:\n" + "".join(
+            f"  {key}: {json.dumps(values[key], ensure_ascii=False)}\n"
+            for key in _BILLING_FILL_KEYS if key in values)
+        return text + ("\n" if text and not text.endswith("\n\n") else "") + block
+
+    start, end, base_indent = bounds
+    child_indent = base_indent + "  "
+    for j in range(start + 1, end):
+        stripped = lines[j].strip()
+        if stripped and not stripped.startswith("#"):
+            child_indent = re.match(r"^(\s*)", lines[j]).group(1)
+            break
+
+    found = set()
+    for j in range(start + 1, end):
+        line = lines[j]
+        bare = line.rstrip("\r\n")
+        newline = line[len(bare):]
+        m = re.match(r"^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:\s*)(.*)$", bare)
+        if not m:
+            continue
+        key = m.group(2)
+        if key not in values:
+            continue
+        found.add(key)
+        rest = m.group(4)
+        comment = ""
+        if "#" in rest:
+            hash_at = rest.index("#")
+            comment = rest[hash_at:]
+            rest = rest[:hash_at]
+        if rest.strip() not in ("", '""', "''", "null", "~"):
+            continue
+        patched = m.group(1) + key + m.group(3) + json.dumps(
+            values[key], ensure_ascii=False)
+        if comment:
+            patched += " " + comment.lstrip()
+        lines[j] = patched + newline
+
+    missing = [key for key in _BILLING_FILL_KEYS
+               if key in values and key not in found]
+    if missing:
+        insert_at = end
+        for j in range(end - 1, start, -1):
+            if lines[j].strip():
+                insert_at = j + 1
+                break
+        new_lines = [
+            f"{child_indent}{key}: {json.dumps(values[key], ensure_ascii=False)}\n"
+            for key in missing
+        ]
+        lines[insert_at:insert_at] = new_lines
+    return "".join(lines)
+
+
+def _backfill_billing_sync(src_cfg: Path, dst_cfg: Path) -> None:
+    """Fill empty billing sync fields once, preserving comments and edits."""
+    marker = Path(dst_cfg) / _BILLING_BACKFILL_MARKER
+    if marker.exists():
+        return
+    dst = Path(dst_cfg) / "settings.yaml"
+    if not dst.exists():
+        return
+    values = _bundled_billing_defaults(Path(src_cfg))
+    if not values:
+        return
+    try:
+        import yaml
+
+        raw = dst.read_text(encoding="utf-8")
+        parsed = yaml.safe_load(raw) or {}
+    except Exception:  # noqa: BLE001 - never break launch on user config
+        return
+    if not isinstance(parsed, dict):
+        return
+    billing = parsed.get("billing")
+    if "billing" in parsed and not isinstance(billing, dict):
+        return
+    lines = raw.splitlines(keepends=True)
+    if _billing_block_bounds(lines) is None and "billing" in parsed:
+        # Flow-style or quoted top-level ``billing:`` is valid YAML but not
+        # safe to patch line-by-line; appending a second key would silently
+        # override (or corrupt) the user's own settings.
+        logging.getLogger(__name__).warning(
+            "Skipping billing sync backfill: billing key is not in block style"
+        )
+        return
+
+    patched = _patch_billing_block(raw, values)
+    if patched != raw:
+        tmp = dst.with_name(dst.name + ".tmp")
+        tmp.write_text(patched, encoding="utf-8", newline="")
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, dst)
+    marker.write_text("applied\n", encoding="utf-8")
+
+
 def _frozen_bootstrap() -> None:
     """Prepare a writable runtime dir for frozen (PyInstaller) builds.
 
@@ -360,6 +511,7 @@ def _frozen_bootstrap() -> None:
             dst = dst_cfg / name
             if src.exists() and not dst.exists():
                 shutil.copy2(src, dst)
+        _backfill_billing_sync(src_cfg, dst_cfg)
 
 
 def main():

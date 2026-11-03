@@ -42,6 +42,10 @@ def test_conditional_count_escapes_apostrophe_end_to_end():
         con.execute("CREATE SCHEMA analytics")
         con.execute("CREATE TABLE analytics.t (priority VARCHAR, amount DOUBLE)")
         con.execute("INSERT INTO analytics.t VALUES ('O''Brien', 1.0), ('High', 2.0)")
+        # The planner references tables UNQUALIFIED; the app resolves them
+        # through the caller's tenant search path (ADR-009 D1), so the
+        # connection under test needs the same path.
+        con.execute("SET search_path = 'analytics'")
         for question in (
             "how many orders are o'brien priority?",
             "how many tickets are high priority?",

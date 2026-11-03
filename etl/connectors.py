@@ -82,6 +82,10 @@ class DatabaseConnector:
             logger.error("Failed to list tables: %s", e)
             return []
 
+    def _quote_identifier(self, name: str) -> str:
+        """Quote a table/schema name with the engine's own dialect rules."""
+        return self._engine.dialect.identifier_preparer.quote(name)
+
     def read_table(
         self,
         table_name: str,
@@ -92,10 +96,20 @@ class DatabaseConnector:
         if not self._engine:
             return pd.DataFrame()
         try:
-            if limit:
-                query = f"SELECT * FROM {table_name} LIMIT {limit}"
-                return pd.read_sql(query, self._engine)
-            return pd.read_sql_table(table_name, self._engine, schema=schema)
+            # pandas 3 no longer accepts an Engine for read_sql_table; a
+            # Connection keeps the same transactional/lifecycle behaviour.
+            with self._engine.connect() as conn:
+                if limit:
+                    qualified = self._quote_identifier(table_name)
+                    if schema:
+                        qualified = (
+                            f"{self._quote_identifier(schema)}.{qualified}"
+                        )
+                    query = sa.text(
+                        f"SELECT * FROM {qualified} LIMIT :limit"
+                    )
+                    return pd.read_sql(query, conn, params={"limit": int(limit)})
+                return pd.read_sql_table(table_name, conn, schema=schema)
         except Exception as e:
             logger.error("Failed to read table %s: %s", table_name, e)
             return pd.DataFrame()

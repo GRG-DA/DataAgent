@@ -1,6 +1,23 @@
+/* ============================================================
+   KPI cards — semantic status colours on the shared token ramp
+   File: web/css/kpiStyles.css
+   ────────────────────────────────────────────────────────────
+   "good" / "bad" / "muted" now use the semantic status tokens
+   (--color-success / --color-danger / --color-text-muted) so a
+   KPI reads as status instead of decoration, and the label text
+   uses the neutral ramp (--color-text-secondary in light,
+   --color-text-muted in dark) at >= 4.5:1 in both themes.
+   ============================================================ */
+
 .kpi-simple, .kpi-trend, .kpi-percentage, .kpi-sparkline, .kpi-mini-line, .kpi-mini-bar, .kpi-progress, .kpi-radial, .kpi-comparison, .kpi-target-actual, .kpi-icon, .kpi-status, .kpi-multi-value, .kpi-previous-period {
   box-sizing: border-box;
   font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+
+  /* The "signal" KPI cards (progress, radial, target, multi-value,
+     mini-bar) are painted with saturated accent fills that are the
+     same in both themes, so the marks drawn on top of them stay
+     white. One token keeps that in a single place. */
+  --kpi-mark: #fff;
 }
 
 .kpi-value { line-height: 1.2; letter-spacing: -0.02em; }
@@ -9,31 +26,49 @@
 .kpi-description { line-height: 1.4; opacity: 0.7; }
 .kpi-subtitle { line-height: 1.4; opacity: 0.8; }
 
+/* KPI label: secondary in light, muted in dark — both >= 4.5:1 on
+   the card surface. `.kpi-light` marks the surface-backed KPI
+   cards; the signal cards keep their own on-fill ink.
+   The !important is required because the KPI renderer writes the
+   label colour inline. The colour itself comes from the renderer's
+   own scoped token (--bd-kpi-txt-2) so a widget that owns its own
+   ink — the "shine" gradient card (white) or a widget-scoped theme
+   (--w-theme-text-2) — keeps it; the fallback is the neutral ramp
+   used by the plain dashboard, which has no scoped token. */
+.kpi-light .kpi-label {
+  color: var(--bd-kpi-txt-2, var(--color-text-secondary)) !important;
+}
+
+[data-theme="dark"] .kpi-light .kpi-label,
+.dark .kpi-light .kpi-label {
+  color: var(--bd-kpi-txt-2, var(--color-text-muted)) !important;
+}
+
 .kpi-trend-badge {
   display: inline-flex; align-items: center; gap: 3px;
-  background: rgba(0,0,0,0.2); border-radius: 12px;
+  background: var(--color-surface-2); border-radius: 12px;
   padding: 3px 10px; font-size: 11px; backdrop-filter: blur(4px);
 }
-.kpi-trend-badge.positive { color: #86efac; }
-.kpi-trend-badge.negative { color: #fca5a5; }
-.kpi-trend-badge.neutral { color: #d1d5db; }
+.kpi-trend-badge.positive { color: var(--color-success); }
+.kpi-trend-badge.negative { color: var(--color-danger); }
+.kpi-trend-badge.neutral { color: var(--color-text-muted); }
 
-.kpi-progress-bar { background: rgba(255,255,255,0.2); border-radius: 8px; height: 8px; width: 100%; overflow: hidden; }
-.kpi-progress-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; background: #fff; }
+.kpi-progress-bar { background: color-mix(in srgb, var(--kpi-mark) 20%, transparent); border-radius: 8px; height: 8px; width: 100%; overflow: hidden; }
+.kpi-progress-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; background: var(--kpi-mark); }
 
 .kpi-radial { display: flex; align-items: center; justify-content: center; }
 .kpi-radial svg { transform: rotate(-90deg); }
-.kpi-radial-track { fill: none; stroke: rgba(255,255,255,0.2); }
-.kpi-radial-fill { fill: none; stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
+.kpi-radial-track { fill: none; stroke: color-mix(in srgb, var(--kpi-mark) 20%, transparent); }
+.kpi-radial-fill { fill: none; stroke: var(--kpi-mark); stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; }
 
 .kpi-comparison { display: flex; align-items: center; gap: 16px; }
 .kpi-comparison-main { flex: 1; text-align: center; }
-.kpi-comparison-divider { width: 1px; height: 60%; background: rgba(255,255,255,0.3); }
 .kpi-comparison-side { flex: 1; text-align: center; }
+.kpi-comparison-divider { width: 1px; height: 60%; background: var(--color-border); }
 
 .kpi-target-actual { display: flex; flex-direction: column; gap: 8px; }
 .kpi-target-actual .kpi-target-row { display: flex; justify-content: space-between; font-size: 12px; }
-.kpi-target-actual .kpi-target-bar { height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+.kpi-target-actual .kpi-target-bar { height: 6px; background: color-mix(in srgb, var(--kpi-mark) 20%, transparent); border-radius: 3px; overflow: hidden; }
 .kpi-target-actual .kpi-target-fill { height: 100%; border-radius: 3px; }
 
 .kpi-icon-container { display: flex; align-items: center; gap: 10px; }
@@ -42,15 +77,24 @@
 .kpi-icon-container.icon-top { flex-direction: column; }
 .kpi-icon { display: flex; align-items: center; justify-content: center; }
 
-.kpi-status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.kpi-status-dot.success { background: #10B981; }
-.kpi-status-dot.warning { background: #F59E0B; }
-.kpi-status-dot.danger { background: #EF4444; }
-.kpi-status-dot.info { background: #3B82F6; }
+/* The status dot has ONE owner (this file). It was previously declared in
+   both styles.css and kpiStyles.css with different sizes and different
+   modifier names, so the later file silently won and the unmodelled state
+   defaulted to GREEN — a status dot that says "healthy" before the health
+   check has answered. The resting state is now neutral. */
+.kpi-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  background: var(--color-text-muted);
+  margin-right: 6px; vertical-align: middle; flex-shrink: 0;
+}
+.kpi-status-dot.is-success { background: var(--color-success); }
+.kpi-status-dot.is-warning { background: var(--color-warning); }
+.kpi-status-dot.is-danger { background: var(--color-danger); }
+.kpi-status-dot.is-info { background: var(--color-info); }
 .kpi-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; }
 
 .kpi-multi-value { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
-.kpi-multi-item { text-align: center; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; }
+.kpi-multi-item { text-align: center; padding: 8px; background: color-mix(in srgb, var(--kpi-mark) 10%, transparent); border-radius: 8px; }
 .kpi-multi-item .kpi-value { font-size: 20px; font-weight: 700; }
 .kpi-multi-item .kpi-label { font-size: 10px; }
 
@@ -60,11 +104,11 @@
 .kpi-previous-delta { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-top: 4px; }
 
 .kpi-mini-bars { display: flex; align-items: flex-end; gap: 2px; height: 40px; margin-top: 6px; }
-.kpi-mini-bar-item { flex: 1; background: rgba(255,255,255,0.6); border-radius: 2px 2px 0 0; transition: height 0.3s ease; min-height: 2px; }
+.kpi-mini-bar-item { flex: 1; background: color-mix(in srgb, var(--kpi-mark) 60%, transparent); border-radius: 2px 2px 0 0; transition: height 0.3s ease; min-height: 2px; }
 
 .kpi-sparkline-container { width: 100%; margin-top: 6px; }
 .kpi-sparkline-container canvas { width: 100%; height: 32px; opacity: 0.85; border-radius: 4px; }
 .kpi-mini-line-container { width: 100%; margin-top: 8px; }
 .kpi-mini-line-container canvas { width: 100%; height: 50px; opacity: 0.9; border-radius: 4px; }
 
-[data-theme="dark"] .kpi-status-badge { border: 1px solid rgba(255,255,255,0.1); }
+[data-theme="dark"] .kpi-status-badge { border: 1px solid color-mix(in srgb, var(--kpi-mark) 10%, transparent); }

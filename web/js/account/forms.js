@@ -41,21 +41,21 @@
     var card = overlay.firstElementChild;
     if (!card) return;
     card.innerHTML =
-      '<div style="width:60px;height:60px;margin:0 auto 14px;border-radius:16px;' +
-        'background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;">' +
-        '<i class="fas fa-key" style="color:#fff;font-size:24px;"></i></div>' +
-      '<h1 style="font-size:22px;font-weight:800;color:#111827;margin:0 0 6px;">Reset your password</h1>' +
-      '<p style="font-size:14px;color:#6b7280;margin:0 0 20px;">Enter the address on your account and we will send a reset link.</p>' +
+      '<div style="width:48px;height:48px;margin:0 auto 14px;border-radius:var(--radius-md);' +
+        'background:var(--color-primary);display:flex;align-items:center;justify-content:center;">' +
+        '<i class="fas fa-key" style="color:var(--color-on-primary);font-size:20px;"></i></div>' +
+      '<h1 style="font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--color-text);margin:0 0 4px;">Reset your password</h1>' +
+      '<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 20px;">Enter the address on your account and we will send a reset link.</p>' +
       '<input id="forgot-email" type="email" maxlength="254" autocomplete="email" aria-label="E-mail address" ' +
         'placeholder="E-mail address" style="' + INPUT + 'margin-bottom:12px;" />' +
-      '<div id="forgot-status" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;' +
-        'background:#ecfdf5;color:#047857;font-size:13px;text-align:left;"></div>' +
-      '<div id="forgot-error" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;' +
-        'background:#fef2f2;color:#dc2626;font-size:13px;text-align:left;"></div>' +
-      '<button type="button" id="forgot-submit" style="width:100%;padding:11px;border:none;border-radius:10px;' +
-        'background:#4f46e5;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Send the reset link</button>' +
-      '<button type="button" id="forgot-back" style="width:100%;margin-top:10px;padding:10px;border:1px solid #e5e7eb;' +
-        'border-radius:10px;background:#fff;color:#111827;font-size:14px;font-weight:600;cursor:pointer;">Back to sign in</button>';
+      '<div id="forgot-status" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:var(--radius-md);' +
+        'background:var(--color-success-bg);color:var(--color-success-solid);font-size:13px;text-align:left;"></div>' +
+      '<div id="forgot-error" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:var(--radius-md);' +
+        'background:var(--color-danger-bg);color:var(--color-danger-hover, #991b1b);font-size:13px;text-align:left;"></div>' +
+      '<button type="button" id="forgot-submit" style="width:100%;padding:11px;border:none;border-radius:var(--radius-md);' +
+        'background:var(--color-primary);color:var(--color-on-primary);font-size:14px;font-weight:600;cursor:pointer;">Send the reset link</button>' +
+      '<button type="button" id="forgot-back" style="width:100%;margin-top:10px;padding:10px;border:1px solid var(--color-border);' +
+        'border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);font-size:14px;font-weight:600;cursor:pointer;">Back to sign in</button>';
 
     var email = card.querySelector("#forgot-email");
     var statusBox = card.querySelector("#forgot-status");

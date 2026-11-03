@@ -145,6 +145,10 @@ def test_ready_wait_allows_slow_cold_start(monkeypatch):
 
             class _R:
                 status_code = 200
+                text = '{"$schema": "https://opencode.ai/config.json", "agent": {}}'
+
+                def json(self):
+                    return {"$schema": "https://opencode.ai/config.json", "agent": {}}
 
             return _R()
 
@@ -183,6 +187,10 @@ def test_concurrent_ensures_spawn_once(monkeypatch):
             if state["ready"]:
                 class _R:
                     status_code = 200
+                    text = '{"$schema": "https://opencode.ai/config.json", "agent": {}}'
+
+                    def json(self):
+                        return {"$schema": "https://opencode.ai/config.json", "agent": {}}
 
                 return _R()
             raise _httpx.ConnectError("down")
@@ -248,6 +256,7 @@ def test_no_autospawn_for_remote_server_url(monkeypatch):
     assert spawns == [], "must never auto-spawn for a non-loopback server_url"
 
 
+@pytest.mark.skipif(ob.os.name != "nt", reason="netstat/tasklist are Windows-only")
 def test_port_holder_info_parsed(monkeypatch):
     """The port holder must be identified by pid + image from netstat/tasklist."""
     import subprocess as _sp

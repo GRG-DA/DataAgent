@@ -657,6 +657,14 @@ class TestLineage:
         empty = lin.get_dag(table="nope_xyz")
         assert "nodes" in empty
 
+    def test_dag_skips_empty_records(self, lin):
+        lin.record_transform("", "", [], [])
+        lin.record_transform("real", "clean", ["raw"], ["real"])
+        d = lin.get_dag()
+        transform_nodes = [n for n in d["nodes"] if n["type"] == "transform"]
+        assert len(transform_nodes) == 1
+        assert transform_nodes[0]["operation"] == "clean"
+
     def test_column_lineage(self, lin):
         lin.record_transform("o", "map", ["s"], ["o"], column_map={"y": ["s.x", "plain"]})
         cl = lin.get_column_lineage("o")

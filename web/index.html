@@ -40,10 +40,12 @@
     <script src="vendor/maplibre-gl.js"></script>
 
     <!-- Application Stylesheet -->
-    <link rel="stylesheet" href="css/styles.css?v=2755000027">
+    <link rel="stylesheet" href="css/styles.css?v=2755000029">
+    <!-- Token-driven utility layer (Tailwind-style helpers) -->
+    <link rel="stylesheet" href="css/utilities.css?v=1">
     <!-- Widget Customization System -->
-    <link rel="stylesheet" href="css/propsPanel.css?v=4">
-    <link rel="stylesheet" href="css/kpiStyles.css?v=2">
+    <link rel="stylesheet" href="css/propsPanel.css?v=6">
+    <link rel="stylesheet" href="css/kpiStyles.css?v=4">
 
     <!-- Force CSS cache bust — ensures fresh CSS on every load -->
     <script>
@@ -59,15 +61,15 @@
     <!-- ═══════════════════════════════════════════════════════════════
          Top Navigation Bar — Fixed, z-40, Full Width
          ═══════════════════════════════════════════════════════════════ -->
-    <header id="topnav" class="fixed top-0 left-0 right-0 z-40 h-14">
+    <header id="topnav" class="fixed top-0 left-0 right-0 z-40">
         <div class="flex items-center h-full px-4 gap-2">
 
             <!-- ── Logo / Brand ── -->
-            <a href="#dashboard" id="topnav-logo" class="flex items-center gap-2.5 mr-4 shrink-0" onclick="App.navigate('#dashboard')">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/25">
-                    <i class="fas fa-chart-network text-white text-xs"></i>
+            <a href="#dashboard" id="topnav-logo" class="flex items-center gap-2.5 mr-4 shrink-0" onclick="App.navigate('#dashboard')" aria-label="DataAgent home">
+                <div class="brand-tile">
+                    <i class="fas fa-network-wired"></i>
                 </div>
-                <span class="font-bold text-sm text-white tracking-tight hidden sm:block">DataAgent</span>
+                <span class="brand-wordmark">DataAgent</span>
             </a>
 
             <!-- ── Scrollable Nav Items (Home / Data / Analyze / Tools / Settings) ── -->
@@ -81,15 +83,17 @@
                 <div class="nav-group" id="nav-data">
                     <button class="nav-item nav-group-trigger" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-database"></i><span>Data</span>
-                        <i class="fas fa-chevron-down text-[9px] ml-0.5 opacity-60"></i>
+                        <i class="fas fa-chevron-down nav-chevron"></i>
                     </button>
                     <div class="nav-dropdown" role="menu">
-                        <a href="#upload" class="nav-dropdown-item" data-page="upload" role="menuitem">
-                            <i class="fas fa-cloud-arrow-up"></i><span>Upload</span>
-                        </a>
-                        <a href="#warehouse" class="nav-dropdown-item" data-page="warehouse" role="menuitem">
-                            <i class="fas fa-warehouse"></i><span>Warehouse</span>
-                        </a>
+                        <div class="nav-dropdown-scroll">
+                            <a href="#upload" class="nav-dropdown-item" data-page="upload" role="menuitem">
+                                <i class="fas fa-cloud-arrow-up"></i><span>Upload</span>
+                            </a>
+                            <a href="#warehouse" class="nav-dropdown-item" data-page="warehouse" role="menuitem">
+                                <i class="fas fa-warehouse"></i><span>Warehouse</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -97,24 +101,26 @@
                 <div class="nav-group" id="nav-analyze">
                     <button class="nav-item nav-group-trigger" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-microscope"></i><span>Analyze</span>
-                        <i class="fas fa-chevron-down text-[9px] ml-0.5 opacity-60"></i>
+                        <i class="fas fa-chevron-down nav-chevron"></i>
                     </button>
                     <div class="nav-dropdown" role="menu">
-                        <a href="#dashboardstudio" class="nav-dropdown-item" data-page="dashboardstudio" role="menuitem">
-                            <i class="fas fa-object-group"></i><span>Dashboard Studio</span>
-                        </a>
-                        <a href="#analysis" class="nav-dropdown-item" data-page="analysis" role="menuitem">
-                            <i class="fas fa-chart-line"></i><span>Analysis</span>
-                        </a>
-                        <a href="#chat" class="nav-dropdown-item feature-llm" data-page="chat" role="menuitem" style="display: none;">
-                            <i class="fas fa-wand-magic-sparkles"></i><span>AI Chat</span>
-                        </a>
-                        <a href="#chat-pro" class="nav-dropdown-item feature-llm" data-page="chat-pro" role="menuitem" style="display: none;">
-                            <i class="fas fa-comments"></i><span>Chat Pro</span>
-                        </a>
-                        <a href="#sql" class="nav-dropdown-item" data-page="sql" role="menuitem">
-                            <i class="fas fa-terminal"></i><span>SQL Explorer</span>
-                        </a>
+                        <div class="nav-dropdown-scroll">
+                            <a href="#dashboardstudio" class="nav-dropdown-item" data-page="dashboardstudio" role="menuitem">
+                                <i class="fas fa-object-group"></i><span>Dashboard Studio</span>
+                            </a>
+                            <a href="#analysis" class="nav-dropdown-item" data-page="analysis" role="menuitem">
+                                <i class="fas fa-chart-line"></i><span>Analysis</span>
+                            </a>
+                            <a href="#chat" class="nav-dropdown-item feature-llm" data-page="chat" role="menuitem" style="display: none;">
+                                <i class="fas fa-wand-magic-sparkles"></i><span>AI Chat</span>
+                            </a>
+                            <a href="#chat-pro" class="nav-dropdown-item feature-llm" data-page="chat-pro" role="menuitem" style="display: none;">
+                                <i class="fas fa-comments"></i><span>Chat Pro</span>
+                            </a>
+                            <a href="#sql" class="nav-dropdown-item" data-page="sql" role="menuitem">
+                                <i class="fas fa-terminal"></i><span>SQL Explorer</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -122,26 +128,32 @@
                 <div class="nav-group" id="nav-tools">
                     <button class="nav-item nav-group-trigger" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-toolbox"></i><span>Tools</span>
-                        <i class="fas fa-chevron-down text-[9px] ml-0.5 opacity-60"></i>
+                        <i class="fas fa-chevron-down nav-chevron"></i>
                     </button>
                     <div class="nav-dropdown" role="menu">
-                        <a href="#export" class="nav-dropdown-item" data-page="export" data-feature="export_page" role="menuitem"><i class="fas fa-file-export"></i><span>Export</span></a>
-                        <a href="#compare" class="nav-dropdown-item" data-page="compare" role="menuitem"><i class="fas fa-code-compare"></i><span>Compare</span></a>
-                        <a href="#anomalies" class="nav-dropdown-item" data-page="anomalies" role="menuitem"><i class="fas fa-bug"></i><span>Anomalies</span></a>
-                        <a href="#quality" class="nav-dropdown-item" data-page="quality" role="menuitem"><i class="fas fa-chart-line"></i><span>Quality Trends</span></a>
-                        <a href="#stats" class="nav-dropdown-item" data-page="stats" role="menuitem"><i class="fas fa-calculator"></i><span>Stats</span></a>
-                        <a href="#forecast" class="nav-dropdown-item" data-page="forecast" role="menuitem"><i class="fas fa-chart-line"></i><span>Trend Forecast</span></a>
-                        <a href="#connect" class="nav-dropdown-item" data-page="connect" data-feature="connect_page" role="menuitem"><i class="fas fa-plug"></i><span>Connections</span></a>
-                        <a href="#lineage" class="nav-dropdown-item" data-page="lineage" role="menuitem"><i class="fas fa-diagram-project"></i><span>Lineage</span></a>
-                        <a href="#notebook" class="nav-dropdown-item" data-page="notebook" role="menuitem"><i class="fas fa-book-open"></i><span>Notebook</span></a>
-                        <a href="#automation" class="nav-dropdown-item" data-page="automation" data-feature="automation" role="menuitem"><i class="fas fa-diagram-project"></i><span>Automation</span></a>
-                        <a href="#admin" class="nav-dropdown-item" data-page="admin" data-role="admin" role="menuitem"><i class="fas fa-gauge-high"></i><span>Admin</span></a>
-                        <a href="#audit" class="nav-dropdown-item" data-page="audit" data-role="admin" role="menuitem"><i class="fas fa-clipboard-list"></i><span>Audit Log</span></a>
-                        <a href="#workflows" class="nav-dropdown-item" data-page="workflows" data-feature="automation" role="menuitem"><i class="fas fa-diagram-project"></i><span>Workflows</span></a>
-                        <a href="#marketplace" class="nav-dropdown-item" data-page="marketplace" data-feature="marketplace" role="menuitem"><i class="fas fa-store"></i><span>Marketplace</span></a>
-                        <a href="#catalog" class="nav-dropdown-item" data-page="catalog" data-feature="governance" role="menuitem"><i class="fas fa-book"></i><span>Data Catalog</span></a>
-                        <a href="#org" class="nav-dropdown-item" data-page="org" data-feature="organization" role="menuitem"><i class="fas fa-sitemap"></i><span>Org Structure</span></a>
-                        <a href="#notifications" class="nav-dropdown-item" data-page="notifications" role="menuitem"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                        <div class="nav-dropdown-scroll">
+                            <div class="nav-dropdown-label">Analysis</div>
+                            <a href="#anomalies" class="nav-dropdown-item" data-page="anomalies" role="menuitem"><i class="fas fa-bug"></i><span>Anomalies</span></a>
+                            <a href="#quality" class="nav-dropdown-item" data-page="quality" role="menuitem"><i class="fas fa-chart-line"></i><span>Quality Trends</span></a>
+                            <a href="#stats" class="nav-dropdown-item" data-page="stats" role="menuitem"><i class="fas fa-calculator"></i><span>Stats</span></a>
+                            <a href="#forecast" class="nav-dropdown-item" data-page="forecast" role="menuitem"><i class="fas fa-arrow-trend-up"></i><span>Trend Forecast</span></a>
+                            <a href="#compare" class="nav-dropdown-item" data-page="compare" role="menuitem"><i class="fas fa-code-compare"></i><span>Compare</span></a>
+                            <div class="nav-dropdown-label">Data</div>
+                            <a href="#connect" class="nav-dropdown-item" data-page="connect" data-feature="connect_page" role="menuitem"><i class="fas fa-plug"></i><span>Connections</span></a>
+                            <a href="#lineage" class="nav-dropdown-item" data-page="lineage" role="menuitem"><i class="fas fa-diagram-project"></i><span>Lineage</span></a>
+                            <a href="#catalog" class="nav-dropdown-item" data-page="catalog" data-feature="governance" role="menuitem"><i class="fas fa-book"></i><span>Data Catalog</span></a>
+                            <div class="nav-dropdown-label">Build</div>
+                            <a href="#notebook" class="nav-dropdown-item" data-page="notebook" role="menuitem"><i class="fas fa-book-open"></i><span>Notebook</span></a>
+                            <a href="#automation" class="nav-dropdown-item" data-page="automation" data-feature="automation" role="menuitem"><i class="fas fa-diagram-project"></i><span>Automation</span></a>
+                            <a href="#workflows" class="nav-dropdown-item" data-page="workflows" data-feature="automation" role="menuitem"><i class="fas fa-gears"></i><span>Workflows</span></a>
+                            <a href="#export" class="nav-dropdown-item" data-page="export" data-feature="export_page" role="menuitem"><i class="fas fa-file-export"></i><span>Export</span></a>
+                            <div class="nav-dropdown-label">Organisation</div>
+                            <a href="#org" class="nav-dropdown-item" data-page="org" data-feature="organization" role="menuitem"><i class="fas fa-sitemap"></i><span>Org Structure</span></a>
+                            <a href="#marketplace" class="nav-dropdown-item" data-page="marketplace" data-feature="marketplace" role="menuitem"><i class="fas fa-store"></i><span>Marketplace</span></a>
+                            <a href="#notifications" class="nav-dropdown-item" data-page="notifications" role="menuitem"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                            <a href="#admin" class="nav-dropdown-item" data-page="admin" data-role="admin" role="menuitem"><i class="fas fa-gauge-high"></i><span>Admin</span></a>
+                            <a href="#audit" class="nav-dropdown-item" data-page="audit" data-role="admin" role="menuitem"><i class="fas fa-clipboard-list"></i><span>Audit Log</span></a>
+                        </div>
                     </div>
                 </div>
 
@@ -161,24 +173,24 @@
 
                 <!-- Connection Status -->
                 <div class="flex items-center gap-1.5 text-xs shrink-0" id="connection-status">
-                    <span class="status-dot rounded-full bg-red-500" id="status-dot"></span>
-                    <span id="status-text" class="text-white/60 font-medium hidden md:inline">Connecting...</span>
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="status-text" class="status-text font-medium hidden md:inline">Connecting...</span>
                 </div>
 
                 <!-- Stats (hidden on small screens — < lg) -->
-                <div class="hidden lg:flex items-center gap-3 text-xs text-white/50 shrink-0" id="nav-stats">
+                <div class="hidden lg:flex items-center gap-3 nav-stats shrink-0" id="nav-stats">
                     <span><i class="fas fa-table mr-1"></i><span id="stat-tables">0</span></span>
-                    <span class="text-white/20">|</span>
+                    <span class="nav-stats-sep" aria-hidden="true">|</span>
                     <span><i class="fas fa-table-cells mr-1"></i><span id="stat-rows">0</span></span>
                 </div>
 
                 <!-- Notification Bell -->
                 <div class="relative" id="notif-bell-container">
-                    <button id="notif-bell" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white/70 hover:text-white relative" title="Notifications">
+                    <button id="notif-bell" class="topnav-icon-btn relative" title="Notifications">
                         <i class="fas fa-bell text-sm"></i>
                         <span id="notif-badge" class="badge-count" style="display:none">0</span>
                     </button>
-                    <div id="notif-dropdown" class="notification-dropdown" style="right:-60px;top:40px;">
+                    <div id="notif-dropdown" class="notification-dropdown" style="right:-60px;top:42px;">
                         <div class="notification-dropdown-header">
                             <h4>Notifications</h4>
                             <button class="mark-all-read" onclick="App.markAllNotificationsRead()">Mark all read</button>
@@ -235,12 +247,13 @@
                 </div>
 
                 <!-- Dark Mode Toggle -->
-                <button id="dark-toggle" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white/70 hover:text-white" title="Toggle dark mode">
+                <button id="dark-toggle" class="topnav-icon-btn" title="Toggle dark mode">
                     <i class="fas fa-moon text-sm" id="dark-icon"></i>
                 </button>
 
                 <!-- Mobile Menu Toggle (visible only below md breakpoint) -->
-                <button id="mobile-menu-toggle" class="md:hidden w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white/70" title="Menu">
+                <button id="mobile-menu-toggle" class="topnav-icon-btn md:hidden" title="Menu"
+                    aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-nav">
                     <i class="fas fa-bars text-sm"></i>
                 </button>
 
@@ -251,8 +264,8 @@
     <!-- ═══════════════════════════════════════════════════════════════
          Mobile Navigation Overlay & Drawer
          ═══════════════════════════════════════════════════════════════ -->
-    <div id="mobile-nav-overlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden"></div>
-    <nav id="mobile-nav" class="fixed top-14 left-0 right-0 z-30 hidden md:hidden p-4 space-y-1">
+    <div id="mobile-nav-overlay" class="fixed inset-0 z-30 hidden md:hidden"></div>
+    <nav id="mobile-nav" class="fixed left-0 right-0 z-30 hidden md:hidden p-4 space-y-1">
         <a href="#dashboard" class="mobile-nav-item" data-page="dashboard"><i class="fas fa-house w-5"></i>Home</a>
         <a href="#upload" class="mobile-nav-item" data-page="upload"><i class="fas fa-cloud-arrow-up w-5"></i>Upload</a>
         <a href="#warehouse" class="mobile-nav-item" data-page="warehouse"><i class="fas fa-warehouse w-5"></i>Warehouse</a>
@@ -271,7 +284,7 @@
     <!-- ═══════════════════════════════════════════════════════════════
          Main Content Area
          ═══════════════════════════════════════════════════════════════ -->
-    <main class="flex-1 mt-14 transition-all duration-300" id="main-content">
+    <main class="flex-1 transition-all duration-300" id="main-content">
         <!-- Ad slots removed — the product is fully ad-free for all plans. -->
         <div id="page-content" class="animate-fade-in p-6">
             <div class="empty-state py-20">
@@ -304,10 +317,10 @@
     <!-- ═══════════════════════════════════════════════════════════════
          Loading Overlay (shown during page transitions)
          ═══════════════════════════════════════════════════════════════ -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl flex items-center gap-4 border border-gray-100 dark:border-gray-700">
-            <div class="w-8 h-8 border-3 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
-            <span class="font-medium text-sm text-gray-700 dark:text-gray-200" id="loading-text">Loading...</span>
+    <div id="loading-overlay" class="fixed inset-0 z-50 hidden flex items-center justify-center">
+        <div class="loading-card">
+            <div class="loading-spinner"></div>
+            <span id="loading-text">Loading...</span>
         </div>
     </div>
 
@@ -344,55 +357,55 @@
       })();
     </script>
     <script src="js/api.js?v=27"></script>
-    <script src="js/charts.js?v=21"></script>
+    <script src="js/charts.js?v=25"></script>
 
     <!-- Layer 2: Core UI Components -->
     <script src="js/components/sidebar.js?v=3"></script>
     <script src="js/components/modal.js?v=20"></script>
     <script src="js/components/table.js?v=21"></script>
-    <script src="js/components/blueprint.js?v=24"></script>
+    <script src="js/components/blueprint.js?v=28"></script>
     <script src="js/components/card.js?v=2"></script>
     <script src="js/components/tabs.js?v=2"></script>
     <script src="js/components/badge.js?v=2"></script>
-    <script src="js/components/chartToolbar.js?v=2"></script>
-    <script src="js/components/dashboardGrid.js?v=2"></script>
-    <script src="js/components/dashboardRenderer.js?v=9"></script>
+    <script src="js/components/chartToolbar.js?v=5"></script>
+    <script src="js/components/dashboardGrid.js?v=6"></script>
+    <script src="js/components/dashboardRenderer.js?v=13"></script>
     <!-- Widget Customization System (schemas, controls, panel, styles, presets, responsive) -->
-    <script src="js/components/widgetSchemas.js?v=15"></script>
-    <script src="js/components/uiControls.js?v=18"></script>
+    <script src="js/components/widgetSchemas.js?v=19"></script>
+    <script src="js/components/uiControls.js?v=22"></script>
     <script src="js/components/propsPanel.js?v=11"></script>
-    <script src="js/components/kpiStyles.js?v=14"></script>
-    <script src="js/components/widgetPresets.js?v=2"></script>
+    <script src="js/components/kpiStyles.js?v=18"></script>
+    <script src="js/components/widgetPresets.js?v=6"></script>
     <script src="js/components/responsiveConfig.js?v=2"></script>
-    <script src="js/components/widgetEditor.js?v=13"></script>
+    <script src="js/components/widgetEditor.js?v=17"></script>
     <script src="js/components/columnInspector.js?v=2"></script>
     <script src="js/components/chartQuickGen.js?v=2"></script>
-    <script src="js/components/aiChartBuild.js?v=36"></script>
+    <script src="js/components/aiChartBuild.js?v=40"></script>
     <script src="js/components/timeIntel.js?v=2"></script>
     <script src="js/components/diffViewer.js?v=2"></script>
-    <script src="js/components/kpiCompareCard.js?v=2"></script>
+    <script src="js/components/kpiCompareCard.js?v=5"></script>
     <script src="js/components/compareEngine.js?v=2"></script>
-    <script src="js/components/storyCard.js?v=2"></script>
+    <script src="js/components/storyCard.js?v=6"></script>
     <script src="js/components/storyFeed.js?v=2"></script>
 
     <!-- Layer 3: Feature Components (may reference API + App) -->
     <script src="js/components/notifications.js?v=2"></script>
     <script src="js/components/comments.js?v=2"></script>
-    <script src="js/components/rbac.js?v=8"></script>
+    <script src="js/components/rbac.js?v=12"></script>
     <!-- ads.js removed — ad-free for all plans -->
 
     <!-- Auth gate: native Google OAuth + local/central email accounts.
          auth.js runs after api.js/rbac.js and before app.js so the boot
          gate can block rendering until a session exists. -->
-    <script src="js/auth.js?v=2"></script>
+    <script src="js/auth.js?v=6"></script>
 
     <!-- Account lifecycle: token links (reset / verify / invite), the
          "forgot password" form, self-serve delete and the tenant
          onboarding step. Loaded before app.js — the router must not see
          a token that lives in the URL fragment. -->
     <script src="js/account/fragments.js?v=2"></script>
-    <script src="js/account/views.js?v=2"></script>
-    <script src="js/account/forms.js?v=2"></script>
+    <script src="js/account/views.js?v=6"></script>
+    <script src="js/account/forms.js?v=6"></script>
     <script src="js/account/delete.js?v=1"></script>
     <script src="js/account/onboarding.js?v=2"></script>
     <script src="js/account.js?v=1"></script>
@@ -407,13 +420,13 @@
     <script src="js/bi/sqlFilters.js?v=2"></script>
     <!-- D3.js TypeScript bundle (replaces/extends the above helpers) -->
     <!-- Curated runtime templates (loaded after the bundle so these win) -->
-    <script src="js/bi/dashboardTemplates.js?v=3"></script>
+    <script src="js/bi/dashboardTemplates.js?v=7"></script>
 
     <!-- Layer 4: Application Bootstrap (SPA router, state, init) -->
-    <script src="js/app.js?v=32"></script>
+    <script src="js/app.js?v=36"></script>
 
     <!-- Layer 5: Formula system (Excel page — loaded eagerly, used on demand) -->
-    <script src="js/pages/formula-engine.js?v=2"></script>
+    <script src="js/pages/formula-engine.js?v=5"></script>
     <script src="js/pages/formula-bar.js?v=2"></script>
 
     <!-- Layer 5b: Admin console sections (Users & Roles) — loaded eagerly so

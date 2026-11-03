@@ -1,24 +1,28 @@
 # DataAgent — Caddy config for the billing VPS (Ubuntu/Debian, x86_64).
 #
-# Single origin (recommended — the billing server has no CORS middleware,
-# and same-origin keeps checkout fetch() calls and the webhook URL simple):
+# Split origin (production): the storefront is hosted on Vercel at
+# https://data-agent.me, and this hostname serves ONLY the billing API:
 #
-#   https://yourdomain.com/               static storefront   (website/)
-#   https://yourdomain.com/create-… etc.  JSON API → uvicorn 127.0.0.1:8090
+#   https://pay.data-agent.me/healthz       readiness
+#   https://pay.data-agent.me/create-…      checkout JSON API → uvicorn
+#   https://pay.data-agent.me/famgateway/*  webhook
+#   https://pay.data-agent.me/v1/*          entitlements + accounts
+#
+# CORS is handled by billing_server (BILLING_CORS_ORIGINS), so the
+# storefront may be on a different origin.
 #
 # TLS certificates are issued + renewed automatically (Let's Encrypt).
 #
 # Install:
 #   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-#   # edit the hostname below (keep both apex and www on one line)
 #   sudo caddy validate --config /etc/caddy/Caddyfile
 #   sudo systemctl reload caddy
 #
-# DNS: one A record for the apex AND one for www, both → the VPS IP.
-# Ports 80 + 443 must be reachable (Oracle: open them in the VPC security
-# list AND remove the image's default INPUT block — see the deploy guide).
+# DNS: one A record pay.data-agent.me → the VPS IP. The apex belongs to
+# Vercel; do not point the apex or www at this VM. Ports 80 + 443 must be
+# reachable (Azure NSG + host firewall).
 
-yourdomain.com, www.yourdomain.com {
+pay.data-agent.me {
 	encode gzip
 
 	# Baseline security headers. HSTS kicks in once TLS works; remove it only
@@ -29,22 +33,7 @@ yourdomain.com, www.yourdomain.com {
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
-	# API endpoints + server-rendered pages → uvicorn.
-	# Paths mirror every @app route in billing_server/main.py; everything
-	# else falls through to the static storefront below.
-	reverse_proxy /create-order* /create-subscription* /verify* /razorpay/* /v1/* /admin/* /success* /healthz 127.0.0.1:8090
-
-	# Static storefront (uploaded copy of website/).
-	root * /srv/dataagent/website
-	file_server
+	# Paths mirror every @app route in billing_server/main.py.
+	@api path /create-order* /create-subscription* /verify* /razorpay/* /famgateway/* /v1/* /admin/* /success* /healthz
+	reverse_proxy @api 127.0.0.1:8090
 }
-
-# ── Alternative: split the API onto a subdomain ──────────────────────
-# Requires adding CORSMiddleware (with an explicit origin allowlist) to
-# billing_server/main.py first — without it browsers will block the
-# storefront's fetch() calls. Not needed for the single-origin setup above.
-#
-# billing.yourdomain.com {
-# 	encode gzip
-# 	reverse_proxy 127.0.0.1:8090
-# }

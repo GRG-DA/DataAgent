@@ -109,7 +109,17 @@ class FeatureImportanceResult:
 
 @dataclass
 class ConfidenceIntervalResult:
-    """Result of confidence interval calculation."""
+    """Result of confidence interval calculation.
+
+    ``margin_of_error`` is the authoritative half-width of the published
+    interval, i.e. exactly ``(ci_upper - ci_lower) / 2`` computed from the
+    (rounded) bounds reported here. The web UI used to re-derive it
+    client-side, which could drift; the backend now owns the value.
+
+    The half-width is level-independent by construction: it is whatever the
+    requested confidence level produced, so a 90 % interval reports its own
+    (narrower) margin rather than a 95 % one.
+    """
     column: str
     mean: float
     ci_lower: float
@@ -118,6 +128,7 @@ class ConfidenceIntervalResult:
     method: str
     sample_size: int
     interpretation: str
+    margin_of_error: float = 0.0
 
 
 @dataclass
@@ -255,6 +266,12 @@ def test_hypothesis(
             groups = df[group_col].dropna().unique()
             if len(groups) < 2:
                 return _hypothesis_error(test_type, f"Need at least 2 groups in '{group_col}'")
+            if len(groups) > 2:
+                return _hypothesis_error(
+                    test_type,
+                    f"T-Test requires exactly 2 groups in '{group_col}' "
+                    f"(found {len(groups)}); use ANOVA for 3 or more groups",
+                )
             g1 = df[df[group_col] == groups[0]][column_a].dropna()
             g2 = df[df[group_col] == groups[1]][column_a].dropna()
             groups_list = [str(groups[0]), str(groups[1])]
@@ -301,6 +318,12 @@ def test_hypothesis(
             groups = df[group_col].dropna().unique()
             if len(groups) < 2:
                 return _hypothesis_error(test_type, f"Need at least 2 groups in '{group_col}'")
+            if len(groups) > 2:
+                return _hypothesis_error(
+                    test_type,
+                    f"Mann-Whitney U requires exactly 2 groups in '{group_col}' "
+                    f"(found {len(groups)}); use ANOVA for 3 or more groups",
+                )
             g1 = df[df[group_col] == groups[0]][column_a].dropna()
             g2 = df[df[group_col] == groups[1]][column_a].dropna()
             groups_list = [str(groups[0]), str(groups[1])]
@@ -463,32 +486,36 @@ def _interpret_hypothesis(
     significant: bool, effect_label: str, statistic: float = 0.0,
 ) -> str:
     verb = "is" if significant else "is NOT"
-    sig_text = f"statistically significant (p={p:.4f} < {alpha})" if significant \
-        else f"NOT statistically significant (p={p:.4f} >= {alpha})"
+    comparison = "<" if significant else ">="
+    sig_text = f"statistically significant (p={p:.4f} {comparison} {alpha})"
     effect_text = f"The effect size is {effect_label}."
 
     if test_type == "chi2":
         return (
             f"The chi-square test of independence between '{groups[0]}' and '{groups[1]}' "
-            f"{sig_text}. {effect_text} There {'is' if significant else 'is no'} evidence of "
+            f"{verb} {sig_text}. {effect_text} There {'is' if significant else 'is no'} evidence of "
             f"an association between the two variables."
         )
     elif test_type == "pearsonr":
         direction = "positive" if statistic >= 0 else "negative"
         return (
             f"The Pearson correlation between '{groups[0]}' and '{groups[1]}' is {direction} and "
-            f"{sig_text}. {effect_text}"
+            f"{verb} {sig_text}. {effect_text}"
         )
     elif test_type == "anova":
+        preview = ", ".join(f"'{g}'" for g in groups[:5])
+        if len(groups) > 5:
+            preview += f", +{len(groups) - 5} more"
         return (
-            f"The one-way ANOVA comparing '{groups[0]}' across groups in the data "
-            f"{sig_text}. {effect_text} There {'are' if significant else 'are no'} "
-            f"statistically significant differences between group means."
+            f"The one-way ANOVA comparing group means across {len(groups)} groups "
+            f"({preview}) {verb} {sig_text}. {effect_text} There "
+            f"{'are' if significant else 'are no'} statistically significant "
+            f"differences between group means."
         )
     else:
         return (
             f"The {test_type} between {' and '.join(f'{g}' for g in groups)} "
-            f"{sig_text}. {effect_text}"
+            f"{verb} {sig_text}. {effect_text}"
         )
 
 
@@ -521,6 +548,7 @@ def compute_confidence_interval(
             column=column_name, mean=mean, ci_lower=mean, ci_upper=mean,
             confidence_level=confidence, method=method, sample_size=n,
             interpretation="Not enough data points for confidence interval.",
+            margin_of_error=0.0,
         )
 
     sem = clean.std() / np.sqrt(n)
@@ -541,14 +569,17 @@ def compute_confidence_interval(
         upper_pct = (1 + confidence) / 2 * 100
         ci_lower = float(np.percentile(boot_means, lower_pct))
         ci_upper = float(np.percentile(boot_means, upper_pct))
+        ci_lower_r = round(ci_lower, 4)
+        ci_upper_r = round(ci_upper, 4)
         return ConfidenceIntervalResult(
             column=column_name, mean=round(mean, 4),
-            ci_lower=round(ci_lower, 4), ci_upper=round(ci_upper, 4),
+            ci_lower=ci_lower_r, ci_upper=ci_upper_r,
             confidence_level=confidence, method="Bootstrap", sample_size=n,
             interpretation=(
                 f"We are {confidence*100:.0f}% confident that the true mean of '{column_name}' "
                 f"lies between {ci_lower:.4f} and {ci_upper:.4f} (bootstrap, {n} samples)."
             ),
+            margin_of_error=(ci_upper_r - ci_lower_r) / 2,
         )
     else:
         # Normal Z-interval
@@ -558,12 +589,14 @@ def compute_confidence_interval(
 
     ci_lower = mean - margin
     ci_upper = mean + margin
+    ci_lower_r = round(float(ci_lower), 4)
+    ci_upper_r = round(float(ci_upper), 4)
 
     return ConfidenceIntervalResult(
         column=column_name,
         mean=round(mean, 4),
-        ci_lower=round(float(ci_lower), 4),
-        ci_upper=round(float(ci_upper), 4),
+        ci_lower=ci_lower_r,
+        ci_upper=ci_upper_r,
         confidence_level=confidence,
         method=method_name,
         sample_size=n,
@@ -571,6 +604,7 @@ def compute_confidence_interval(
             f"We are {confidence*100:.0f}% confident that the true mean of '{column_name}' "
             f"lies between {ci_lower:.4f} and {ci_upper:.4f} (method: {method_name}, n={n})."
         ),
+        margin_of_error=(ci_upper_r - ci_lower_r) / 2,
     )
 
 

@@ -19,7 +19,7 @@
     var isUp = delta > 0;
     var isDown = delta < 0;
     var arrowClass = isUp ? "fa-arrow-up text-green-500" : isDown ? "fa-arrow-down text-red-500" : "fa-minus text-gray-400";
-    var arrowColor = isUp ? "#22c55e" : isDown ? "#ef4444" : "#9ca3af";
+    var arrowColor = isUp ? "var(--color-success)" : isDown ? "var(--color-danger)" : "var(--color-text-muted)";
 
     // Significance
     var sigHtml = "";

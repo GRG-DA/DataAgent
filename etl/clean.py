@@ -143,8 +143,11 @@ class DataCleaner:
                 else:
                     rule.strategy = CleaningStrategy.FILL_MODE
 
-            # Infer target dtype
-            if pd.api.types.is_object_dtype(dtype):
+            # Infer target dtype. Nullable ``string`` columns reach here from
+            # the extractor, which preserves missing values instead of
+            # stringifying them; treat them like object strings for date
+            # detection so CSV dates still load as timestamps.
+            if pd.api.types.is_object_dtype(dtype) or pd.api.types.is_string_dtype(dtype):
                 # Try to parse as datetime
                 sample = df[col].dropna().head(20)
                 if len(sample) > 0:

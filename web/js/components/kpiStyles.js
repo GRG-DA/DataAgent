@@ -4,19 +4,22 @@
 
   /* Accent palette for the flat "light card" KPI look. Used only as a thin
      accent bar / line / glyph so chart data stays the star. */
-  var _ACCENTS = ['#3B82F6', '#14B8A6', '#F59E0B'];
+  var _ACCENTS = ['var(--color-primary)', 'var(--color-accent-teal)', 'var(--color-warning)'];
 
-  /* Fallback dark gradients, kept for the signal-heavy styles (radial,
-     progress, target/actual, status) that encode their meaning with colour. */
+  /* Filled card backgrounds for the signal-heavy styles (radial, progress,
+     target/actual, status) that encode their meaning with colour.
+     FLAT, not gradients — the card rule bans gradients on cards — and the
+     *-solid tokens keep a deep fill in BOTH themes, so the white label text
+     on these cards stays legible. */
   var _gradients = [
-    'linear-gradient(135deg,#3b82f6 0%,#1e40af 100%)',
-    'linear-gradient(135deg,#14b8a6 0%,#0f766e 100%)',
-    'linear-gradient(135deg,#f59e0b 0%,#b45309 100%)',
-    'linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%)',
-    'linear-gradient(135deg,#0ea5e9 0%,#0369a1 100%)',
-    'linear-gradient(135deg,#10b981 0%,#047857 100%)',
-    'linear-gradient(135deg,#ef4444 0%,#b91c1c 100%)',
-    'linear-gradient(135deg,#6366f1 0%,#4338ca 100%)'
+    'var(--color-info-solid)',
+    'var(--color-accent-teal-solid)',
+    'var(--color-warning-solid)',
+    'var(--color-accent-purple-solid)',
+    'var(--color-info-solid)',
+    'var(--color-success-solid)',
+    'var(--color-danger-solid)',
+    'var(--color-info-solid)'
   ];
 
   var _light = false; /* tone for the current card being rendered */
@@ -37,11 +40,11 @@
 
   function _getStatusColor(status) {
     switch (status) {
-      case 'success': return '#10B981';
-      case 'warning': return '#F59E0B';
-      case 'danger':  return '#EF4444';
-      case 'info':    return '#3B82F6';
-      default:        return '#64748B';
+      case 'success': return 'var(--color-success)';
+      case 'warning': return 'var(--color-warning)';
+      case 'danger':  return 'var(--color-danger)';
+      case 'info':    return 'var(--color-info)';
+      default:        return 'var(--color-text-muted)';
     }
   }
 
@@ -200,9 +203,9 @@
     var val = _fmtValue(config.value != null ? config.value : (data && data.value), config);
     var label = config.label || '';
     return '<div class="kpi-simple kpi-light" style="' + _bgStyle(config, 0) + '; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; text-align:center;">' +
-      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:6px;">' + _esc(label) + '</div>' +
-      (config.description ? '<div style="font-size:10px; color:' + _td('#94a3b8') + '; margin-top:4px;">' + _esc(config.description) + '</div>' : '') +
+      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:6px;">' + _esc(label) + '</div>' +
+      (config.description ? '<div style="font-size:10px; color:' + _td('var(--color-text-muted)') + '; margin-top:4px;">' + _esc(config.description) + '</div>' : '') +
       '</div>';
   };
 
@@ -226,11 +229,11 @@
       var delta = cur - base;
       var arrow = delta >= 0 ? '&#9650;' : '&#9660;';
       var pct = base !== 0 ? ((delta / Math.abs(base)) * 100).toFixed(1) : null;
-      var col = delta >= 0 ? 'var(--bd-kpi-good,#10b981)' : 'var(--bd-kpi-bad,#ef4444)';
+      var col = delta >= 0 ? 'var(--bd-kpi-good,var(--color-success))' : 'var(--bd-kpi-bad,var(--color-danger))';
       deltaStr = '<span style="color:' + col + '; font-weight:700;">' + arrow + '&nbsp;' +
         (delta >= 0 ? '+' : '') + (pct != null ? _esc(pct) + '%' : _esc(_fmtValue(delta, config))) + '</span>';
       if (prevVal != null) {
-        prevStr = '<span style="color:var(--bd-kpi-muted,#94a3b8);">vs Previous ' + _esc(prevVal) + '</span>';
+        prevStr = '<span style="color:var(--bd-kpi-muted,var(--color-text-muted));">vs Previous ' + _esc(prevVal) + '</span>';
       }
     }
     /* Single reserved line so every card's big value lands on the same Y and
@@ -238,8 +241,8 @@
        top accent stripe). */
     var footer = '<div style="height:16px; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:5px; font-size:11px; font-weight:700; letter-spacing:.2px; white-space:nowrap;">' + deltaStr + prevStr + '</div>';
     return '<div class="kpi-plan kpi-light" style="' + _bgStyle(config, 0) + '; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 16px; text-align:center;">' +
-      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.15; letter-spacing:-0.02em; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:11px; font-weight:600; letter-spacing:.3px; color:' + _tm('#475569') + '; margin-top:5px;">' + _esc(label) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.15; letter-spacing:-0.02em; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:11px; font-weight:600; letter-spacing:.3px; color:' + _tm('var(--color-text-secondary)') + '; margin-top:5px;">' + _esc(label) + '</div>' +
       footer +
       '</div>';
   };
@@ -255,12 +258,12 @@
     else if (trend === 'down' || (pct != null && Number(pct) < 0)) up = false;
     var arrow = up ? '&#9650;' : '&#9660;';
     var pctAbs = pct != null ? Math.abs(Number(pct)).toFixed(1) : '';
-    var badgeBg = up ? 'var(--bd-kpi-good,#10b981)' : 'var(--bd-kpi-bad,#ef4444)';
+    var badgeBg = up ? 'var(--bd-kpi-good,var(--color-success))' : 'var(--bd-kpi-bad,var(--color-danger))';
     var badge = pctAbs ? '<span style="display:inline-block; background:' + badgeBg + '; border-radius:12px; padding:3px 10px; font-size:11px; color:#fff; margin-top:8px;">' + arrow + ' ' + _esc(pctAbs) + '%</span>' : '';
 
     return '<div class="kpi-trend kpi-light" style="' + _bgStyle(config, 1) + '; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; text-align:center;">' +
-      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:6px;">' + _esc(label) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:6px;">' + _esc(label) + '</div>' +
       badge +
       '</div>';
   };
@@ -271,11 +274,11 @@
     var label = config.label || '';
     var pct = config.comparisonValue != null ? Number(config.comparisonValue) : null;
     var pctStr = pct != null ? (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%' : '';
-    var pctColor = pct != null ? (pct >= 0 ? 'var(--bd-kpi-good,#10b981)' : 'var(--bd-kpi-bad,#ef4444)') : _td('#94a3b8');
+    var pctColor = pct != null ? (pct >= 0 ? 'var(--bd-kpi-good,var(--color-success))' : 'var(--bd-kpi-bad,var(--color-danger))') : _td('var(--color-text-muted)');
 
     return '<div class="kpi-percentage kpi-light" style="' + _bgStyle(config, 2) + '; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; text-align:center;">' +
-      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:6px;">' + _esc(label) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:6px;">' + _esc(label) + '</div>' +
       (pctStr ? '<div style="font-size:24px; font-weight:700; color:' + pctColor + '; margin-top:8px;">' + _esc(pctStr) + '</div>' : '') +
       '</div>';
   };
@@ -329,17 +332,17 @@
       var delta = cur - base;
       var arrow = delta >= 0 ? '&#9650;' : '&#9660;';
       var pct = base !== 0 ? ((delta / Math.abs(base)) * 100).toFixed(1) : null;
-      var col = delta >= 0 ? 'var(--bd-kpi-good,#10b981)' : 'var(--bd-kpi-bad,#ef4444)';
+      var col = delta >= 0 ? 'var(--bd-kpi-good,var(--color-success))' : 'var(--bd-kpi-bad,var(--color-danger))';
       deltaStr = '<span style="color:' + col + '; font-weight:700;">' + arrow + '&nbsp;' +
         (delta >= 0 ? '+' : '') + (pct != null ? _esc(pct) + '%' : _esc(_fmtValue(delta, config))) + '</span>';
     }
 
     return '<div class="kpi-sparklineDelta kpi-light" style="' + _bgStyle(config, 0) + '; height:100%; display:flex; flex-direction:column; justify-content:center; padding:16px;">' +
       '<div style="display:flex; justify-content:space-between; align-items:baseline;">' +
-      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
       '<div style="font-size:11px; font-weight:700; letter-spacing:.2px; white-space:nowrap;">' + deltaStr + '</div>' +
       '</div>' +
-      '<div class="kpi-label" style="font-size:11px; font-weight:600; color:' + _tm('#475569') + '; margin-top:4px;">' + _esc(label) + '</div>' +
+      '<div class="kpi-label" style="font-size:11px; font-weight:600; color:' + _tm('var(--color-text-secondary)') + '; margin-top:4px;">' + _esc(label) + '</div>' +
       '<div style="flex:1; min-height:40px; margin-top:8px;">' +
       '<canvas id="' + _esc(canvasId) + '" style="width:100%; height:100%;" data-widget-id="' + _esc(widgetId) + '"></canvas>' +
       '</div>' +
@@ -357,7 +360,7 @@
       var n = Number(chartData[i]);
       if (!isNaN(n) && n > maxVal) maxVal = n;
     }
-    var barColor = config.color || '#3B82F6';
+    var barColor = config.color || '#2563eb';
     for (var j = 0; j < chartData.length; j++) {
       var v = Number(chartData[j]) || 0;
       var h = Math.round((v / maxVal) * 100);
@@ -438,7 +441,7 @@
     var radius = 40;
     var circumference = 2 * Math.PI * radius;
     var offset = circumference * (1 - pct);
-    var ringColor = config.donutColor || (pct >= 0.8 ? '#10B981' : pct >= 0.5 ? '#F59E0B' : '#EF4444');
+    var ringColor = config.donutColor || (pct >= 0.8 ? 'var(--color-success)' : pct >= 0.5 ? 'var(--color-warning)' : 'var(--color-danger)');
     var trackColor = config.donutTrackColor || 'rgba(15,23,42,0.08)';
 
     var svg = '<svg viewBox="0 0 100 100" style="height:64px;width:64px;flex:none;">' +
@@ -446,15 +449,15 @@
       '<circle cx="50" cy="50" r="' + radius + '" fill="none" stroke="' + ringColor + '" stroke-width="10" ' +
       'stroke-linecap="round" stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" ' +
       'transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 0.6s ease;"/>' +
-      '<text x="50" y="50" text-anchor="middle" dominant-baseline="central" fill="' + _tv('#0f172a') + '" font-size="15" font-weight="800">' + _esc(Math.round(pct * 100) + '%') + '</text>' +
+      '<text x="50" y="50" text-anchor="middle" dominant-baseline="central" fill="' + _tv('var(--color-text)') + '" font-size="15" font-weight="800">' + _esc(Math.round(pct * 100) + '%') + '</text>' +
       '</svg>';
 
     return '<div class="kpi-donut kpi-light" style="' + _bgStyle(config, 0) + '; height:100%; display:flex; align-items:center; justify-content:center; gap:16px; padding:16px;">' +
       svg +
       '<div style="text-align:left;">' +
-      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:11px; font-weight:600; color:' + _tm('#475569') + '; margin-top:4px;">' + _esc(label) + '</div>' +
-      (config.target != null ? '<div style="font-size:11px; color:' + _td('#94a3b8') + '; margin-top:2px;">Target ' + _esc(_fmtValue(config.target, config)) + '</div>' : '') +
+      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:11px; font-weight:600; color:' + _tm('var(--color-text-secondary)') + '; margin-top:4px;">' + _esc(label) + '</div>' +
+      (config.target != null ? '<div style="font-size:11px; color:' + _td('var(--color-text-muted)') + '; margin-top:2px;">Target ' + _esc(_fmtValue(config.target, config)) + '</div>' : '') +
       '</div>' +
       '</div>';
   };
@@ -469,13 +472,13 @@
     return '<div class="kpi-comparison kpi-light" style="' + _bgStyle(config, 0) + '; height:100%; display:flex; flex-direction:column; justify-content:center; padding:16px; text-align:center;">' +
       '<div style="display:flex; align-items:center; justify-content:center; gap:24px;">' +
       '<div style="flex:1;">' +
-      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-      '<div class="kpi-label" style="font-size:11px; font-weight:500; color:' + _tm('#475569') + '; margin-top:4px;">' + _esc(label) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+      '<div class="kpi-label" style="font-size:11px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:4px;">' + _esc(label) + '</div>' +
       '</div>' +
       '<div style="width:1px; height:40px; background:var(--bd-kpi-line,rgba(15,23,42,0.08));"></div>' +
       '<div style="flex:1;">' +
-      '<div style="font-size:24px; font-weight:700; color:' + _tv('#0f172a') + '; line-height:1.2;">' + _esc(compVal) + '</div>' +
-      '<div style="font-size:11px; color:' + _tm('#64748b') + '; margin-top:4px;">' + _esc(compLabel) + '</div>' +
+      '<div style="font-size:24px; font-weight:700; color:' + _tv('var(--color-text)') + '; line-height:1.2;">' + _esc(compVal) + '</div>' +
+      '<div style="font-size:11px; color:' + _tm('var(--color-text-muted)') + '; margin-top:4px;">' + _esc(compLabel) + '</div>' +
       '</div>' +
       '</div>' +
       '</div>';
@@ -524,21 +527,21 @@
     var icon = config.icon || '&#9733;';
     var iconPos = config.iconPosition || 'left';
     var iconSize = config.iconSize || '28px';
-    var iconColor = config.iconColor || (config.color || '#3B82F6');
+    var iconColor = config.iconColor || (config.color || 'var(--color-primary)');
     var iconHtml = '<span style="font-size:' + iconSize + '; color:' + iconColor + '; line-height:1;">' + icon + '</span>';
 
     var layout;
     if (iconPos === 'top') {
       layout = '<div style="text-align:center;">' +
         '<div style="margin-bottom:8px;">' + iconHtml + '</div>' +
-        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:4px;">' + _esc(label) + '</div>' +
+        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:4px;">' + _esc(label) + '</div>' +
         '</div>';
     } else if (iconPos === 'right') {
       layout = '<div style="display:flex; align-items:center; justify-content:space-between; width:100%;">' +
         '<div>' +
-        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:4px;">' + _esc(label) + '</div>' +
+        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:4px;">' + _esc(label) + '</div>' +
         '</div>' +
         iconHtml +
         '</div>';
@@ -547,8 +550,8 @@
         '<div style="display:flex; align-items:center; gap:12px;">' +
         iconHtml +
         '<div>' +
-        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
-        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; margin-top:2px;">' + _esc(label) + '</div>' +
+        '<div class="kpi-value" style="font-size:calc(28px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2; ' + _typography(config.typography) + '">' + _esc(val) + '</div>' +
+        '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; margin-top:2px;">' + _esc(label) + '</div>' +
         '</div>' +
         '</div>' +
         '</div>';
@@ -610,24 +613,24 @@
     var cur = Number(config.value != null ? config.value : (data && data.value));
     var prev = Number(config.previousValue != null ? config.previousValue : (data && data.previousValue));
     var delta = null;
-    var deltaColor = _td('#94a3b8');
+    var deltaColor = _td('var(--color-text-muted)');
     var tip = config.measureExpr ? _reportTip(config) : '';
     var switcher = _measureSwitcher(config);
     var headRow = '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">' +
-      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('#475569') + '; ' + _typography(config.typography) + '">' + _esc(label) + '</div>' +
+      '<div class="kpi-label" style="font-size:12px; font-weight:500; color:' + _tm('var(--color-text-secondary)') + '; ' + _typography(config.typography) + '">' + _esc(label) + '</div>' +
       switcher + '</div>';
     if (!isNaN(cur) && !isNaN(prev)) {
       delta = cur - prev;
       var deltaPct = prev !== 0 ? ((delta / Math.abs(prev)) * 100).toFixed(1) : null;
       var arrow = delta >= 0 ? '&#9650;' : '&#9660;';
-      deltaColor = delta >= 0 ? 'var(--bd-kpi-good,#10b981)' : 'var(--bd-kpi-bad,#ef4444)';
+      deltaColor = delta >= 0 ? 'var(--bd-kpi-good,var(--color-success))' : 'var(--bd-kpi-bad,var(--color-danger))';
       var deltaStr = delta >= 0 ? '+' : '';
       deltaStr += deltaPct != null ? deltaPct + '%' : _fmtValue(delta, config);
       var cfMode = (config.cf || 'auto');
       var cfBg = _bgStyle(config, 5);
       var cfBadge = '';
       if (config.measureExpr && cfMode !== 'none') {
-        var tint = delta >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+        var tint = delta >= 0 ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-danger) 12%, transparent)';
         var tintLayer = 'linear-gradient(' + tint + ',' + tint + ')';
         if (cfBg.indexOf('background-image:') !== -1) {
           cfBg = cfBg.replace(/background-image:/, 'background-image: ' + tintLayer + ' , ');
@@ -642,20 +645,20 @@
 return '<div class="kpi-previousPeriod kpi-light" style="' + cfBg + '; height:100%; display:flex; flex-direction:column; justify-content:center; padding:16px; position:relative;">' +
         tip +
         headRow +
-        '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2;">' + _esc(val) + '</div>' +
+        '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2;">' + _esc(val) + '</div>' +
         '<div style="display:flex; align-items:center; gap:8px; margin-top:8px;">' +
         cfBadge +
         '<span style="color:' + deltaColor + '; font-weight:700; font-size:13px;">' + arrow + ' ' + _esc(deltaStr) + '</span>' +
         '</div>' +
-        '<div style="font-size:11px; color:' + _td('#94a3b8') + '; margin-top:4px;">' + _esc(periodLabel) + ': ' + _esc(prevVal) + '</div>' +
+        '<div style="font-size:11px; color:' + _td('var(--color-text-muted)') + '; margin-top:4px;">' + _esc(periodLabel) + ': ' + _esc(prevVal) + '</div>' +
         '</div>';
     }
 
     return '<div class="kpi-previousPeriod kpi-light" style="' + _bgStyle(config, 5) + '; height:100%; display:flex; flex-direction:column; justify-content:center; padding:16px; position:relative;">' +
       tip +
       headRow +
-      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('#0f172a') + '; line-height:1.2;">' + _esc(val) + '</div>' +
-      '<div style="font-size:12px; color:' + _td('#94a3b8') + '; margin-top:6px;">' + _esc(periodLabel) + ': ' + _esc(prevVal) + '</div>' +
+      '<div class="kpi-value" style="font-size:calc(32px * var(--bd-scale, 1)); font-weight:800; color:' + _tv('var(--color-text)') + '; line-height:1.2;">' + _esc(val) + '</div>' +
+      '<div style="font-size:12px; color:' + _td('var(--color-text-muted)') + '; margin-top:6px;">' + _esc(periodLabel) + ': ' + _esc(prevVal) + '</div>' +
       '</div>';
   };
 
@@ -671,7 +674,7 @@ return '<div class="kpi-previousPeriod kpi-light" style="' + cfBg + '; height:10
     var opts = lst.map(function (m) {
       return '<option value="' + _esc(m.id) + '"' + (String(m.id) === String(c.measureId) ? ' selected' : '') + '>' + _esc(m.name) + '</option>';
     }).join('');
-    return '<select class="bd-kpi-measure-switch" title="Switch measure" onchange="window.BlankDash && BlankDash.switchMeasure(\'' + _esc(c.id) + '\', this.value)" style="font-size:10.5px; background:rgba(127,97,255,0.08); color:' + _tm('#475569') + '; border:1px solid rgba(127,97,255,0.25); border-radius:6px; padding:2px 4px; max-width:132px; cursor:pointer; font-weight:600; outline:none;">' + opts + '</select>';
+    return '<select class="bd-kpi-measure-switch" title="Switch measure" onchange="window.BlankDash && BlankDash.switchMeasure(\'' + _esc(c.id) + '\', this.value)" style="font-size:10.5px; background:rgba(var(--color-primary-rgb),0.08); color:' + _tm('var(--color-text-secondary)') + '; border:1px solid rgba(var(--color-primary-rgb),0.25); border-radius:6px; padding:2px 4px; max-width:132px; cursor:pointer; font-weight:600; outline:none;">' + opts + '</select>';
   }
 
   /* ─── Report tooltip (P1.1) ───
@@ -681,8 +684,8 @@ return '<div class="kpi-previousPeriod kpi-light" style="' + cfBg + '; height:10
     var rows = '';
     function rw(key, valHtml) {
       return '<div style="display:flex; justify-content:space-between; gap:14px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.08);">' +
-        '<span style="color:#a3a3c2; font-size:11px; white-space:nowrap;">' + _esc(key) + '</span>' +
-        '<span style="color:#eceaf8; font-size:11px; text-align:right; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">' + valHtml + '</span>' +
+        '<span style="color:#94a3b8; font-size:11px; white-space:nowrap;">' + _esc(key) + '</span>' +
+        '<span style="color:#f8fafc; font-size:11px; text-align:right; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">' + valHtml + '</span>' +
         '</div>';
     }
     var cur = Number(c.value != null ? c.value : 0);
@@ -693,19 +696,19 @@ return '<div class="kpi-previousPeriod kpi-light" style="' + cfBg + '; height:10
     var arrow = delta >= 0 ? '▲' : '▼';
     var pctStr = deltaPct == null ? '—' : (deltaPct > 0 ? '+' : '') + deltaPct.toFixed(1) + '%';
     var curLabel = (c.timeIntel ? String(c.timeIntel).toUpperCase() : 'CURRENT');
-    rows += rw('Period', _esc(curLabel) + ' <span style="color:#827cac">(' + _esc(c.periodLabel || 'prior') + ')</span>');
-    rows += rw('Value', '<span style="color:#10b981; font-weight:700;">' + _esc(_fmtValue(cur, c)) + '</span>');
+    rows += rw('Period', _esc(curLabel) + ' <span style="color:#64748b">(' + _esc(c.periodLabel || 'prior') + ')</span>');
+    rows += rw('Value', '<span style="color:var(--color-success); font-weight:700;">' + _esc(_fmtValue(cur, c)) + '</span>');
     rows += rw('Prior', _esc(_fmtValue(prev, c)));
-    rows += rw('Δ ' + pctStr, '<span style="color:' + (delta >= 0 ? '#10b981' : '#ef4444') + ';">' + arrow + ' ' + _esc(_fmtValue(delta, c)) + '</span>');
+    rows += rw('Δ ' + pctStr, '<span style="color:' + (delta >= 0 ? 'var(--color-success)' : 'var(--color-danger)') + ';">' + arrow + ' ' + _esc(_fmtValue(delta, c)) + '</span>');
     if (cmp != null && !isNaN(cmp) && String(cmp) !== '' && Number(cmp) !== 0) rows += rw('Full prior', _esc(_fmtValue(cmp, c)));
     var formula = String(c.measureExpr || '');
     if (formula.length > 34) formula = formula.slice(0, 31) + '…';
     rows += rw('Formula', _esc(formula));
     rows += rw('Source', 'analytics.' + _esc(c.table || ''));
     if (c.anchor) rows += rw('As of', _esc(c.anchor));
-    return '<span class="bd-kpi-tip-ic" style="position:absolute; top:8px; right:8px; z-index:30; width:20px; height:20px; border-radius:50%; background:rgba(127,97,255,0.14); color:#7B61FF; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; cursor:help;" onmouseover="var cc=this.firstElementChild; if(cc){cc.style.display=\'block\';}" onmouseout="var cc=this.firstElementChild; if(cc){cc.style.display=\'none\';}">ℹ' +
-      '<span class="bd-kpi-tip-card" style="display:none; position:absolute; top:24px; right:0; width:250px; background:#1e1b3a; border:1px solid #3b355c; border-radius:10px; padding:10px 12px; box-shadow:0 12px 32px rgba(0,0,0,0.45); z-index:40;">' +
-      '<div style="color:#c9c4f0; font-size:12px; font-weight:700; margin-bottom:6px;">Report</div>' + rows +
+    return '<span class="bd-kpi-tip-ic" style="position:absolute; top:8px; right:8px; z-index:30; width:20px; height:20px; border-radius:50%; background:rgba(var(--color-primary-rgb),0.14); color:var(--color-primary); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; cursor:help;" onmouseover="var cc=this.firstElementChild; if(cc){cc.style.display=\'block\';}" onmouseout="var cc=this.firstElementChild; if(cc){cc.style.display=\'none\';}">ℹ' +
+      '<span class="bd-kpi-tip-card" style="display:none; position:absolute; top:24px; right:0; width:250px; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; box-shadow:0 12px 32px rgba(0,0,0,0.45); z-index:40;">' +
+      '<div style="color:#e2e8f0; font-size:12px; font-weight:700; margin-bottom:6px;">Report</div>' + rows +
       '</span></span>';
   }
 

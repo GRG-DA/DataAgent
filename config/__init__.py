@@ -160,7 +160,8 @@ class LLMSettings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com/v1"
 
     # OpenCode Free (opencode.ai/zen/v1 — no API key required)
-    opencode_model: str = ""
+    # "auto" = the fastest free model the opencode server offers.
+    opencode_model: str = "auto"
     opencode_base_url: str = "https://opencode.ai/zen/v1"
     # Optional opencode server URL (e.g. "http://localhost:3000"). When set,
     # the provider routes through the server's session API instead of the zen

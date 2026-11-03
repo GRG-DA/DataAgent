@@ -874,6 +874,192 @@ def test_pbix_builder_happy(tmp_path):
         assert "DataModelSchema" in zf.namelist()
 
 
+def test_pbix_builder_blankdash_layout(tmp_path):
+    from export import pbix_export as px
+
+    db = _seed_db(tmp_path)
+    run_query, load_table = _pbix_runners(db)
+    dash = {
+        "name": "Studio Dash",
+        "widgets": [],
+        "layout": {
+            "_blankdash": {
+                "canvasMinW": 1920,
+                "canvasMinH": 1080,
+                "pages": [{
+                    "name": "Page 1",
+                    "widgets": [
+                        {"type": "slicer", "title": "Region",
+                         "config": {"filterField": "region", "table": "sales",
+                                    "sql": "SELECT DISTINCT region AS label FROM analytics.sales"}},
+                        {"type": "kpi", "title": "Total", "cols": 3, "rows": 2,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT SUM(amount) AS value FROM analytics.sales"}},
+                        {"type": "chart", "title": "By region", "cols": 6, "rows": 3,
+                         "config": {"table": "sales", "chartType": "bar",
+                                    "xCol": "label", "yCol": "value",
+                                    "sql": "SELECT region AS label, SUM(amount) AS value FROM analytics.sales GROUP BY label"}},
+                        {"type": "table", "title": "Rows", "cols": 12, "rows": 3,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT product, amount FROM analytics.sales"}},
+                    ],
+                }],
+            },
+        },
+    }
+    blob = px.build_powerbi_pbit(dash, run_query, load_table)
+    assert blob[:2] == b"PK"
+    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+        model = json.loads(zf.read("DataModelSchema").decode("utf-16-le"))
+        report = json.loads(zf.read("Report/Layout").decode("utf-16-le"))
+    table_names = {t["name"] for t in model["model"]["tables"]}
+    assert "Total" in table_names
+    assert "By region" in table_names
+    assert "Rows" in table_names
+    containers = report["sections"][0]["visualContainers"]
+    types = [json.loads(c["config"])["singleVisual"]["visualType"]
+             for c in containers if json.loads(c["config"]).get("singleVisual")]
+    assert "cardVisual" in types
+    assert "tableEx" in types
+    assert len(containers) >= 5
+
+
+def test_pbix_slicer_uses_dropdown_mode():
+    from export import pbix_export as px
+
+    visual = px._slicer_visual("T", "f", "F")
+    mode = visual["objects"]["data"][0]["properties"]["mode"]["expr"]["Literal"]["Value"]
+    assert mode == "'Dropdown'"
+    assert "Values" in visual["projections"]
+    assert "Category" not in visual["projections"]
+
+
+def test_pbix_slicer_has_single_label_and_usable_height():
+    """A slicer only gets the header label, not header + visual title.
+
+    Both labels plus the dropdown cannot fit in the old 36px band; the
+    dropdown was clipped, so Power BI rendered a blank white card.
+    """
+    from export import pbix_export as px
+
+    visual = px._slicer_visual("T", "f", "F")
+    assert "title" not in (visual.get("vcObjects") or {})
+    assert visual["objects"]["header"][0]["properties"]["show"]["expr"]["Literal"]["Value"] == "true"
+    assert px._SLICER_HEIGHT >= 52.0
+
+
+def test_pbix_slicers_sit_in_header_band(tmp_path):
+    from export import pbix_export as px
+
+    db = _seed_db(tmp_path)
+    run_query, load_table = _pbix_runners(db)
+    dash = {
+        "name": "Header Filters",
+        "widgets": [],
+        "layout": {
+            "_blankdash": {
+                "pages": [{
+                    "name": "Page 1",
+                    "widgets": [
+                        {"type": "slicer", "title": "Region",
+                         "config": {"filterField": "region", "table": "sales"}},
+                        {"type": "slicer", "title": "Category",
+                         "config": {"filterField": "product", "table": "sales"}},
+                        {"type": "kpi", "title": "Total", "cols": 3, "rows": 3,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT SUM(amount) AS value FROM analytics.sales"}},
+                        {"type": "chart", "title": "By region", "cols": 6, "rows": 3,
+                         "config": {"table": "sales", "chartType": "bar",
+                                    "xCol": "region", "yCol": "value",
+                                    "sql": "SELECT region, SUM(amount) AS value FROM analytics.sales GROUP BY region"}},
+                        {"type": "table", "title": "Rows", "cols": 12, "rows": 3,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT product, amount FROM analytics.sales"}},
+                    ],
+                }],
+            },
+        },
+    }
+    blob = px.build_powerbi_pbit(dash, run_query, load_table)
+    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+        report = json.loads(zf.read("Report/Layout").decode("utf-16-le"))
+    page = report["sections"][0]
+    slicers = []
+    content = []
+    titles = []
+    for c in page["visualContainers"]:
+        sv = json.loads(c["config"]).get("singleVisual") or {}
+        vtype = sv.get("visualType")
+        if vtype == "slicer":
+            slicers.append(c)
+        elif vtype == "textbox":
+            titles.append(c)
+        else:
+            content.append(c)
+    assert len(slicers) == 2
+    for c in slicers:
+        assert c["y"] < 60, "slicers belong in the title band"
+        assert c["height"] >= 52
+        assert c["x"] >= 300, "slicers sit to the right of the title"
+    # The page title shares the band on the left; content starts below it.
+    assert len(titles) == 1 and titles[0]["y"] < 60
+    assert min(c["y"] for c in content) >= 60
+    # 16:9 page preserved (1280 x 720).
+    assert page["width"] == 1280.0
+    assert page["height"] == 720.0
+
+
+def test_pbix_page_stays_16x9_with_four_grid_rows(tmp_path):
+    """A real dashboard (KPIs + 2 chart rows + table) must still fit 720px."""
+    from export import pbix_export as px
+
+    db = _seed_db(tmp_path)
+    run_query, load_table = _pbix_runners(db)
+
+    def chart(title, col, row, cols=6):
+        return {"type": "chart", "title": title, "cols": cols, "rows": 3,
+                "col": col, "row": row,
+                "config": {"table": "sales", "chartType": "bar",
+                           "xCol": "region", "yCol": "value",
+                           "sql": "SELECT region, SUM(amount) AS value FROM analytics.sales GROUP BY region"}}
+
+    dash = {
+        "name": "Tall Dash",
+        "widgets": [],
+        "layout": {
+            "_blankdash": {
+                "pages": [{
+                    "name": "Page 1",
+                    "widgets": [
+                        {"type": "slicer", "title": "Region",
+                         "config": {"filterField": "region", "table": "sales"}},
+                        {"type": "slicer", "title": "Category",
+                         "config": {"filterField": "product", "table": "sales"}},
+                        {"type": "kpi", "title": "Total", "cols": 3, "rows": 3,
+                         "col": 1, "row": 1,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT SUM(amount) AS value FROM analytics.sales"}},
+                        chart("A", 4, 1),
+                        chart("B", 1, 4),
+                        chart("C", 7, 7),
+                        {"type": "table", "title": "Rows", "cols": 12, "rows": 3,
+                         "col": 1, "row": 10,
+                         "config": {"table": "sales",
+                                    "sql": "SELECT product, amount FROM analytics.sales"}},
+                    ],
+                }],
+            },
+        },
+    }
+    blob = px.build_powerbi_pbit(dash, run_query, load_table)
+    with zipfile.ZipFile(io.BytesIO(blob)) as zf:
+        report = json.loads(zf.read("Report/Layout").decode("utf-16-le"))
+    page = report["sections"][0]
+    assert page["width"] == 1280.0
+    assert page["height"] == 720.0
+    assert max(c["y"] + c["height"] for c in page["visualContainers"]) <= 710
+
+
 def test_pbix_builder_missing_table(tmp_path):
     from export import pbix_export as px
 

@@ -1814,6 +1814,7 @@ class TestOpencodeBootstrap:
         monkeypatch.setattr(ob.platform, "machine", lambda: "weird123")
         assert ob._machine_arch() == "weird123"
 
+    @pytest.mark.skipif(os.name != "nt", reason="Windows path semantics only")
     def test_runtime_bin_dir(self, monkeypatch):
         import agent.opencode_bootstrap as ob
         # Windows branch only (posix Path cannot instantiate on win32)
@@ -2050,7 +2051,11 @@ class TestOpencodeBootstrap:
             def __init__(self, *a, **k): pass
             async def __aenter__(self): return self
             async def __aexit__(self, *a): return False
-            async def get(self, url): return FakeResp({}, status_code=200)
+            async def get(self, url):
+                return FakeResp(
+                    {"$schema": "https://opencode.ai/config.json", "agent": {}},
+                    status_code=200,
+                )
         monkeypatch.setattr(ob.httpx, "AsyncClient", GoodC)
         monkeypatch.setattr(ob, "opencode_bin_path", lambda: Path("x"))
         st = await ob.server_status("http://127.0.0.1:3000")

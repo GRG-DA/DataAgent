@@ -436,7 +436,7 @@ const el = document.querySelector(`[data-cell-id="${cell.id}"] .cell-input texta
 
         this._cells.forEach((cell, i) => {
             html += `<div class="cell"><div class="cell-header">${cell.type.toUpperCase()} Cell #${i + 1}`;
-            if (cell.note) html += ` <span style="color:#818cf8;font-style:italic;font-weight:normal;margin-left:8px">"${App.escapeHtml(cell.note)}"</span>`;
+            if (cell.note) html += ` <span style="color:var(--color-primary-hover);font-style:italic;font-weight:normal;margin-left:8px">"${App.escapeHtml(cell.note)}"</span>`;
             html += `</div>`;
             if (cell.source) {
                 html += `<div class="cell-source">${App.escapeHtml(cell.source)}</div>`;

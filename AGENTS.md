@@ -68,7 +68,11 @@ change breaks one, fix the change, not the test.
   from `request.state.user`; a client-supplied `owner_id` is never trusted.
 - **SSO `state` is single-use and server-verified** (`api.sso._remember_state` /
   `_consume_state`).
-- **First-admin registration requires `DATAAGENT_BOOTSTRAP_TOKEN`.**
+- **First-admin registration on a network-reachable/production instance requires
+  `DATAAGENT_BOOTSTRAP_TOKEN`.** Loopback non-production installs are exempt via
+  `api.bootstrap_gate.bootstrap_gate_required()` only when the request is also
+  local (no forwarded headers / non-loopback client); local `/auth/register` and
+  central `/auth/accounts/*` must share that decision (ADR-019).
 - **Never commit or ship runtime secrets**: `.env`, `config/users.json`,
   `data/.jwt_secret`, `data/.grant_key`, `data/.grant_migrated`,
   `config/db_connections.json`, `config/llm_runtime.json`,

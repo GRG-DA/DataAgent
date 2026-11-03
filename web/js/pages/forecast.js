@@ -218,8 +218,8 @@ const ForecastPage = {
                 const canvas = document.getElementById('fc-chart');
                 if (canvas && window.Charts) {
                     Charts.line('fc-chart', allLabels, [
-                        { label: 'Historical', data: [...histValues, ...new Array(predValues.length).fill(null)], borderColor: '#3b82f6', fill: false },
-                        { label: 'Forecast', data: paddedPred, borderColor: '#ef4444', borderDash: [5, 5], fill: false },
+                        { label: 'Historical', data: [...histValues, ...new Array(predValues.length).fill(null)], borderColor: '#2563eb', fill: false },
+                        { label: 'Forecast', data: paddedPred, borderColor: '#b91c1c', borderDash: [5, 5], fill: false },
                     ], {
                         plugins: { title: { display: true, text: `${valCol} Forecast — ${table}` } },
                         scales: { y: { beginAtZero: false } },

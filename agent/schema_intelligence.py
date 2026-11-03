@@ -256,8 +256,9 @@ def classify_schema_from_context(schema_context: str) -> SchemaProfile:
     current_table = None
 
     for line in lines:
-        # Match table header: "TABLE schema.name (N rows):"
-        table_match = re.match(r'TABLE\s+\S+\.(\w+)\s+\((\d+)\s+rows\):?', line, re.IGNORECASE)
+        # Match table header: "TABLE name (N rows):" — the schema prefix is
+        # optional ("TABLE analytics_t_x.name (N rows):" is still accepted).
+        table_match = re.match(r'TABLE\s+(?:\S+\.)?(\w+)\s+\((\d+)\s+rows\):?', line, re.IGNORECASE)
         if table_match:
             current_table = table_match.group(1)
             table_name = current_table
@@ -305,12 +306,17 @@ def _is_identifier(col_name: str, col_lower: str, col_type: str, cardinality: Di
 
 
 def _is_date_column(col_name: str, col_lower: str, col_type: str) -> bool:
-    """Check if a column is a date/timestamp."""
+    """Check if a column is a date/timestamp.
+
+    Types are matched by prefix because DuckDB reports TIMESTAMP_NS /
+    TIMESTAMP_MS / TIMESTAMP_S (and TIMESTAMP WITH TIME ZONE) — an exact
+    match on "TIMESTAMP" misses every one of them.
+    """
     date_keywords = ["date", "time", "timestamp", "datetime", "year", "month",
                      "quarter", "day", "week"]
     if any(kw in col_lower for kw in date_keywords):
         return True
-    if col_type.upper() in ("DATE", "TIMESTAMP", "DATETIME", "TIMESTAMP WITH TIME ZONE"):
+    if any(t in col_type.upper() for t in ("DATE", "TIMESTAMP", "DATETIME")):
         return True
     return False
 

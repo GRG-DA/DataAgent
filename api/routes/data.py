@@ -18,6 +18,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from api import state as _state
+from api.lineage_service import identity_column_map, record_persisted_transform
 from api.security_paths import resolve_under, sanitize_upload_name
 from api.security_uploads import SniffError, validate_content
 from config import settings
@@ -78,6 +79,22 @@ class CleanPreviewRequest(BaseModel):
     dedup: bool = True
     null_strategy: str = "drop"
     drop_columns: List[str] = []
+
+
+class CleanApplyRequest(BaseModel):
+    """Request to clean a warehouse table and persist the result.
+
+    The source table is never modified: the cleaned rows are written to a
+    new table (``<table>_clean`` by default, suffixed on collision).
+    """
+
+    table_name: str
+    output_table: Optional[str] = None
+    dedup: bool = True
+    null_strategy: str = "drop"
+    drop_columns: List[str] = []
+    trim_whitespace: bool = True
+    empty_to_null: bool = True
 
 
 class LoadRequest(BaseModel):
@@ -300,6 +317,130 @@ async def clean_data(request: CleanRequest, http_request: Request):
     )
 
 
+_MAX_CLEAN_APPLY_ROWS = 1_000_000
+
+
+def _clean_dataframe_ops(
+    df: pd.DataFrame,
+    *,
+    dedup: bool,
+    null_strategy: str,
+    drop_columns: List[str],
+    trim_whitespace: bool,
+    empty_to_null: bool,
+) -> tuple[pd.DataFrame, List[Dict[str, Any]]]:
+    """Apply deterministic cleaning steps to a copy of *df*.
+
+    Returns the cleaned frame plus a human-readable change log. The input
+    frame is never mutated, so callers can compare before/after safely.
+    """
+    df_after = df.copy()
+    changes: List[Dict[str, Any]] = []
+
+    if trim_whitespace:
+        for col in df_after.columns:
+            if df_after[col].dtype == object:
+                df_after[col] = df_after[col].map(
+                    lambda v: v.strip() if isinstance(v, str) else v
+                )
+        changes.append(
+            {"step": "Trim whitespace", "detail": "Trimmed text columns", "rows_affected": 0}
+        )
+
+    if empty_to_null:
+        for col in df_after.columns:
+            if df_after[col].dtype == object:
+                df_after[col] = df_after[col].map(
+                    lambda v: None if isinstance(v, str) and v.strip() == "" else v
+                )
+        changes.append(
+            {"step": "Empty strings to null", "detail": "Normalized empty text cells", "rows_affected": 0}
+        )
+
+    if dedup:
+        dup_count = int(df_after.duplicated().sum())
+        if dup_count > 0:
+            df_after = df_after.drop_duplicates()
+            changes.append(
+                {"step": "Deduplication", "detail": f"Removed {dup_count} duplicate rows", "rows_affected": dup_count}
+            )
+
+    for col in df_after.columns:
+        null_count = int(df_after[col].isnull().sum())
+        if null_count == 0:
+            continue
+        if null_strategy == "drop":
+            before_len = len(df_after)
+            df_after = df_after.dropna(subset=[col])
+            dropped = before_len - len(df_after)
+            if dropped > 0:
+                changes.append(
+                    {"step": f"Drop nulls in '{col}'", "detail": f"Dropped {dropped} rows with null values", "rows_affected": dropped}
+                )
+        elif null_strategy.startswith("fill_"):
+            numeric = pd.api.types.is_numeric_dtype(df_after[col])
+            if null_strategy == "fill_mean" and numeric:
+                fill_val = df_after[col].mean()
+            elif null_strategy == "fill_median" and numeric:
+                fill_val = df_after[col].median()
+            elif null_strategy == "fill_mode":
+                modes = df_after[col].mode()
+                fill_val = modes.iloc[0] if len(modes) > 0 else 0
+            else:
+                # Non-numeric mean/median falls back to the mode.
+                modes = df_after[col].mode()
+                fill_val = modes.iloc[0] if len(modes) > 0 else 0
+            filled = null_count
+            df_after[col] = df_after[col].fillna(fill_val)
+            if isinstance(fill_val, float):
+                shown = f"{fill_val:.2f}"
+            else:
+                shown = str(fill_val)
+            changes.append(
+                {"step": f"Fill nulls in '{col}'", "detail": f"Filled {filled} nulls with {null_strategy.replace('fill_', '')} ({shown})", "rows_affected": filled}
+            )
+
+    for col in drop_columns:
+        if col in df_after.columns:
+            df_after = df_after.drop(columns=[col])
+            changes.append(
+                {"step": f"Drop column '{col}'", "detail": f"Removed column (was {df[col].dtype})", "rows_affected": 0}
+            )
+
+    return df_after, changes
+
+
+def _cleaning_code_snippet(
+    request: "CleanApplyRequest", output_table: str
+) -> str:
+    """Return an auditable pandas snippet mirroring the applied steps."""
+    lines = [
+        "# Generated by DataAgent - deterministic cleaning (pandas)",
+        "df = df.copy()",
+    ]
+    if request.trim_whitespace:
+        lines.append(
+            "for _c in df.select_dtypes(include=['object']).columns:\n"
+            "    df[_c] = df[_c].map(lambda v: v.strip() if isinstance(v, str) else v)"
+        )
+    if request.empty_to_null:
+        lines.append(
+            "for _c in df.select_dtypes(include=['object']).columns:\n"
+            "    df[_c] = df[_c].map(lambda v: None if isinstance(v, str) and v.strip() == '' else v)"
+        )
+    if request.dedup:
+        lines.append("df = df.drop_duplicates()")
+    if request.null_strategy == "drop":
+        lines.append("df = df.dropna()")
+    elif request.null_strategy.startswith("fill_"):
+        method = request.null_strategy.replace("fill_", "")
+        lines.append(f"df = df.fillna(df.{method}())")
+    if request.drop_columns:
+        lines.append(f"df = df.drop(columns={request.drop_columns!r})")
+    lines.append(f"# persisted as {output_table!r} (source table untouched)")
+    return "\n".join(lines)
+
+
 @router.post("/clean/preview")
 async def clean_preview(request: CleanPreviewRequest):
     """Preview cleaning changes before applying  returns before/after stats + diff."""
@@ -323,34 +464,14 @@ async def clean_preview(request: CleanPreviewRequest):
             conn.execute(f'SET search_path = "{schema}"')
             df_before = conn.execute(f'SELECT * FROM "{schema}".{safe}').df()
 
-        df_after = df_before.copy()
-        changes = []
-
-        if request.dedup:
-            dup_count = df_after.duplicated().sum()
-            if dup_count > 0:
-                df_after = df_after.drop_duplicates()
-                changes.append({"step": "Deduplication", "detail": f"Removed {int(dup_count)} duplicate rows", "rows_affected": int(dup_count)})
-
-        for col in df_after.columns:
-            null_count = int(df_after[col].isnull().sum())
-            if null_count > 0:
-                if request.null_strategy == "drop":
-                    before_len = len(df_after)
-                    df_after = df_after.dropna(subset=[col])
-                    dropped = before_len - len(df_after)
-                    if dropped > 0:
-                        changes.append({"step": f"Drop nulls in '{col}'", "detail": f"Dropped {dropped} rows with null values", "rows_affected": dropped})
-                elif request.null_strategy.startswith("fill_"):
-                    fill_val = {"fill_mean": df_after[col].mean(), "fill_median": df_after[col].median(), "fill_mode": df_after[col].mode().iloc[0] if len(df_after[col].mode()) > 0 else 0}.get(request.null_strategy, 0)
-                    filled = int(df_after[col].isnull().sum())
-                    df_after[col] = df_after[col].fillna(fill_val)
-                    changes.append({"step": f"Fill nulls in '{col}'", "detail": f"Filled {filled} nulls with {request.null_strategy.replace('fill_', '')} ({fill_val:.2f})", "rows_affected": filled})
-
-        for col in request.drop_columns:
-            if col in df_after.columns:
-                df_after = df_after.drop(columns=[col])
-                changes.append({"step": f"Drop column '{col}'", "detail": f"Removed column (was {df_before[col].dtype})", "rows_affected": 0})
+        df_after, changes = _clean_dataframe_ops(
+            df_before,
+            dedup=request.dedup,
+            null_strategy=request.null_strategy,
+            drop_columns=request.drop_columns,
+            trim_whitespace=False,
+            empty_to_null=False,
+        )
 
         cols_before = set(df_before.columns)
         cols_after = set(df_after.columns)
@@ -373,6 +494,131 @@ async def clean_preview(request: CleanPreviewRequest):
     except Exception as e:
         logger.error("Clean preview failed: %s", e, exc_info=True)
         return {"success": False, "error": "Clean preview failed"}
+
+
+def _free_output_table(
+    table_name: str, tenant_id: Optional[str] = None
+) -> str:
+    """Pick ``<table>_clean`` (``_clean2``, ``_clean3``, ... on collision)."""
+    from api.security_paths import sanitize_table_name
+
+    loader = _loader()
+    base = sanitize_table_name(f"{table_name}_clean")
+    output_table = base
+    suffix = 2
+    while loader.table_exists(output_table, tenant_id=tenant_id):
+        output_table = f"{base}{suffix}"
+        suffix += 1
+        if suffix > 50:
+            raise HTTPException(
+                status_code=409,
+                detail="Could not find a free output table name",
+            )
+    return output_table
+
+
+@router.post("/clean/apply")
+async def clean_apply(request: CleanApplyRequest, http_request: Request):
+    """Clean a warehouse table and persist the result to a NEW table.
+
+    The source table is never modified. The output defaults to
+    ``<table>_clean`` (``<table>_clean2``, ``_clean3``, ... on collision) so a
+    repeated task can never destroy earlier results.
+    """
+    from api.middleware.rate_limit import check_rate_limit
+    from api.security_paths import validate_table_name
+
+    check_rate_limit(http_request, "load")
+
+    table_name = validate_table_name(request.table_name)
+    loader = _loader()
+    if not loader.table_exists(table_name):
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' not found")
+
+    if request.output_table:
+        output_table = validate_table_name(request.output_table)
+        if output_table == table_name:
+            raise HTTPException(
+                status_code=400, detail="Refusing to overwrite the source table"
+            )
+    else:
+        output_table = _free_output_table(table_name)
+
+    safe = '"' + table_name.replace('"', '""') + '"'
+    try:
+        with loader.get_connection() as conn:
+            df_before = conn.execute(f"SELECT * FROM {safe}").df()
+
+        if len(df_before) > _MAX_CLEAN_APPLY_ROWS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Table is too large to clean here "
+                    f"(max {_MAX_CLEAN_APPLY_ROWS} rows)"
+                ),
+            )
+
+        df_after, changes = _clean_dataframe_ops(
+            df_before,
+            dedup=request.dedup,
+            null_strategy=request.null_strategy,
+            drop_columns=request.drop_columns,
+            trim_whitespace=request.trim_whitespace,
+            empty_to_null=request.empty_to_null,
+        )
+
+        if df_after.empty:
+            raise HTTPException(
+                status_code=400,
+                detail="No rows left after cleaning; source table left unchanged",
+            )
+
+        rows = loader.load_dataframe(df_after, output_table, if_exists="fail")
+        logger.info(
+            "Clean apply: %s -> %s (%s rows)", table_name, output_table, rows
+        )
+
+        from api.tenancy import current_tenant_id
+
+        record_persisted_transform(
+            operation="clean",
+            inputs=[table_name],
+            outputs=[output_table],
+            table=output_table,
+            description=f"Cleaned {table_name} into {output_table}",
+            metadata={
+                "rows_before": len(df_before),
+                "rows_after": len(df_after),
+                "changes": changes,
+                "dedup": request.dedup,
+                "null_strategy": request.null_strategy,
+                "drop_columns": list(request.drop_columns),
+            },
+            column_map=identity_column_map(
+                table_name,
+                [col for col in df_after.columns if col in df_before.columns],
+            ),
+            tenant_id=current_tenant_id(),
+        )
+
+        return {
+            "success": True,
+            "source_table": table_name,
+            "output_table": output_table,
+            "rows_before": len(df_before),
+            "rows_after": len(df_after),
+            "cols_before": len(df_before.columns),
+            "cols_after": len(df_after.columns),
+            "rows_loaded": rows,
+            "changes": changes,
+            "cleaning_code": _cleaning_code_snippet(request, output_table),
+            "message": f"Cleaned {table_name} -> {output_table} ({len(df_after)} rows)",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Clean apply failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Clean apply failed")
 
 
 @router.post("/load")
@@ -431,6 +677,24 @@ async def load_to_warehouse(request: LoadRequest, http_request: Request):
         except Exception as e:
             logger.error(f"Load to warehouse failed: {e}", exc_info=True)
             raise
+
+        from api.tenancy import current_tenant_id
+
+        record_persisted_transform(
+            operation="load",
+            inputs=[request.filename],
+            outputs=[table_name],
+            table=table_name,
+            description=f"Loaded {request.filename} into {table_name}",
+            metadata={
+                "rows": rows,
+                "filename": request.filename,
+                "sheet": sheet_name,
+                "if_exists": request.if_exists,
+            },
+            column_map=identity_column_map(request.filename, cleaned_df.columns),
+            tenant_id=current_tenant_id(),
+        )
 
         return {
             "success": True,

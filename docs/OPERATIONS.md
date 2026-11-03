@@ -44,14 +44,18 @@ python run.py shell            # desktop shell (pywebview window)
 
 On a fresh install with **zero users**, the first account to register becomes `admin`. That was a real hole: when the Docker publish bypassed nginx, whoever reached port 8002 first took over the instance.
 
-The fix is a bootstrap token:
+The fix is a bootstrap token on every **network-reachable** instance (any
+non-loopback bind, any forwarded/off-host request, or an environment other
+than development/local/test). A loopback-only desktop install is exempt, on
+both `/auth/register` and central `/auth/accounts/*` (ADR-019).
 
 | | |
 |---|---|
 | Env var | `DATAAGENT_BOOTSTRAP_TOKEN` |
 | Compared with | `hmac.compare_digest(supplied, expected)` |
-| Without it | **Nobody can create the first admin over HTTP.** Registration returns "No users exist and no bootstrap token is configured. Set DATAAGENT_BOOTSTRAP_TOKEN (or create an admin out-of-band) before registering." |
+| Without it | **On a gated instance nobody can create the first admin over HTTP.** Registration returns "No users exist and no bootstrap token is configured. Set DATAAGENT_BOOTSTRAP_TOKEN (or create an admin out-of-band) before registering." |
 | With it | The first registrant must present the matching token in the request body (`bootstrap_token`), or registration fails with "A valid bootstrap token is required to create the first account." |
+| Loopback exemption | Only when `app.host` is `127.0.0.1`/`localhost`/`::1`/`[::1]`, `APP_ENV` is development/local/test, and the request has no forwarded headers and a loopback client. Exposing the install on `0.0.0.0` or reaching it through a proxy re-enables the gate. |
 
 Generate one:
 
@@ -66,6 +70,10 @@ curl.exe -X POST http://127.0.0.1:8002/auth/register `
   -H "Content-Type: application/json" `
   -d '{"username":"admin","password":"<strong-password>","role":"admin","bootstrap_token":"<your-token>"}'
 ```
+
+Central accounts (`/auth/accounts/register` and `/auth/accounts/login`) use the
+same gate: the first central user on a gated instance needs the token, while a
+loopback desktop install can sign in without one.
 
 After the first account exists, **self-registration can only grant the standard role** (`settings.rbac.default_role`, i.e. `user`). An explicit request for a privileged role is rejected outright ("Self-registration is limited to standard accounts. Ask an administrator to grant elevated roles."). Roles are managed over HTTP (ADR-009 D4): `GET /auth/users` (admin-only) lists them, `PATCH /auth/users/{username}` changes a role (admin-only, audited, role validated against `settings.rbac.roles`) and `DELETE /auth/users/{username}` removes the account and cascades to its data. The user directory itself lives in the SQLite store `data/users.db` (`api/user_store.py`); `config/users.json` is only read once on the first start and is never written again.
 
@@ -127,7 +135,7 @@ The uncommented block sets `ssl_protocols TLSv1.2 TLSv1.3`, HSTS (`max-age=31536
 | Variable | Required? | What it does | Example |
 |---|---|---|---|
 | `JWT_SECRET` | **Yes for any shared deployment** | Signs session JWTs (HS256). Rejects published placeholders (`change-me-in-production`, `your-secret-key`, `secret`, …) and anything shorter than 16 chars — **the app refuses to start**. Falls back to `data/.jwt_secret` (auto-generated as `secrets.token_hex(32)`) when unset. | `python -c "import secrets;print(secrets.token_hex(32))"` → 64 hex chars |
-| `DATAAGENT_BOOTSTRAP_TOKEN` | Required to create the first admin | Bootstrap gate for the first (admin) registration; compared with `hmac.compare_digest`. Without it, nobody can create the first admin over HTTP. | 32 random hex bytes |
+| `DATAAGENT_BOOTSTRAP_TOKEN` | Required to create the first admin on a network-reachable/production instance | Bootstrap gate for the first (admin) registration on `/auth/register` and central `/auth/accounts/*`; compared with `hmac.compare_digest`. Loopback non-production installs are exempt. | 32 random hex bytes |
 | `TRUSTED_HOSTS` | Yes in production | Comma-separated `Host` allow-list for the `TrustedHostMiddleware` (DNS-rebinding guard). Defaults to `*` (permissive) when unset; Compose defaults to `localhost,127.0.0.1,web`. | `analytics.example.com,www.example.com` |
 | `TRUSTED_PROXY_NETWORKS` | Yes for Docker | CIDRs (or plain IPs) whose `X-Forwarded-For` header is trusted. **In Docker the api container sees nginx's bridge address, not loopback** — without this, the header is ignored entirely and every user shares one rate-limit bucket (10 failed logins anywhere locks everyone out). | `172.16.0.0/12` |
 | `BILLING_EXTERNAL_URL` | No | URL of the external checkout site (`BillingSettings`, `env_prefix="BILLING_"`). Empty ⇒ self-hosted free plan, no in-app purchase path. | `https://billing.example.com` |
@@ -270,7 +278,7 @@ The billing server has its own probe: `GET /healthz` reports each component (`ra
 | **403 with `X-Upgrade-Required: true` on a premium endpoint** | The plan does not include the feature. `X-Required-Feature` names the key. The frontend shows the upgrade overlay. |
 | **Ollama not reachable** | `LLM_BASE_URL` must point at a running Ollama (`http://localhost:11434`). Check `GET /health` — it appends "(unreachable — running in rule-based fallback mode)" when the provider is configured but not answering. Everything except the AI chat still works in fallback mode. `python run.py check` probes `/api/tags`. In Docker, run the `full` profile (`docker compose --profile full up`) and point `LLM_BASE_URL` at `http://ollama:11434`. |
 | **A paid plan shows as free after editing the DB** | Expected. A hand-edited row no longer matches its grant signature, so `_verify_effective` refuses it and fails closed to `free`. The log line is `local grant rejected for <user>: missing or invalid signature (provider=…)`. For `keygen` rows look for `keygen plan rejected for …: invalid_signature` / `email_mismatch` / `plan_mismatch`; for `cloud_sync`, `cloud_sync plan rejected for …: no_token` / `bad_token`. |
-| **Nobody can create the first admin** | `DATAAGENT_BOOTSTRAP_TOKEN` is unset. Set it and restart, then register with `bootstrap_token` in the body — or provision an admin out-of-band. |
+| **Nobody can create the first admin** | The instance is network-reachable/production and `DATAAGENT_BOOTSTRAP_TOKEN` is unset. Set it and restart, then register with `bootstrap_token` in the body — or provision an admin out-of-band. A loopback desktop install should not hit this gate. |
 | **429 on login / register** | Per-IP sliding window (10 logins/min, 5 registrations/min). Also check `TRUSTED_PROXY_NETWORKS` in Docker: without it every user shares one bucket and one user's failures lock everyone out. |
 
 ---

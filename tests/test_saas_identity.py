@@ -373,11 +373,20 @@ def test_session_store_selection_is_explicit():
 # ── D3 — the bootstrap gate ───────────────────────────────────────────
 
 
+def _force_host(monkeypatch, host: str, env: str = "development") -> None:
+    from config import settings
+
+    monkeypatch.setattr(settings.app, "host", host)
+    monkeypatch.setattr(settings.app, "env", env)
+    monkeypatch.delenv("APP_ENV", raising=False)
+
+
 def test_first_central_registrant_needs_a_bootstrap_token(monkeypatch, isolated_manager):
     from fastapi import HTTPException
 
     from api.central_accounts import provision_user
 
+    _force_host(monkeypatch, "0.0.0.0")
     monkeypatch.delenv("DATAAGENT_BOOTSTRAP_TOKEN", raising=False)
     with pytest.raises(HTTPException) as excinfo:
         provision_user("first@example.com", "acct-1", "")
@@ -402,6 +411,7 @@ def test_central_register_refuses_without_the_bootstrap_token(monkeypatch, clien
 
     from api.billing import cloud_sync
 
+    _force_host(monkeypatch, "0.0.0.0")
     monkeypatch.setattr(cloud_sync, "billing_sync_base_url", lambda: "http://billing.test")
     monkeypatch.delenv("DATAAGENT_BOOTSTRAP_TOKEN", raising=False)
 
@@ -417,6 +427,97 @@ def test_central_register_refuses_without_the_bootstrap_token(monkeypatch, clien
                             json={"email": "gate@example.com", "password": "Str0ng!Passw0rd"})
     assert response.status_code == 403
     assert "no bootstrap token is configured" in response.json()["detail"]
+
+
+def test_central_register_on_loopback_needs_no_token(monkeypatch, client, isolated_manager):
+    import httpx
+
+    from api.billing import cloud_sync
+
+    _force_host(monkeypatch, "127.0.0.1")
+    monkeypatch.setattr(cloud_sync, "billing_sync_base_url", lambda: "http://billing.test")
+    monkeypatch.setattr(cloud_sync, "sync_user", lambda *args, **kwargs: None)
+    monkeypatch.delenv("DATAAGENT_BOOTSTRAP_TOKEN", raising=False)
+
+    class _Resp:
+        status_code = 200
+        text = "{}"
+
+        def json(self):
+            return {"ok": True, "user_id": "acct-loop-1",
+                    "email": "loop-register@example.com"}
+
+    monkeypatch.setattr(httpx, "post", lambda url, json=None, timeout=None: _Resp())
+    response = client.post(
+        "/auth/accounts/register",
+        json={"email": "loop-register@example.com", "password": "Str0ng!Passw0rd"},
+    )
+
+    assert response.status_code == 200
+    info = isolated_manager.get_user_by_email("loop-register@example.com")
+    assert info is not None
+    assert info["role"] == "admin"
+
+
+def test_central_login_through_a_reverse_proxy_needs_the_bootstrap_token(
+    monkeypatch, client, isolated_manager
+):
+    import httpx
+
+    from api.billing import cloud_sync
+
+    _force_host(monkeypatch, "127.0.0.1")
+    monkeypatch.setattr(cloud_sync, "billing_sync_base_url", lambda: "http://billing.test")
+    monkeypatch.delenv("DATAAGENT_BOOTSTRAP_TOKEN", raising=False)
+
+    class _Resp:
+        status_code = 200
+        text = "{}"
+
+        def json(self):
+            return {"ok": True, "token": "billing-session",
+                    "email": "remote-login@example.com", "user_id": "acct-remote"}
+
+    monkeypatch.setattr(httpx, "post", lambda url, json=None, timeout=None: _Resp())
+    response = client.post(
+        "/auth/accounts/login",
+        headers={"X-Forwarded-For": "203.0.113.9"},
+        json={"email": "remote-login@example.com", "password": "Str0ng!Passw0rd"},
+    )
+
+    assert response.status_code == 403
+    assert "no bootstrap token is configured" in response.json()["detail"]
+    assert isolated_manager.get_user_by_email("remote-login@example.com") is None
+
+
+def test_central_login_on_loopback_provisions_first_admin(monkeypatch, client, isolated_manager):
+    import httpx
+
+    from api.billing import cloud_sync
+
+    _force_host(monkeypatch, "127.0.0.1")
+    monkeypatch.setattr(cloud_sync, "billing_sync_base_url", lambda: "http://billing.test")
+    monkeypatch.setattr(cloud_sync, "sync_user", lambda *args, **kwargs: None)
+    monkeypatch.delenv("DATAAGENT_BOOTSTRAP_TOKEN", raising=False)
+
+    class _Resp:
+        status_code = 200
+        text = "{}"
+
+        def json(self):
+            return {"ok": True, "token": "billing-session",
+                    "email": "loop-login@example.com", "user_id": "acct-loop-2"}
+
+    monkeypatch.setattr(httpx, "post", lambda url, json=None, timeout=None: _Resp())
+    response = client.post(
+        "/auth/accounts/login",
+        json={"email": "loop-login@example.com", "password": "Str0ng!Passw0rd"},
+    )
+
+    assert response.status_code == 200
+    info = isolated_manager.get_user_by_email("loop-login@example.com")
+    assert info is not None
+    assert info["role"] == "admin"
 
 
 # ── D4 — role management ──────────────────────────────────────────────

@@ -200,6 +200,11 @@ MAX_WIDGET_ROWS = 5000
 MAX_FACT_ROWS = 3000
 MAX_SLICER_ROWS = 5000
 
+# Slicer containers need room for the header label *and* the dropdown. At 36px
+# Power BI clips the dropdown and paints a blank white card; 72px leaves the
+# 11pt header plus a full 32px dropdown control visible.
+_SLICER_HEIGHT = 72.0
+
 # Emit the real-PBI semantic-query shape for value roles: ``Aggregation`` +
 # ``_AGG_FUNCTION`` (2 = Sum) named ``Sum(Table.Column)``, resolved via the
 # model column's ``summarizeBy: "sum"`` implicit measure. When False, value roles
@@ -1159,12 +1164,12 @@ def _card_visual(table: str, value_col: str, title: str,
 
 
 def _slicer_visual(table: str, field: str, title: str) -> Dict[str, Any]:
-    return _chart_visual(
+    sv = _chart_visual(
         "slicer", table, [(field, False)],
-        {"Category": field}, title,
+        {"Values": field}, title,
         column_props={f"{table}.{field}": {"displayName": title}},
         objects={
-            "data": [{"properties": {"mode": _expr("'Basic'")}}],
+            "data": [{"properties": {"mode": _expr("'Dropdown'")}}],
             "general": [{"properties": {}}],
             "header": [{
                 "properties": {
@@ -1196,6 +1201,11 @@ def _slicer_visual(table: str, field: str, title: str) -> Dict[str, Any]:
             }],
         },
     )
+    # The slicer header already labels the visual. Keeping the generic visual
+    # title as well stacked two labels above the dropdown, which cannot fit in
+    # a header-height container and makes Power BI render a blank card.
+    sv.pop("vcObjects", None)
+    return sv
 
 
 def _table_visual(table: str, columns: List[str], title: str) -> Dict[str, Any]:
@@ -2078,6 +2088,106 @@ def _patch_theme_data_colors(theme_json: str,
 
 # ── public API ──────────────────────────────────────────────────────────
 
+# Blankdash (Dashboard Studio) compatibility
+# ------------------------------------------
+# Dashboard Studio stores widgets as free-positioned pixels on a 1920x1080
+# canvas; the PBI builder lays visuals out on a 12-column grid. 48px row units
+# keep the exported page close to 16:9 once the four KPI cards and the table
+# are stacked.
+_BLANKDASH_ROW_HEIGHT = 48.0
+_BLANKDASH_CHART_TYPES = {
+    "horizontalbar": "bar",
+    "stackedbar": "bar",
+    "doughnut": "donut",
+    "sparkline": "line",
+}
+_BLANKDASH_SLICER_TYPES = {
+    "slicer", "daterange", "searchbox", "numrange", "hierarchy",
+    "relativedate", "topn", "filterpane", "globalsearch",
+}
+_BLANKDASH_DECOR_TYPES = {"image", "page", "button", "shape", "divider"}
+
+
+def _blankdash_config(dashboard: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return the nested Dashboard Studio config, if *dashboard* is one."""
+    layout = dashboard.get("layout")
+    if not isinstance(layout, dict):
+        return None
+    nested = layout.get("_blankdash")
+    if isinstance(nested, dict) and isinstance(nested.get("pages"), list):
+        return nested
+    if isinstance(layout.get("pages"), list):
+        return layout
+    return None
+
+
+def _blankdash_widgets(config: Dict[str, Any]) -> tuple:
+    """Flatten a blankdash config into legacy widgets + grid layout.
+
+    Saved Dashboard Studio dashboards keep their widgets under
+    ``layout._blankdash.pages[].widgets``; the Power BI builder (and older
+    dashboard exports) read a top-level ``widgets`` list. Without this bridge
+    the exporter silently builds an empty model and a title-only report.
+    """
+    widgets: List[Dict[str, Any]] = []
+    slicers: List[Dict[str, Any]] = []
+    for page in config.get("pages") or []:
+        if not isinstance(page, dict):
+            continue
+        for src in page.get("widgets") or []:
+            if not isinstance(src, dict):
+                continue
+            wtype = str(src.get("type") or "").strip().lower()
+            cfg = src.get("config") if isinstance(src.get("config"), dict) else {}
+            cfg = dict(cfg)
+            title = str(src.get("title") or "").strip()
+
+            if wtype in _BLANKDASH_SLICER_TYPES:
+                field = str(cfg.get("filterField") or title).strip()
+                table = str(cfg.get("table") or config.get("table") or "").strip()
+                if field and table:
+                    slicers.append({"field": field, "table": table, "kind": "select"})
+                continue
+            if wtype in _BLANKDASH_DECOR_TYPES:
+                continue
+
+            if wtype == "chart":
+                mapped = str(cfg.get("chartType") or "bar").strip().lower() or "bar"
+                mapped = _BLANKDASH_CHART_TYPES.get(mapped, mapped)
+            elif wtype in ("text", "heading", "title"):
+                mapped = "text"
+            elif wtype == "metriccard":
+                mapped = "kpi"
+            else:
+                mapped = wtype or "bar"
+
+            out = {k: v for k, v in src.items() if k != "__rq"}
+            out["type"] = mapped
+            out["title"] = title
+            out["config"] = cfg
+            if not out.get("cols"):
+                try:
+                    out["cols"] = max(1, min(12, round(float(src.get("width") or 0) / 160.0)))
+                except (TypeError, ValueError):
+                    out["cols"] = 6
+            if not out.get("rows"):
+                try:
+                    out["rows"] = max(1, round(float(src.get("height") or 0) / max(1.0, _BLANKDASH_ROW_HEIGHT)))
+                except (TypeError, ValueError):
+                    out["rows"] = 3
+            widgets.append(out)
+
+    layout: Dict[str, Any] = {
+        "columns": 12,
+        "row_height": _BLANKDASH_ROW_HEIGHT,
+        "slicers": slicers,
+    }
+    insight = config.get("insight")
+    if isinstance(insight, str) and insight.strip():
+        layout["insight"] = insight
+    return widgets, layout
+
+
 def build_powerbi_pbit(
     dashboard: Dict[str, Any],
     query_runner: Callable[[str], pd.DataFrame],
@@ -2109,6 +2219,11 @@ def build_powerbi_pbit(
     theme_name = theme_name or "DarkBlue"
     widgets = dashboard.get("widgets") or []
     layout = dashboard.get("layout") or {}
+    bd_config = _blankdash_config(dashboard)
+    if bd_config is not None:
+        bd_widgets, bd_layout = _blankdash_widgets(bd_config)
+        if bd_widgets:
+            widgets, layout = bd_widgets, bd_layout
     slicers = layout.get("slicers") or []
     insight = layout.get("insight") or ""
 
@@ -2253,7 +2368,6 @@ def build_powerbi_pbit(
     _margin = 10.0
     _gap = 4.0
     _GRID_COLS = 12
-    has_slicers = bool(slicer_tables)
 
     containers: List[Dict[str, Any]] = []
     vis_id = 0
@@ -2278,32 +2392,49 @@ def build_powerbi_pbit(
         vis_id += 1
         containers.append(vc)
 
-    # header: title + optional insight banner
+    # header: title on the left, slicers right-aligned in the SAME band.
+    # Slicers need room for the header label *and* the dropdown; sharing the
+    # title band keeps the 16:9 page instead of eating a second row off 720px.
     _title_h = 42.0
     _insight_h = 40.0
+
+    # Reserve ~300px on the left for the title. Below 120px per slicer the
+    # dropdown gets too cramped, so fall back to a band below the title.
+    n_slicers = len(slicer_tables)
+    _slicer_avail = page_width - 2 * _margin - 300.0
+    _slicer_w = (min(260.0, (_slicer_avail - (n_slicers - 1) * _gap) / n_slicers)
+                 if n_slicers else 0.0)
+    slicers_in_header = bool(n_slicers) and _slicer_w >= 120.0
+    if slicers_in_header:
+        _title_h = max(_title_h, _SLICER_HEIGHT)
+
     y_cursor = 6.0
+    # Title first so the slicers paint on top of the shared band.
     add_vc(_margin, y_cursor, page_width - 2 * _margin, _title_h,
            _textbox_visual(name, "18pt", bold=True), has_data=False)
+    if slicers_in_header:
+        _group_w = n_slicers * _slicer_w + (n_slicers - 1) * _gap
+        sx = page_width - _margin - _group_w
+        for st in slicer_tables:
+            add_vc(sx, y_cursor, _slicer_w, _SLICER_HEIGHT,
+                   _slicer_visual(st["table"], st["field"], st["raw_field"]))
+            sx += _slicer_w + _gap
     y_cursor += _title_h + 6.0
     if insight:
         add_vc(_margin, y_cursor, page_width - 2 * _margin, _insight_h,
                _textbox_visual(insight, "11pt", background="#E8F0FE"), has_data=False)
         y_cursor += _insight_h + 6.0
 
-    # horizontal slicer band (one row). A left rail would eat ~200px of the
-    # 720px page and push the widget grid below the visible canvas; the samples
-    # put their filter chips across the top instead.
-    _slicer_h = 36.0
-    if has_slicers:
+    # fallback: too many slicers to share the title band -> dedicated band below
+    if n_slicers and not slicers_in_header:
         _slicer_top = y_cursor
-        n = len(slicer_tables)
-        _slicer_w = min(260.0, (page_width - 2 * _margin - (n - 1) * _gap) / n)
+        _slicer_w = min(260.0, (page_width - 2 * _margin - (n_slicers - 1) * _gap) / n_slicers)
         sx = _margin
         for st in slicer_tables:
-            add_vc(sx, _slicer_top, _slicer_w, _slicer_h,
+            add_vc(sx, _slicer_top, _slicer_w, _SLICER_HEIGHT,
                    _slicer_visual(st["table"], st["field"], st["raw_field"]))
             sx += _slicer_w + _gap
-        y_cursor = _slicer_top + _slicer_h + 2.0
+        y_cursor = _slicer_top + _SLICER_HEIGHT + 2.0
 
     # widget grid — position-driven (WYSIWYG). Each widget's stored col/row
     # (1-based, 12-col grid) maps to a fixed PBI canvas position using the SAME

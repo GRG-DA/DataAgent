@@ -6,6 +6,7 @@ Unified interface with streaming, tool-calling, and model routing.
 """
 
 import asyncio
+import base64
 import logging
 import os
 import sys
@@ -13,7 +14,7 @@ import json
 import re
 import time
 from urllib.parse import urlsplit
-from typing import Dict, List, Optional, Any, AsyncGenerator, Union, Literal
+from typing import Dict, List, Optional, Any, AsyncGenerator, Union, Literal, Set, Tuple
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -23,6 +24,37 @@ import httpx
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+
+# Model ids an opencode server offers, cached per server URL so the
+# provider never sends a model the server would reject (and does not pay
+# for the model list on every request). Value: (fetched_at, ids, default).
+_SERVER_MODEL_CACHE: Dict[str, Tuple[float, Set[str], str]] = {}
+_SERVER_MODEL_CACHE_TTL_S = 300.0
+
+
+# ─────────────────────────────────────────────────────────────
+# opencode server: abort a running turn
+# ─────────────────────────────────────────────────────────────
+#
+# When the browser drops the connection the app cancels the request task,
+# but the opencode server keeps working on the turn it was asked to run: the
+# provider had already created a session and asked it to generate, so an
+# abandoned turn still costs a full LLM call and leaves the session object
+# dangling. The pinned v1 server exposes this abort route (from its OpenAPI
+# document, ``GET /doc``):
+#
+#   POST /session/{sessionID}/abort         -> 200 (boolean)
+#
+# The abort is BEST-EFFORT: it runs while the task is being cancelled, so it
+# must never raise, must never block for long and must never replace the
+# CancelledError that triggered it.
+
+_ABORT_ROUTE = "/session/{session_id}/abort"
+
+#: Upper bound for the abort request — the caller is already gone, so the
+#: turn must be released quickly (and the free-tier call stopped with it).
+_ABORT_TIMEOUT_S = 3.0
 
 
 # ─────────────────────────────────────────────────────────────
@@ -164,17 +196,26 @@ class OpencodeConfig:
     """
     base_url: str = "https://opencode.ai/zen/v1"
     # Optional opencode server URL (e.g. "http://localhost:3000"). When set,
-    # chat routes through the server's session API (POST /session,
-    # POST /session/{id}/message) instead of the zen endpoint directly. This
-    # lets the app use opencode "by URL" without a local opencode CLI install.
+    # chat routes through the server's v1 session API instead of the zen
+    # endpoint directly. This lets the app use opencode "by URL" without a
+    # local opencode CLI install.
+    #
+    # Only the v1 API is supported (``POST /session`` +
+    # ``POST /session/{id}/message``). A v2 server is rejected by the
+    # bootstrap: the project pins v1 and does not silently switch dialects.
     server_url: str = ""
+    # Optional HTTP Basic auth for deployments that put the server behind an
+    # authenticated proxy. The password is taken from the
+    # OPENCODE_SERVER_PASSWORD env var (or the explicit config).
+    server_username: str = "opencode"
+    server_password: str = ""
     # When True (default), the provider auto-starts the opencode server on the
     # loopback host/port below when server_url is set but not answering — the
     # "bundled .exe works automatically" behavior (agent.opencode_bootstrap).
     server_auto_start: bool = True
     server_hostname: str = "127.0.0.1"
     server_port: int = 3000
-    model: str = "big-pickle"
+    model: str = "auto"
     proxies: List[str] = field(default_factory=list)
     timeout: int = 180
     options: Dict[str, Any] = None
@@ -210,10 +251,12 @@ def opencode_config_from_settings(settings) -> OpencodeConfig:
     cfg = OpencodeConfig(
         base_url=getattr(settings.llm, "opencode_base_url", "https://opencode.ai/zen/v1"),
         server_url=getattr(settings.llm, "opencode_server_url", ""),
+        server_username=getattr(settings.llm, "opencode_server_username", "") or "opencode",
+        server_password=getattr(settings.llm, "opencode_server_password", "") or "",
         server_auto_start=getattr(settings.llm, "opencode_server_auto_start", True),
         server_hostname=getattr(settings.llm, "opencode_server_hostname", "127.0.0.1"),
         server_port=int(getattr(settings.llm, "opencode_server_port", 3000)),
-        model=getattr(settings.llm, "opencode_model", "") or "big-pickle",
+        model=getattr(settings.llm, "opencode_model", "") or "auto",
         proxies=list(getattr(settings.llm, "opencode_proxies", None) or []),
         auto_proxy_pool=False,
         proxy_pool_limit=300,
@@ -276,6 +319,36 @@ ROUTING_KEYWORDS = {
     "data_cleaning": ["clean", "fix", "null", "missing", "duplicate", "outlier", "normalize", "transform", "dedupe", "dirty"],
     "narrative": ["summary", "summarize", "explain", "why", "insight", "recommend", "suggest", "report", "narrative", "conclude"],
 }
+
+
+# ─────────────────────────────────────────────────────────────────
+# "auto" — let the backend pick the model
+# ─────────────────────────────────────────────────────────────────
+#
+# The opencode free tier rotates its model set, so pinning ONE id is a
+# promise the app cannot keep: the id may be gone next week. "auto" is the
+# honest setting — the provider asks the server which models it offers and
+# picks the fastest one the app knows about.
+
+#: The sentinel that means "resolve the model per request".
+AUTO_MODEL = "auto"
+
+#: Free-tier models ordered by MEASURED end-to-end latency through the
+#: pinned v1 opencode server (scripts/bench_opencode_models.py; the numbers
+#: and the run that produced them are in
+#: docs/testing/opencode-v1-pin-and-fast-model.tdd.md). Every entry was
+#: measured over the v1 session API.
+AUTO_MODEL_PREFERENCE = (
+    "nemotron-3.5-lightning-free",
+    "beam-free",
+    "flint-40b-free",
+    "nemotron-3-ultra-free",
+    "minimax-m3.1-flash-free",
+    "mimo-v2.6-flash-free",
+    "deepseek-v4.1-flash-free",
+    "glm-5.3-flash-free",
+)
+
 
 
 # ─────────────────────────────────────────────────────────────
@@ -657,20 +730,30 @@ class OpencodeProvider(LLMProvider):
     # Models that work WITHOUT any API key on the free/noauth opencode tier.
     # The upstream free tier rotates frequently — any model id ending in
     # "-free" is also accepted automatically.
+    #
+    # This is the free/no-key tier as the opencode server currently lists it
+    # (GET /provider -> the "opencode" provider). The upstream free tier
+    # rotates, so the set is a snapshot: the GATE is the "-free" suffix (see
+    # is_premium_model), and this set only powers the error message and the
+    # list_models() fallback. A stale id here would show up as a model the
+    # app offers that no longer exists upstream.
     FREE_MODELS = {
         "big-pickle",
-        "deepseek-v4-flash-free",
-        "mimo-v2.5-free",
+        "beam-free",
+        "flint-40b-free",
+        "minimax-m3.1-flash-free",
+        "deepseek-v4.1-flash-free",
+        "glm-5.3-flash-free",
         "mimo-v2.6-flash-free",
-        "hy3-free",
         "nemotron-3-ultra-free",
-        "north-mini-code-free",
+        "nemotron-3.5-lightning-free",
+        "nemotron-3.5-super-vl-free",
     }
 
     def __init__(self, config: OpencodeConfig):
         super().__init__(config)
         if not self.config.model:
-            self.config.model = "big-pickle"
+            self.config.model = "auto"
         self._clients: Dict[str, Optional[httpx.AsyncClient]] = {}
         self._cooldowns: Dict[str, float] = {}  # egress key -> cooldown until (epoch s)
         self._dead: Dict[str, int] = {}  # egress key -> consecutive transport failures
@@ -686,6 +769,9 @@ class OpencodeProvider(LLMProvider):
         """True when a model needs an opencode API key (not on the free tier)."""
         if not model:
             return True
+        if model.strip().lower() == AUTO_MODEL:
+            # "auto" is resolved to a free model before the call.
+            return False
         if model.endswith("-free"):
             return False
         return model not in OpencodeProvider.FREE_MODELS
@@ -916,16 +1002,106 @@ class OpencodeProvider(LLMProvider):
         """True when routing through an opencode server's session API."""
         return bool(self.config.server_url)
 
+    # ── server auth (optional; for an authenticated proxy) ──────
+
+    def _server_password(self) -> str:
+        """Password for the opencode server's HTTP Basic auth.
+
+        This is only needed when the v1 server sits behind an authenticated
+        proxy. The password is looked up in the order: explicit config → the
+        ``OPENCODE_SERVER_PASSWORD`` / ``OPENCODE_PASSWORD`` env vars → the
+        Settings-UI runtime file → the password the bootstrap generated for
+        a server the app started.
+        """
+        if self.config.server_password:
+            return self.config.server_password
+        try:
+            from agent.opencode_bootstrap import server_password
+
+            return server_password(self.config.server_url)
+        except Exception:  # noqa: BLE001
+            return ""
+
+    def _server_auth_headers(self) -> Dict[str, str]:
+        """Authorization header for the opencode server API."""
+        password = self._server_password()
+        if not password:
+            return {}
+        username = self.config.server_username or "opencode"
+        token = base64.b64encode(
+            f"{username}:{password}".encode("utf-8")
+        ).decode("ascii")
+        return {"Authorization": f"Basic {token}"}
+
     def _server_client(self) -> httpx.AsyncClient:
         client = self._clients.get("__server__")
         if client is None or client.is_closed:
+            headers = {"Content-Type": "application/json"}
+            headers.update(self._server_auth_headers())
             client = httpx.AsyncClient(
                 base_url=self.config.server_url,
                 timeout=httpx.Timeout(self.config.timeout, connect=10.0),
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             )
             self._clients["__server__"] = client
         return client
+
+    async def _abort_server_session(self, session_id: str) -> None:
+        """Ask the opencode server to stop working on a session.
+
+        Called when a chat request is cancelled (the client went away). The
+        server is already running the turn, so without this the abandoned
+        turn keeps burning a free-tier LLM call and the session object
+        dangles.
+
+        BEST-EFFORT by design: it never raises, never blocks for more than
+        ``_ABORT_TIMEOUT_S`` and never replaces the ``CancelledError`` that
+        triggered it. It reuses the provider's own server client (so the
+        abort carries the same auth and leaks no extra connection pool).
+        """
+        if not session_id or not self._server_mode:
+            return
+        route = _ABORT_ROUTE
+        client = self._clients.get("__server__")
+        temporary = client is None or client.is_closed
+        if temporary:
+            # No cached server client (the provider was closed underneath
+            # us) — use a throwaway one and close it right after, so the
+            # abort never leaks a connection pool.
+            headers = {"Content-Type": "application/json"}
+            headers.update(self._server_auth_headers())
+            client = httpx.AsyncClient(
+                base_url=self.config.server_url,
+                timeout=httpx.Timeout(_ABORT_TIMEOUT_S, connect=2.0),
+                headers=headers,
+            )
+        try:
+            resp = await client.post(
+                route.format(session_id=session_id),
+                json={},
+                headers=self._server_auth_headers() or None,
+                timeout=httpx.Timeout(_ABORT_TIMEOUT_S, connect=2.0),
+            )
+            status = getattr(resp, "status_code", 200)
+            if status >= 400:
+                logger.debug(
+                    "opencode: abort of session %s answered HTTP %s",
+                    session_id, status,
+                )
+        except asyncio.CancelledError:
+            # A second cancellation arrived while aborting. Swallow it: the
+            # ORIGINAL CancelledError is the one that must propagate.
+            logger.debug("opencode: abort of session %s was cancelled", session_id)
+        except Exception as e:  # noqa: BLE001 — best effort, never raise
+            logger.debug("opencode: abort of session %s failed: %s", session_id, e)
+        finally:
+            if temporary:
+                try:
+                    await client.aclose()
+                except asyncio.CancelledError:
+                    pass  # never mask the cancellation that triggered us
+                except Exception:  # noqa: BLE001
+                    pass
 
     async def _ensure_server_started(self) -> None:
         """Lazily start the opencode server (once) when server_url is set.
@@ -944,9 +1120,18 @@ class OpencodeProvider(LLMProvider):
 
         ok = await ensure_opencode_server(self.config.server_url, auto_install=True)
         if not ok:
+            detail = ""
+            try:
+                from agent.opencode_bootstrap import last_probe_error
+
+                reason = last_probe_error()
+                detail = f" ({reason})" if reason else ""
+            except Exception:  # noqa: BLE001
+                pass
             raise RuntimeError(
-                f"OpenCode server not reachable at {self.config.server_url} — "
-                "start it manually (opencode serve) or check logs/opencode-server.log."
+                f"OpenCode server not reachable at {self.config.server_url}"
+                f"{detail} — start it manually (opencode serve) or check "
+                "logs/opencode-server.log."
             )
         self._server_started = True
 
@@ -1018,7 +1203,93 @@ class OpencodeProvider(LLMProvider):
         return parts
 
     async def _server_chat_once(self, body: Dict) -> CompletionResponse:
-        model = body.get("model", self.config.model)
+        """Route a chat through the opencode server's v1 session API."""
+        return await self._server_chat(body)
+
+    async def _server_models(self) -> Tuple[Set[str], str]:
+        """(model ids the v1 server offers, its default model id).
+
+        The v1 server publishes the configured providers and their models at
+        ``GET /config/providers``. That is the only model list used here: the
+        app never falls back to a v2 ``/api/model`` route.
+        """
+        base = (self.config.server_url or "").rstrip("/")
+        now = time.time()
+        cached = _SERVER_MODEL_CACHE.get(base)
+        if cached and now - cached[0] < _SERVER_MODEL_CACHE_TTL_S:
+            return cached[1], cached[2]
+        ids: Set[str] = set()
+        default_id = ""
+        try:
+            resp = await self._server_client().get(
+                "/config/providers", timeout=httpx.Timeout(10.0, connect=5.0)
+            )
+            if resp.status_code == 200:
+                payload = resp.json() or {}
+                defaults = payload.get("default") or {}
+                if isinstance(defaults, dict):
+                    default_id = next(
+                        (str(v) for v in defaults.values() if v), ""
+                    )
+                elif isinstance(defaults, str):
+                    default_id = defaults
+                for provider in payload.get("providers") or []:
+                    if not isinstance(provider, dict):
+                        continue
+                    provider_id = provider.get("id") or ""
+                    models = provider.get("models") or {}
+                    if isinstance(models, dict):
+                        model_ids = list(models)
+                    elif isinstance(models, list):
+                        model_ids = [
+                            m.get("id") for m in models if isinstance(m, dict)
+                        ]
+                    else:
+                        continue
+                    for model_id in model_ids:
+                        if not model_id:
+                            continue
+                        ids.add(str(model_id))
+                        if provider_id:
+                            ids.add(f"{provider_id}/{model_id}")
+        except Exception as e:  # noqa: BLE001
+            logger.debug("opencode: server model list unavailable: %s", e)
+        _SERVER_MODEL_CACHE[base] = (now, ids, default_id)
+        return ids, default_id
+
+    async def _resolve_model(self, model_id: str) -> str:
+        """The model id to actually use.
+
+        ``"auto"`` is resolved against the model list the v1 server offers:
+        the fastest free model the app knows about wins, then the server's
+        own default. Any other id is used as-is (the server validates it).
+        """
+        if (model_id or "").strip().lower() != AUTO_MODEL:
+            return model_id
+        known, default_id = await self._server_models()
+        if not known:
+            # The server does not expose its model list - fall back to the
+            # measured fastest instead of sending a literal "auto".
+            logger.info(
+                "opencode: model list unavailable - using %r for 'auto'",
+                AUTO_MODEL_PREFERENCE[0],
+            )
+            return AUTO_MODEL_PREFERENCE[0]
+        free_ids = {m for m in known if not self.is_premium_model(m)}
+        for candidate in AUTO_MODEL_PREFERENCE:
+            if candidate in free_ids:
+                return candidate
+        if default_id and not self.is_premium_model(default_id):
+            return default_id
+        for candidate in AUTO_MODEL_PREFERENCE:
+            if candidate in known:
+                return candidate
+        return AUTO_MODEL_PREFERENCE[0]
+
+    # ── v1 session API ──────────────────────────────────────────
+
+    async def _server_chat(self, body: Dict) -> CompletionResponse:
+        model = await self._resolve_model(body.get("model", self.config.model))
         model_ref = self._model_ref(model)
         messages = body.get("messages", [])
         system_text = "\n".join(
@@ -1045,17 +1316,6 @@ class OpencodeProvider(LLMProvider):
         buckets = [b for b in buckets if b]
         if not buckets:
             raise RuntimeError("OpenCode server chat: no parts to send")
-        for parts in buckets[:-1]:
-            await client.post(
-                f"/session/{session_id}/message",
-                json={
-                    "model": model_ref,
-                    "parts": parts,
-                    "noReply": True,
-                    "stream": False,
-                },
-                timeout=req_timeout,
-            )
         payload: Dict[str, Any] = {
             "model": model_ref,
             "parts": buckets[-1],
@@ -1083,12 +1343,31 @@ class OpencodeProvider(LLMProvider):
         compact = body.get("compact")
         if compact is not None:
             payload["compact"] = compact
-        resp = await client.post(
-            f"/session/{session_id}/message", json=payload, timeout=req_timeout
-        )
+        try:
+            # Seed the history first (noReply), then send the final message.
+            for parts in buckets[:-1]:
+                await client.post(
+                    f"/session/{session_id}/message",
+                    json={
+                        "model": model_ref,
+                        "parts": parts,
+                        "noReply": True,
+                        "stream": False,
+                    },
+                    timeout=req_timeout,
+                )
+            resp = await client.post(
+                f"/session/{session_id}/message", json=payload, timeout=req_timeout
+            )
+        except asyncio.CancelledError:
+            # The client went away mid-turn. The server is already running the
+            # turn, so it has to be told to stop — otherwise the abandoned
+            # turn still costs a full LLM call and the session dangles.
+            await self._abort_server_session(session_id)
+            raise
         if resp.status_code == 429:
             if await self._warp_retry_once():
-                return await self._server_chat_once(body)
+                return await self._server_chat(body)
             raise RuntimeError("OpenCode free quota exhausted (HTTP 429)")
         resp.raise_for_status()
         data = resp.json()

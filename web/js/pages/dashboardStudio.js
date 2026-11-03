@@ -80,91 +80,91 @@
     // AI should place on the dashboard. When the blank-dashboard page has already
     // loaded its richer catalogue (window.DashVisCatalogue) that one wins.
     widgets: [
-      { type: "kpi",          label: "KPI Card",         icon: "fa-chart-simple",           color: "#7B61FF", cat: "Basics" },
+      { type: "kpi",          label: "KPI Card",         icon: "fa-chart-simple",           color: "#2563eb", cat: "Basics" },
       { type: "table",        label: "Data Table",       icon: "fa-table",                  color: "#64748B", cat: "Basics" },
       { type: "text",         label: "Text Box",         icon: "fa-font",                   color: "#4F46E5", cat: "Basics" },
-      { type: "trendkpi",     label: "Trend KPI",        icon: "fa-arrow-trend-up",         color: "#22C55E", cat: "Basics" },
-      { type: "percentagekpi",label: "% Change KPI",     icon: "fa-percent",                color: "#06B6D4", cat: "Basics" },
-      { type: "prevkpi",      label: "Prev Period KPI",  icon: "fa-clock-rotate-left",      color: "#F59E0B", cat: "Basics" },
+      { type: "trendkpi",     label: "Trend KPI",        icon: "fa-arrow-trend-up",         color: "#15803d", cat: "Basics" },
+      { type: "percentagekpi",label: "% Change KPI",     icon: "fa-percent",                color: "#1d4ed8", cat: "Basics" },
+      { type: "prevkpi",      label: "Prev Period KPI",  icon: "fa-clock-rotate-left",      color: "#b45309", cat: "Basics" },
       { type: "iconkpi",      label: "Icon KPI",         icon: "fa-star",                   color: "#EAB308", cat: "Basics" },
-      { type: "multikpi",     label: "Multi-Value KPI",  icon: "fa-cubes",                  color: "#8B5CF6", cat: "Basics" },
+      { type: "multikpi",     label: "Multi-Value KPI",  icon: "fa-cubes",                  color: "#7c3aed", cat: "Basics" },
       { type: "metriccard",   label: "Metric Card",      icon: "fa-th-large",               color: "#7C3AED", cat: "Basics" },
-      { type: "sparkkpi",     label: "Sparkline KPI",    icon: "fa-wave-square",            color: "#0D9488", cat: "Basics" },
+      { type: "sparkkpi",     label: "Sparkline KPI",    icon: "fa-wave-square",            color: "#0d9488", cat: "Basics" },
       { type: "sparkbarkpi",  label: "Mini Bar KPI",     icon: "fa-signal",                 color: "#10B981", cat: "Basics" },
-      { type: "minilinekpi",  label: "Mini Line KPI",    icon: "fa-chart-line",             color: "#3B82F6", cat: "Basics" },
-      { type: "sparkdeltakpi", label: "Sparkline Delta KPI", icon: "fa-wave-square",       color: "#0D9488", cat: "Basics" },
-      { type: "donutkpi",      label: "Donut KPI",        icon: "fa-circle-notch",           color: "#8B5CF6", cat: "Basics" },
+      { type: "minilinekpi",  label: "Mini Line KPI",    icon: "fa-chart-line",             color: "#2563eb", cat: "Basics" },
+      { type: "sparkdeltakpi", label: "Sparkline Delta KPI", icon: "fa-wave-square",       color: "#0d9488", cat: "Basics" },
+      { type: "donutkpi",      label: "Donut KPI",        icon: "fa-circle-notch",           color: "#7c3aed", cat: "Basics" },
       { type: "radial",       label: "Radial Progress",  icon: "fa-circle-dot",             color: "#10B981", cat: "Basics" },
       { type: "status",       label: "Status Indicator", icon: "fa-circle-check",           color: "#2563EB", cat: "Basics" },
       { type: "comparison",   label: "Comparison KPI",   icon: "fa-scale-balanced",         color: "#7C3AED", cat: "Basics" },
-      { type: "targetactual", label: "Target vs Actual", icon: "fa-crosshairs",             color: "#F59E0B", cat: "Basics" },
-      { type: "line",         label: "Line Chart",       icon: "fa-chart-line",             color: "#3B82F6", cat: "Standard Charts" },
+      { type: "targetactual", label: "Target vs Actual", icon: "fa-crosshairs",             color: "#b45309", cat: "Basics" },
+      { type: "line",         label: "Line Chart",       icon: "fa-chart-line",             color: "#2563eb", cat: "Standard Charts" },
       { type: "bar",          label: "Bar Chart",        icon: "fa-chart-bar",              color: "#10B981", cat: "Standard Charts" },
-      { type: "column",       label: "Column Chart",     icon: "fa-chart-column",           color: "#F59E0B", cat: "Standard Charts" },
-      { type: "area",         label: "Area Chart",       icon: "fa-chart-area",             color: "#14B8A6", cat: "Standard Charts" },
-      { type: "pie",          label: "Pie Chart",        icon: "fa-chart-pie",              color: "#EC4899", cat: "Standard Charts" },
-      { type: "doughnut",     label: "Doughnut",         icon: "fa-circle-notch",           color: "#8B5CF6", cat: "Standard Charts" },
-      { type: "stepline",     label: "Step Line Chart",  icon: "fa-step-forward",           color: "#3B82F6", cat: "Standard Charts" },
-      { type: "smoothline",   label: "Smooth Line",      icon: "fa-wave-sine",              color: "#0EA5E9", cat: "Standard Charts" },
-      { type: "splinearea",   label: "Smooth Area",      icon: "fa-mountain-sun",           color: "#14B8A6", cat: "Standard Charts" },
-      { type: "scatter",      label: "Scatter Plot",     icon: "fa-braille",                color: "#06B6D4", cat: "Advanced Charts" },
-      { type: "bubble",       label: "Bubble Chart",     icon: "fa-circle",                 color: "#0EA5E9", cat: "Advanced Charts" },
-      { type: "radar",        label: "Radar Chart",      icon: "fa-spider",                 color: "#6366F1", cat: "Advanced Charts" },
+      { type: "column",       label: "Column Chart",     icon: "fa-chart-column",           color: "#b45309", cat: "Standard Charts" },
+      { type: "area",         label: "Area Chart",       icon: "fa-chart-area",             color: "#0d9488", cat: "Standard Charts" },
+      { type: "pie",          label: "Pie Chart",        icon: "fa-chart-pie",              color: "#be123c", cat: "Standard Charts" },
+      { type: "doughnut",     label: "Doughnut",         icon: "fa-circle-notch",           color: "#7c3aed", cat: "Standard Charts" },
+      { type: "stepline",     label: "Step Line Chart",  icon: "fa-step-forward",           color: "#2563eb", cat: "Standard Charts" },
+      { type: "smoothline",   label: "Smooth Line",      icon: "fa-wave-sine",              color: "#1d4ed8", cat: "Standard Charts" },
+      { type: "splinearea",   label: "Smooth Area",      icon: "fa-mountain-sun",           color: "#0d9488", cat: "Standard Charts" },
+      { type: "scatter",      label: "Scatter Plot",     icon: "fa-braille",                color: "#1d4ed8", cat: "Advanced Charts" },
+      { type: "bubble",       label: "Bubble Chart",     icon: "fa-circle",                 color: "#1d4ed8", cat: "Advanced Charts" },
+      { type: "radar",        label: "Radar Chart",      icon: "fa-spider",                 color: "#2563eb", cat: "Advanced Charts" },
       { type: "combo",        label: "Combo Chart",      icon: "fa-chart-line fa-chart-bar",color: "#7C3AED", cat: "Advanced Charts" },
       { type: "horizontalbar",label: "Horizontal Bar",   icon: "fa-bars",                   color: "#059669", cat: "Advanced Charts" },
-      { type: "stackedbar",   label: "Stacked Bar",      icon: "fa-layer-group",            color: "#DC2626", cat: "Advanced Charts" },
+      { type: "stackedbar",   label: "Stacked Bar",      icon: "fa-layer-group",            color: "#b91c1c", cat: "Advanced Charts" },
       { type: "stackedarea",  label: "Stacked Area",     icon: "fa-layer-group",            color: "#0891B2", cat: "Advanced Charts" },
       { type: "percentbar",   label: "100% Stacked Bar", icon: "fa-percent",                color: "#9333EA", cat: "Advanced Charts" },
-      { type: "sparkline",    label: "Sparkline",        icon: "fa-wave-square",            color: "#0D9488", cat: "Advanced Charts" },
+      { type: "sparkline",    label: "Sparkline",        icon: "fa-wave-square",            color: "#0d9488", cat: "Advanced Charts" },
       { type: "lollipop",     label: "Lollipop Chart",   icon: "fa-candy-cane",             color: "#DB2777", cat: "Advanced Charts" },
-      { type: "stream",       label: "Stream Graph",     icon: "fa-wind",                   color: "#06B6D4", cat: "Advanced Charts" },
+      { type: "stream",       label: "Stream Graph",     icon: "fa-wind",                   color: "#1d4ed8", cat: "Advanced Charts" },
       { type: "heatmap",      label: "Heatmap",          icon: "fa-border-all",             color: "#D946EF", cat: "Data Viz" },
       { type: "gauge",        label: "Gauge",            icon: "fa-gauge-high",             color: "#F97316", cat: "Data Viz" },
-      { type: "funnel",       label: "Funnel",           icon: "fa-filter",                 color: "#EF4444", cat: "Data Viz" },
+      { type: "funnel",       label: "Funnel",           icon: "fa-filter",                 color: "#b91c1c", cat: "Data Viz" },
       { type: "treemap",      label: "Treemap",          icon: "fa-table-cells-large",      color: "#0891B2", cat: "Data Viz" },
       { type: "waterfall",    label: "Waterfall",        icon: "fa-water",                  color: "#2563EB", cat: "Data Viz" },
       { type: "polar",        label: "Polar Area",       icon: "fa-compass",                color: "#EA580C", cat: "Data Viz" },
-      { type: "waffle",       label: "Waffle Chart",     icon: "fa-table-cells",            color: "#0D9488", cat: "Data Viz" },
-      { type: "calendar",     label: "Calendar Heatmap", icon: "fa-calendar",               color: "#14B8A6", cat: "Data Viz" },
-      { type: "bubblegrid",   label: "Bubble Grid",      icon: "fa-atom",                   color: "#16A34A", cat: "Data Viz" },
-      { type: "watertank",    label: "Water Tank",       icon: "fa-glass-water",            color: "#0EA5E9", cat: "Data Viz" },
-      { type: "venn",         label: "Venn Diagram",     icon: "fa-circle-nodes",           color: "#8B5CF6", cat: "Data Viz" },
+      { type: "waffle",       label: "Waffle Chart",     icon: "fa-table-cells",            color: "#0d9488", cat: "Data Viz" },
+      { type: "calendar",     label: "Calendar Heatmap", icon: "fa-calendar",               color: "#0d9488", cat: "Data Viz" },
+      { type: "bubblegrid",   label: "Bubble Grid",      icon: "fa-atom",                   color: "#15803d", cat: "Data Viz" },
+      { type: "watertank",    label: "Water Tank",       icon: "fa-glass-water",            color: "#1d4ed8", cat: "Data Viz" },
+      { type: "venn",         label: "Venn Diagram",     icon: "fa-circle-nodes",           color: "#7c3aed", cat: "Data Viz" },
       { type: "boxplot",      label: "Box Plot",         icon: "fa-square",                 color: "#475569", cat: "Statistical" },
-      { type: "histogram",    label: "Histogram",        icon: "fa-chart-bar",              color: "#6366F1", cat: "Statistical" },
+      { type: "histogram",    label: "Histogram",        icon: "fa-chart-bar",              color: "#2563eb", cat: "Statistical" },
       { type: "bullet",       label: "Bullet Chart",     icon: "fa-bullseye",               color: "#B91C1C", cat: "Statistical" },
       { type: "pareto",       label: "Pareto Chart",     icon: "fa-bars-progress",          color: "#F97316", cat: "Statistical" },
-      { type: "diverging",    label: "Diverging Bar",    icon: "fa-bars-staggered",         color: "#EF4444", cat: "Statistical" },
-      { type: "population",   label: "Population Pyramid",icon: "fa-people-roof",           color: "#F59E0B", cat: "Statistical" },
-      { type: "pyramid",      label: "Pyramid",          icon: "fa-caret-down",             color: "#D97706", cat: "Specialized" },
+      { type: "diverging",    label: "Diverging Bar",    icon: "fa-bars-staggered",         color: "#b91c1c", cat: "Statistical" },
+      { type: "population",   label: "Population Pyramid",icon: "fa-people-roof",           color: "#b45309", cat: "Statistical" },
+      { type: "pyramid",      label: "Pyramid",          icon: "fa-caret-down",             color: "#b45309", cat: "Specialized" },
       { type: "sunburst",     label: "Sunburst",         icon: "fa-sun",                    color: "#E11D48", cat: "Specialized" },
       { type: "wordcloud",    label: "Word Cloud",       icon: "fa-cloud",                  color: "#7C3AED", cat: "Specialized" },
       { type: "progress",     label: "Progress Ring",    icon: "fa-circle-half-stroke",     color: "#10B981", cat: "Specialized" },
-      { type: "rose",         label: "Rose Chart",       icon: "fa-asterisk",               color: "#EC4899", cat: "Specialized" },
-      { type: "radialbar",    label: "Radial Bar Chart", icon: "fa-record-vinyl",           color: "#8B5CF6", cat: "Specialized" },
+      { type: "rose",         label: "Rose Chart",       icon: "fa-asterisk",               color: "#be123c", cat: "Specialized" },
+      { type: "radialbar",    label: "Radial Bar Chart", icon: "fa-record-vinyl",           color: "#7c3aed", cat: "Specialized" },
       { type: "ranking",      label: "Leaderboard",      icon: "fa-ranking-star",           color: "#EAB308", cat: "Specialized" },
-      { type: "gantt",        label: "Gantt Timeline",   icon: "fa-timeline",               color: "#6366F1", cat: "Specialized" },
+      { type: "gantt",        label: "Gantt Timeline",   icon: "fa-timeline",               color: "#2563eb", cat: "Specialized" },
       { type: "slope",        label: "Slope Chart",      icon: "fa-arrow-trend-up",         color: "#228BE6", cat: "Specialized" },
-      { type: "sankey",       label: "Sankey Diagram",   icon: "fa-code-branch",            color: "#14B8A6", cat: "Specialized" },
+      { type: "sankey",       label: "Sankey Diagram",   icon: "fa-code-branch",            color: "#0d9488", cat: "Specialized" },
       { type: "slicer",       label: "Dropdown Slicer",  icon: "fa-list-check",             color: "#2563EB", cat: "Filters" },
       { type: "daterange",    label: "Date Range",       icon: "fa-calendar-days",          color: "#7C3AED", cat: "Filters" },
-      { type: "searchbox",    label: "Search Filter",    icon: "fa-magnifying-glass",       color: "#0D9488", cat: "Filters" },
-      { type: "numrange",     label: "Number Range",     icon: "fa-sliders",                color: "#06B6D4", cat: "Filters" },
-      { type: "hierarchy",    label: "Hierarchy Slicer", icon: "fa-sitemap",                color: "#F59E0B", cat: "Filters" },
+      { type: "searchbox",    label: "Search Filter",    icon: "fa-magnifying-glass",       color: "#0d9488", cat: "Filters" },
+      { type: "numrange",     label: "Number Range",     icon: "fa-sliders",                color: "#1d4ed8", cat: "Filters" },
+      { type: "hierarchy",    label: "Hierarchy Slicer", icon: "fa-sitemap",                color: "#b45309", cat: "Filters" },
       { type: "relativedate", label: "Relative Date",    icon: "fa-clock",                  color: "#10B981", cat: "Filters" },
-      { type: "topn",         label: "Top N Filter",     icon: "fa-ranking-star",           color: "#DC2626", cat: "Filters" },
+      { type: "topn",         label: "Top N Filter",     icon: "fa-ranking-star",           color: "#b91c1c", cat: "Filters" },
       { type: "filterpane",   label: "Filter Pane",      icon: "fa-filter",                 color: "#2563EB", cat: "Filters" },
-      { type: "globalsearch", label: "Global Search",    icon: "fa-magnifying-glass",       color: "#0D9488", cat: "Filters" },
-      { type: "image",        label: "Image",            icon: "fa-image",                  color: "#16A34A", cat: "Media" },
-      { type: "shape",        label: "Shape",            icon: "fa-shapes",                 color: "#6366F1", cat: "Media" },
+      { type: "globalsearch", label: "Global Search",    icon: "fa-magnifying-glass",       color: "#0d9488", cat: "Filters" },
+      { type: "image",        label: "Image",            icon: "fa-image",                  color: "#15803d", cat: "Media" },
+      { type: "shape",        label: "Shape",            icon: "fa-shapes",                 color: "#2563eb", cat: "Media" },
       { type: "divider",      label: "Divider",          icon: "fa-minus",                  color: "#94A3B8", cat: "Media" },
       { type: "custom",       label: "Custom HTML",      icon: "fa-code",                   color: "#0F766E", cat: "Media" },
-      { type: "page",         label: "Page Link",        icon: "fa-arrow-right-to-bracket", color: "#0EA5E9", cat: "Navigation" },
+      { type: "page",         label: "Page Link",        icon: "fa-arrow-right-to-bracket", color: "#1d4ed8", cat: "Navigation" },
       { type: "button",       label: "Action Button",    icon: "fa-circle-play",            color: "#7C3AED", cat: "Navigation" },
       { type: "geomap",       label: "Marker Map",       icon: "fa-location-dot",           color: "#2563EB", cat: "Maps" },
       { type: "countrymap",   label: "Bubble Sizing Map",icon: "fa-earth-americas",         color: "#7C3AED", cat: "Maps" },
       { type: "shapemap",     label: "Shape Map",        icon: "fa-draw-polygon",           color: "#0EA5A4", cat: "Maps" },
-      { type: "dotmap",       label: "Dot Distribution Map",icon: "fa-circle-dot",          color: "#F59E0B", cat: "Maps" },
-      { type: "heatmapmap",   label: "Heatmap Map",      icon: "fa-temperature-high",       color: "#EF4444", cat: "Maps" },
+      { type: "dotmap",       label: "Dot Distribution Map",icon: "fa-circle-dot",          color: "#b45309", cat: "Maps" },
+      { type: "heatmapmap",   label: "Heatmap Map",      icon: "fa-temperature-high",       color: "#b91c1c", cat: "Maps" },
       { type: "flowmap",      label: "Flow Map",         icon: "fa-right-left",             color: "#10B981", cat: "Maps" }
     ]
   };
@@ -225,27 +225,27 @@
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
             '<div class="stud-quick-card" data-feature="recreate_from_image" onclick="StudioPage._recreateFromImage()" style="cursor:pointer">' +
-              '<div class="stud-quick-ico" style="background:#ede9fe;color:#7B61FF"><i class="fas fa-image"></i></div>' +
+              '<div class="stud-quick-ico stud-ico-purple"><i class="fas fa-image"></i></div>' +
               '<div class="stud-quick-body"><div class="stud-quick-title">Recreate from Image</div><div class="stud-quick-desc">Upload a dashboard screenshot and rebuild it on your data.</div></div>' +
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
             '<div class="stud-quick-card" onclick="StudioPage._aiInsights()" style="cursor:pointer">' +
-              '<div class="stud-quick-ico" style="background:#fef3c7;color:#d97706"><i class="fas fa-lightbulb"></i></div>' +
+              '<div class="stud-quick-ico stud-ico-warning"><i class="fas fa-lightbulb"></i></div>' +
               '<div class="stud-quick-body"><div class="stud-quick-title">AI Insights</div><div class="stud-quick-desc">Let AI narrate your dataset — metrics, key findings, correlations and smart recommendations.</div></div>' +
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
             '<div class="stud-quick-card" onclick="StudioPage._createBlank()" style="cursor:pointer">' +
-              '<div class="stud-quick-ico" style="background:#eef2ff;color:#6366f1"><i class="fas fa-wand-magic-sparkles"></i></div>' +
+              '<div class="stud-quick-ico stud-ico-primary"><i class="fas fa-wand-magic-sparkles"></i></div>' +
               '<div class="stud-quick-body"><div class="stud-quick-title">Start from Scratch</div><div class="stud-quick-desc">Blank canvas with full control over every widget.</div></div>' +
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
             '<div class="stud-quick-card" onclick="StudioPage._openSQL()" style="cursor:pointer">' +
-              '<div class="stud-quick-ico" style="background:#d1fae5;color:#22c55e"><i class="fas fa-terminal"></i></div>' +
+              '<div class="stud-quick-ico stud-ico-success"><i class="fas fa-terminal"></i></div>' +
               '<div class="stud-quick-body"><div class="stud-quick-title">SQL to Dashboard</div><div class="stud-quick-desc">Write a query and visualize the results.</div></div>' +
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
             '<div class="stud-quick-card" onclick="StudioPage._importDash()" style="cursor:pointer">' +
-              '<div class="stud-quick-ico" style="background:#ffedd5;color:#f97316"><i class="fas fa-file-import"></i></div>' +
+              '<div class="stud-quick-ico stud-ico-warning"><i class="fas fa-file-import"></i></div>' +
               '<div class="stud-quick-body"><div class="stud-quick-title">Import Dashboard</div><div class="stud-quick-desc">Upload a real .pbix Power BI report and rebuild it on your data — exact layout & theme.</div></div>' +
               '<div class="stud-quick-arrow"><i class="fas fa-arrow-right"></i></div>' +
             '</div>' +
@@ -533,7 +533,7 @@
         h += '<div class="ds-ai-summary-card"><div class="ds-ai-summary-ico"><i class="fas fa-file-lines"></i></div><div class="ds-ai-summary-txt"><div class="ds-ai-summary-label">Executive summary</div><p class="ds-ai-summary">' + md(ins.summary) + "</p></div></div>";
       }
       if (Array.isArray(ins.metrics_summary) && ins.metrics_summary.length) {
-        h += '<div class="ds-ai-sec-title"><span class="ds-ai-sec-chip" style="--chip:#3b82f6"><i class="fas fa-table-list"></i></span> Metric profile</div>';
+        h += '<div class="ds-ai-sec-title"><span class="ds-ai-sec-chip" style="--chip:var(--color-primary)"><i class="fas fa-table-list"></i></span> Metric profile</div>';
         h += '<div class="overflow-x-auto"><table class="data-table w-full ds-ai-metrics"><thead><tr><th>Metric</th><th>Mean</th><th>Median</th><th>Std</th><th>Min</th><th>Max</th></tr></thead><tbody>';
         ins.metrics_summary.forEach(function (m) {
           h += "<tr><td>" + escq(m.column || m.name || "—") + "</td><td>" + (m.mean != null ? (+m.mean).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—") + "</td><td>" + (m.median != null ? (+m.median).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—") + "</td><td>" + (m.std != null ? (+m.std).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—") + "</td><td>" + (m.min != null ? (+m.min).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—") + "</td><td>" + (m.max != null ? (+m.max).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "—") + "</td></tr>";
@@ -542,10 +542,10 @@
         h += "</tbody></table></div>";
       }
       var sections = [
-        ["Key findings", ins.key_findings || ins.findings, "fa-bullseye", "#f59e0b"],
-        ["Correlations", ins.correlation_highlights || ins.correlations, "fa-link", "#8b5cf6"],
-        ["Distributions", ins.distributions, "fa-chart-column", "#0ea5e9"],
-        ["Outliers", ins.outlier_highlights, "fa-arrow-trend-up", "#ef4444"],
+        ["Key findings", ins.key_findings || ins.findings, "fa-bullseye", "var(--color-warning)"],
+        ["Correlations", ins.correlation_highlights || ins.correlations, "fa-link", "var(--color-accent-purple)"],
+        ["Distributions", ins.distributions, "fa-chart-column", "var(--color-info)"],
+        ["Outliers", ins.outlier_highlights, "fa-arrow-trend-up", "var(--color-danger)"],
         ["Recommendations", ins.recommendations, "fa-list-check", "#10b981"]
       ];
       sections.forEach(function (sec) {
@@ -654,7 +654,7 @@
       }
       var html = '';
       filtered.forEach(function (t) {
-        var accent = t.accent || '#3B82F6';
+        var accent = t.accent || '#2563eb';
         var kpis = t.kpis || 0;
         var charts = (t.charts || []).length;
         var pages = (t.pages || []).length + 1;
@@ -667,7 +667,7 @@
           return '<span class="studio-tpl-tag">' + _esc(tag) + '</span>';
         }).join('');
         var navChip = pages > 1
-          ? '<span class="studio-tpl-navchip" style="background:' + accent + '1a;color:' + accent + '"><i class="fas fa-arrows-up-down-left-right"></i> ' + _esc(t.nav === "sidebar" ? "Sidebar" : "Tabs") + '</span>'
+          ? '<span class="studio-tpl-navchip" style="background:' + accent + '1a"><i class="fas fa-arrows-up-down-left-right"></i> ' + _esc(t.nav === "sidebar" ? "Sidebar" : "Tabs") + '</span>'
           : '';
         var searchText = (t.name + " " + (t.tags || []).join(" ") + " " + (t.blurb || "") + " " + (t.category || "")).toLowerCase();
         var preview = '<div class="studio-tpl-preview">' +
@@ -682,7 +682,9 @@
         html += '<div class="studio-template-card" style="border-top:3px solid ' + accent + '" data-search="' + _esc(searchText) + '" onclick="StudioPage._useTemplate(\'' + t.id + '\')">' +
           '<div class="studio-template-top">' +
             '<div class="studio-template-icon" style="background:' + accent + '1a;color:' + accent + '"><i class="fas ' + (t.icon || 'fa-chart-pie') + '"></i></div>' +
-            '<span class="studio-tpl-cat" style="color:' + accent + '">' + _esc(t.category || "Template") + '</span>' +
+            '<span class="studio-tpl-cat">' +
+            '<i style="display:inline-block;vertical-align:middle;width:7px;height:7px;border-radius:2px;background:' + accent + ';margin-right:5px"></i>' +
+            _esc(t.category || "Template") + '</span>' +
           '</div>' +
           '<div class="studio-template-name">' + _esc(t.name) + '</div>' +
           '<div class="studio-template-desc">' + _esc(t.blurb || '') + '</div>' +
@@ -719,15 +721,15 @@
         '<div class="bd-gal-modal" style="max-width:430px">' +
           '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-expand"></i> ' + label + '</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:14px 18px 6px;font-size:12px;color:var(--color-content-text-secondary,#64748b)">Choose a canvas size</div>' +
+          '<div style="padding:14px 18px 6px;font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted))">Choose a canvas size</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 18px">' + chips + '</div>' +
           '<div style="display:flex;align-items:center;gap:8px;padding:12px 18px">' +
             '<input type="number" min="320" class="form-input" id="ds-canvas-w" value="1900" style="width:90px" title="Canvas width">' +
-            '<span style="color:#94a3b8">×</span>' +
+            '<span style="color:var(--color-text-muted)">×</span>' +
             '<input type="number" min="240" class="form-input" id="ds-canvas-h" value="1080" style="width:90px" title="Canvas height">' +
-            '<span style="font-size:12px;color:#94a3b8">px</span>' +
+            '<span style="font-size:12px;color:var(--color-text-muted)">px</span>' +
           '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-build="1"><i class="fas fa-layer-group"></i> Build Dashboard</button>' +
           '</div>' +
@@ -859,7 +861,7 @@
         '<div class="bd-gal-modal" style="max-width:460px">' +
           '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-robot"></i> ' + label + '</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:14px 18px 6px;font-size:12px;color:var(--color-content-text-secondary,#64748b)">' +
+          '<div style="padding:14px 18px 6px;font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted))">' +
             'Describe the dashboard you want. The AI will pick the best charts (leave blank for automatic suggestions).</div>' +
           '<div style="padding:10px 18px">' +
             '<textarea class="form-input" id="ds-ai-prompt" rows="4" placeholder="e.g. Revenue by region, top products by sales, monthly trend, and a correlation analysis..."></textarea>' +
@@ -869,7 +871,7 @@
               '<button type="button" class="ds-ai-hint" data-hint="correlations between metrics as a scatter/heatmap">Correlation view</button>' +
             '</div>' +
           '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-build="1"><i class="fas fa-wand-magic-sparkles"></i> Generate with AI</button>' +
           '</div>' +
@@ -920,40 +922,40 @@
       // (kpi group). data-opt encodes "<group>_<id>". When rewrite is true the
       // chip gets a small "rewrite with AI" wand icon (purpose/audience only).
       function chipOption(id, label, desc, icon, rewrite) {
-        return '<button type="button" class="ds-ai-hint ds-des-opt" data-opt="' + id + '" style="text-align:left;border:1px solid var(--color-card-border,#e2e8f0);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font-size:12px;width:100%;position:relative">' +
-          (icon ? '<i class="fas ' + icon + '" style="color:#7B61FF;margin-right:6px"></i>' : "") +
+        return '<button type="button" class="ds-ai-hint ds-des-opt" data-opt="' + id + '" style="text-align:left;border:1px solid var(--color-card-border,var(--color-border));background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font-size:12px;width:100%;position:relative">' +
+          (icon ? '<i class="fas ' + icon + '" style="color:var(--color-primary);margin-right:6px"></i>' : "") +
           '<b>' + label + "</b>" +
-          (desc ? '<span class="ds-opt-desc" data-desc-for="' + id + '" style="display:block;font-weight:400;font-size:11px;color:var(--color-content-text-secondary,#64748b);margin-top:2px' + (rewrite ? ";padding-right:18px" : "") + '">' + desc + "</span>" : "") +
-          (rewrite ? '<span class="ds-ai-rewrite" data-rewrite="' + id + '" title="Rewrite with AI" style="position:absolute;top:6px;right:8px;color:#7B61FF;cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-wand-magic-sparkles"></i></span>' : "") +
+          (desc ? '<span class="ds-opt-desc" data-desc-for="' + id + '" style="display:block;font-weight:400;font-size:11px;color:var(--color-content-text-secondary,var(--color-text-muted));margin-top:2px' + (rewrite ? ";padding-right:18px" : "") + '">' + desc + "</span>" : "") +
+          (rewrite ? '<span class="ds-ai-rewrite" data-rewrite="' + id + '" title="Rewrite with AI" style="position:absolute;top:6px;right:8px;color:var(--color-primary);cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-wand-magic-sparkles"></i></span>' : "") +
           "</button>";
       }
 
       function render() {
         var M = _DESIGN_META;
         var head =
-          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-robot" style="color:#7B61FF;margin-right:6px"></i> AI Auto-Build</h3>' +
+          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-robot" style="color:var(--color-primary);margin-right:6px"></i> AI Auto-Build</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1" title="Cancel">&times;</button></div>' +
-          '<div style="padding:2px 18px 0;font-size:11px;color:var(--color-content-text-secondary,#64748b);display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
+          '<div style="padding:2px 18px 0;font-size:11px;color:var(--color-content-text-secondary,var(--color-text-muted));display:flex;gap:14px;align-items:center;flex-wrap:wrap">' +
             STEPS.map(function (s, i) {
               var active = i === step, done = i < step;
-              return '<div style="display:flex;align-items:center;gap:5px' + (active ? ";color:#7B61FF;font-weight:700" : "") + '">' +
-                '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:' + (done ? "#10b981" : active ? "#7B61FF" : "#e2e8f0") + ";color:#fff;font-size:10px\">" +
+              return '<div style="display:flex;align-items:center;gap:5px' + (active ? ";color:var(--color-primary);font-weight:700" : "") + '">' +
+                '<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:' + (done ? "var(--color-success-solid)" : active ? "var(--color-primary)" : "var(--color-border-strong)") + ";color:#fff;font-size:10px\">" +
                 (done ? '<i class="fas fa-check"></i>' : i + 1) + "</span>" + s.title + "</div>";
             }).join("") +
           "</div>" +
           '<div style="padding:12px 18px 2px;font-size:12.5px;font-weight:700">' + STEPS[step].title + "</div>" +
-          '<div style="padding:0 18px;font-size:11.5px;color:var(--color-content-text-secondary,#64748b)">' + STEPS[step].note + "</div>";
+          '<div style="padding:0 18px;font-size:11.5px;color:var(--color-content-text-secondary,var(--color-text-muted))">' + STEPS[step].note + "</div>";
 
         var body = "";
         if (step === 0) {
           body += '<div class="ds-ai-list-title" style="padding:10px 18px 4px;display:flex;align-items:center;justify-content:space-between"><span><i class="fas fa-bullseye"></i> Main purpose</span>' +
-            '<button type="button" class="ds-ai-custom" data-custom="purpose" title="Give a custom prompt" style="border:none;background:none;color:' + (a.purposeCustom ? "#7B61FF" : "var(--color-content-text-secondary,#64748b)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
-            (a.purposeCustom ? '<div class="ds-ai-custom-note" data-custom-note="purpose" style="padding:2px 18px 2px;font-size:11px;color:#7B61FF;display:flex;align-items:center;gap:6px"><i class="fas fa-circle-check"></i><span style="flex:1">' + _esc(a.purposeCustom) + '</span><button type="button" class="ds-ai-custom-clear" data-custom-clear="purpose" title="Clear custom prompt" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-times"></i></button></div>' : "") +
+            '<button type="button" class="ds-ai-custom" data-custom="purpose" title="Give a custom prompt" style="border:none;background:none;color:' + (a.purposeCustom ? "var(--color-primary)" : "var(--color-text-secondary)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
+            (a.purposeCustom ? '<div class="ds-ai-custom-note" data-custom-note="purpose" style="padding:2px 18px 2px;font-size:11px;color:var(--color-primary);display:flex;align-items:center;gap:6px"><i class="fas fa-circle-check"></i><span style="flex:1">' + _esc(a.purposeCustom) + '</span><button type="button" class="ds-ai-custom-clear" data-custom-clear="purpose" title="Clear custom prompt" style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-times"></i></button></div>' : "") +
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 18px">' +
             M.purposes.map(function (p) { return chipOption("purpose_" + p.id, p.label, p.desc, p.icon, true); }).join("") + "</div>" +
             '<div class="ds-ai-list-title" style="padding:10px 18px 4px;display:flex;align-items:center;justify-content:space-between"><span><i class="fas fa-users"></i> Audience & decisions</span>' +
-            '<button type="button" class="ds-ai-custom" data-custom="audience" title="Give a custom prompt" style="border:none;background:none;color:' + (a.audienceCustom ? "#7B61FF" : "var(--color-content-text-secondary,#64748b)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
-            (a.audienceCustom ? '<div class="ds-ai-custom-note" data-custom-note="audience" style="padding:2px 18px 2px;font-size:11px;color:#7B61FF;display:flex;align-items:center;gap:6px"><i class="fas fa-circle-check"></i><span style="flex:1">' + _esc(a.audienceCustom) + '</span><button type="button" class="ds-ai-custom-clear" data-custom-clear="audience" title="Clear custom prompt" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-times"></i></button></div>' : "") +
+            '<button type="button" class="ds-ai-custom" data-custom="audience" title="Give a custom prompt" style="border:none;background:none;color:' + (a.audienceCustom ? "var(--color-primary)" : "var(--color-text-secondary)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
+            (a.audienceCustom ? '<div class="ds-ai-custom-note" data-custom-note="audience" style="padding:2px 18px 2px;font-size:11px;color:var(--color-primary);display:flex;align-items:center;gap:6px"><i class="fas fa-circle-check"></i><span style="flex:1">' + _esc(a.audienceCustom) + '</span><button type="button" class="ds-ai-custom-clear" data-custom-clear="audience" title="Clear custom prompt" style="border:none;background:none;color:var(--color-danger);cursor:pointer;font-size:11px;padding:2px"><i class="fas fa-times"></i></button></div>' : "") +
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 18px">' +
             M.audiences.map(function (p) { return chipOption("audience_" + p.id, p.label, p.desc, p.icon, true); }).join("") + "</div>";
         } else if (step === 1) {
@@ -961,7 +963,7 @@
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 18px">' +
             M.kpis.map(function (p) { return chipOption("kpi_" + p.id, p.label, p.desc, p.icon); }).join("") + "</div>" +
             '<div class="ds-ai-list-title" style="padding:10px 18px 2px;display:flex;align-items:center;justify-content:space-between"><span><i class="fas fa-pen"></i> Anything else the dashboard should show (optional)</span>' +
-            '<button type="button" class="ds-ai-custom" data-custom="extra" title="Give a custom prompt" style="border:none;background:none;color:' + (a.extraCustom ? "#7B61FF" : "var(--color-content-text-secondary,#64748b)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
+            '<button type="button" class="ds-ai-custom" data-custom="extra" title="Give a custom prompt" style="border:none;background:none;color:' + (a.extraCustom ? "var(--color-primary)" : "var(--color-text-secondary)") + ';cursor:pointer;font-size:12px;padding:2px 4px"><i class="fas fa-robot"></i></button></div>' +
             '<div style="padding:2px 18px 10px"><textarea class="form-input" id="ds-des-prompt" rows="2" placeholder="e.g. Show YTD vs target by region and a weekly running average..."></textarea></div>';
         } else if (step === 2) {
           body += '<div class="ds-ai-list-title" style="padding:10px 18px 4px"><i class="fas fa-palette"></i> Visual style / theme</div>' +
@@ -969,7 +971,7 @@
             M.styles.map(function (p) { return chipOption("style_" + p.id, p.label, p.desc, p.icon); }).join("") + "</div>" +
             '<div class="ds-ai-list-title" style="padding:10px 18px 4px"><i class="fas fa-shield-halved"></i> Access</div>' +
             '<div style="padding:2px 18px 10px;display:flex;align-items:center;gap:8px">' +
-              '<input type="checkbox" id="ds-des-share" style="accent-color:#7B61FF"' + (a.sharePublic ? " checked" : "") + ">" +
+              '<input type="checkbox" id="ds-des-share" style="accent-color:var(--color-primary)"' + (a.sharePublic ? " checked" : "") + ">" +
               '<label for="ds-des-share" style="font-size:12.5px">Make this dashboard shareable as a public present link</label>' +
             "</div>";
         } else if (step === 3) {
@@ -984,16 +986,16 @@
             '<div style="padding:4px 18px 10px;display:flex;flex-direction:column;gap:8px">';
           for (var pg = 1; pg <= pgCount; pg++) {
             if (pg === 1) {
-              body += '<div style="border:1px solid var(--color-card-border,#e2e8f0);border-radius:10px;padding:9px 12px;font-size:12px;display:flex;align-items:center;justify-content:space-between">' +
-                '<span><b>Page 1 · Overview</b> <span style="color:var(--color-content-text-secondary,#64748b)">(auto — KPIs, trend, top breakdown & insights)</span></span>' +
-                '<span style="color:var(--color-content-text-secondary,#94a3b8);font-size:11px"><i class="fas fa-lock"></i></span>' +
+              body += '<div style="border:1px solid var(--color-card-border,var(--color-border));border-radius:10px;padding:9px 12px;font-size:12px;display:flex;align-items:center;justify-content:space-between">' +
+                '<span><b>Page 1 · Overview</b> <span style="color:var(--color-content-text-secondary,var(--color-text-muted))">(auto — KPIs, trend, top breakdown & insights)</span></span>' +
+                '<span style="color:var(--color-content-text-secondary,var(--color-text-muted));font-size:11px"><i class="fas fa-lock"></i></span>' +
                 '</div>';
               continue;
             }
-            body += '<div class="ds-dynamic-page" style="border:1px solid var(--color-card-border,#e2e8f0);border-radius:10px;padding:10px 12px">' +
+            body += '<div class="ds-dynamic-page" style="border:1px solid var(--color-card-border,var(--color-border));border-radius:10px;padding:10px 12px">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
                 '<div style="font-size:12px;font-weight:700">Page ' + pg + ' — main focus</div>' +
-                '<button type="button" class="btn btn-sm btn-ghost ds-pg-remove" data-pg="' + pg + '" title="Remove page" style="color:#ef4444;padding:2px 6px;font-size:11px"><i class="fas fa-times"></i></button>' +
+                '<button type="button" class="btn btn-sm btn-ghost ds-pg-remove" data-pg="' + pg + '" title="Remove page" style="color:var(--color-danger);padding:2px 6px;font-size:11px"><i class="fas fa-times"></i></button>' +
               '</div>' +
               '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">' +
               M.pageFocuses.map(function (p) {
@@ -1003,12 +1005,12 @@
               '<input type="text" class="form-input ds-pg-txt" data-page="' + pg + '" value="' + _esc(a.pagePrompt[pg - 1] || "") + '" placeholder="Optional — page title / extra focus (e.g. profit by region and top categories)" style="width:100%;font-size:12px">' +
             "</div>";
           }
-          body += '<button type="button" class="btn btn-sm btn-ghost ds-pg-add" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px dashed var(--color-card-border,#cbd5e1);border-radius:10px;color:var(--color-accent,#7B61FF);font-size:12px"><i class="fas fa-plus"></i> Add page</button>';
+          body += '<button type="button" class="btn btn-sm btn-ghost ds-pg-add" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px dashed var(--color-card-border,var(--color-border-strong));border-radius:10px;color:var(--color-accent,var(--color-primary));font-size:12px"><i class="fas fa-plus"></i> Add page</button>';
           body += "</div>";
         }
 
         var foot =
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             (step > 0 ? '<button type="button" class="btn btn-sm btn-secondary" data-back="1"><i class="fas fa-arrow-left"></i> Back</button>' : "") +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">Cancel</button>' +
             (step < STEPS.length - 1
@@ -1024,8 +1026,8 @@
           var parts = (el.getAttribute("data-opt") || "").split("_", 2);
           var group = parts[0], id = parts[1];
           var applyState = function (on) {
-            el.style.background = on ? "#7B61FF1a" : "#fff";
-            el.style.borderColor = on ? "#7B61FF" : "";
+            el.style.background = on ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "var(--color-surface)";
+            el.style.borderColor = on ? "var(--color-primary)" : "";
           };
           applyState(group === "kpi" ? (a.kpis.indexOf(id) !== -1) : (a[group] === id));
           el.addEventListener("click", function () {
@@ -1037,8 +1039,8 @@
               a[group] = id;
               modal.querySelectorAll(".ds-des-opt[data-opt^='" + group + "_']").forEach(function (x) {
                 var on = x === el;
-                x.style.background = on ? "#7B61FF1a" : "#fff";
-                x.style.borderColor = on ? "#7B61FF" : "";
+                x.style.background = on ? "color-mix(in srgb, var(--color-primary) 10%, transparent)" : "var(--color-surface)";
+                x.style.borderColor = on ? "var(--color-primary)" : "";
               });
             }
           });
@@ -1684,9 +1686,9 @@
           '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-image"></i> Recreate from Image</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
           '<div style="padding:26px 24px">' +
-            '<div style="width:46px;height:46px;margin:0 auto 14px;border:3px solid #e2e8f0;border-top-color:#7B61FF;border-radius:50%;animation:spin 0.9s linear infinite"></div>' +
+            '<div style="width:46px;height:46px;margin:0 auto 14px;border:3px solid var(--color-border);border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.9s linear infinite"></div>' +
             '<div style="font-size:13px;font-weight:700">Reading your dashboard image…</div>' +
-            '<div id="ds-analyze-step" style="font-size:11.5px;color:var(--color-content-text-secondary,#64748b);margin-top:6px">Detecting layout, colors and widgets</div>' +
+            '<div id="ds-analyze-step" style="font-size:11.5px;color:var(--color-content-text-secondary,var(--color-text-muted));margin-top:6px">Detecting layout, colors and widgets</div>' +
           '</div>' +
         '</div>';
       ov.addEventListener("click", function (e) {
@@ -1716,10 +1718,10 @@
       ov.className = "bd-gal-overlay bd-tpl-overlay";
       ov.innerHTML =
         '<div class="bd-gal-modal" style="max-width:440px">' +
-          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-triangle-exclamation" style="color:#ef4444"></i> Could not read the image</h3>' +
+          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-triangle-exclamation" style="color:var(--color-danger)"></i> Could not read the image</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:14px 18px;font-size:12.5px;color:var(--color-content-text-secondary,#64748b)">' + _esc(msg) + '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="padding:14px 18px;font-size:12.5px;color:var(--color-content-text-secondary,var(--color-text-muted))">' + _esc(msg) + '</div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-secondary" data-retry="1"><i class="fas fa-rotate-right"></i> Retry</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-fallback="1"><i class="fas fa-robot"></i> Use AI Auto-Build instead</button>' +
@@ -1747,33 +1749,33 @@
       ov.className = "bd-gal-overlay bd-tpl-overlay";
       ov.innerHTML =
         '<div class="bd-gal-modal" style="max-width:720px;max-height:86vh;display:flex;flex-direction:column">' +
-          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-image" style="color:#7B61FF;margin-right:6px"></i> Recreate from Image</h3>' +
+          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-image" style="color:var(--color-primary);margin-right:6px"></i> Recreate from Image</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:12px 18px;font-size:11.5px;color:var(--color-content-text-secondary,#64748b)">' +
+          '<div style="padding:12px 18px;font-size:11.5px;color:var(--color-content-text-secondary,var(--color-text-muted))">' +
             'We read <b>' + widgets.length + ' widget(s)</b> from your screenshot. Everything is pre-filled — just hit <b>Build it</b>.' +
-            (res.looksLikeDashboard === false ? ' <span style="color:#d97706">This image does not look like a dashboard — results may be rough.</span>' : '') +
+            (res.looksLikeDashboard === false ? ' <span style="color:var(--color-warning)">This image does not look like a dashboard — results may be rough.</span>' : '') +
           '</div>' +
           '<div style="padding:0 18px;overflow:auto;flex:1">' +
-            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Dashboard title</label>' +
+            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Dashboard title</label>' +
               '<input type="text" class="form-input" id="ds-img-title" value="' + _esc(defaultTitle) + '"></div>' +
             '<div style="display:flex;gap:12px">' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Theme</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Theme</label>' +
                 '<select class="form-input" id="ds-img-theme">' +
                   '<option value="light"' + (String(spec.theme) !== "dark" ? " selected" : "") + '>Light</option>' +
                   '<option value="dark"' + (String(spec.theme) === "dark" ? " selected" : "") + '>Dark</option>' +
                 '</select></div>' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Accent color</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Accent color</label>' +
                 '<input type="color" class="form-input" id="ds-img-accent" value="' + _esc(spec.accent || "#2563eb") + '" style="height:38px;padding:2px"></div>' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Background</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Background</label>' +
                 '<input type="color" class="form-input" id="ds-img-bg" value="' + _esc(spec.background || "#f8fafc") + '" style="height:38px;padding:2px"></div>' +
             '</div>' +
-            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Widgets <span style="font-weight:400">(uncheck to skip)</span></label>' +
+            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Widgets <span style="font-weight:400">(uncheck to skip)</span></label>' +
               '<div id="ds-img-widgets"></div>' +
             '</div>' +
-            (res.prompt ? '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Design brief</label>' +
-              '<div style="font-size:12px;color:var(--color-content-text-secondary,#64748b);background:#f8fafc;border:1px solid var(--color-card-border,#e2e8f0);border-radius:8px;padding:8px 10px;margin-top:4px">' + _esc(res.prompt) + '</div></div>' : '') +
+            (res.prompt ? '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Design brief</label>' +
+              '<div style="font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted));background:var(--color-surface-2);border:1px solid var(--color-card-border,var(--color-border));border-radius:8px;padding:8px 10px;margin-top:4px">' + _esc(res.prompt) + '</div></div>' : '') +
           '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-build="1" id="ds-img-build"><i class="fas fa-wand-magic-sparkles"></i> Build it</button>' +
           '</div>' +
@@ -1799,12 +1801,12 @@
             '<input type="checkbox" data-idx="' + i + '" checked>' +
             '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + _esc(w.title || ("Widget " + (i + 1))) + "</span>" +
           "</label>" +
-          '<span style="font-size:10px;color:var(--color-content-text-secondary,#64748b);background:#f1f5f9;border-radius:6px;padding:2px 6px;white-space:nowrap">' + label + "</span>" +
+          '<span style="font-size:10px;color:var(--color-content-text-secondary,var(--color-text-muted));background:var(--color-surface-2);border-radius:6px;padding:2px 6px;white-space:nowrap">' + label + "</span>" +
           swapSel;
         wl.appendChild(row);
       });
       if (!widgets.length) {
-        wl.innerHTML = '<div style="font-size:12px;color:var(--color-content-text-secondary,#64748b);padding:8px 0">No widgets were detected in this image.</div>';
+        wl.innerHTML = '<div style="font-size:12px;color:var(--color-content-text-secondary,var(--color-text-muted));padding:8px 0">No widgets were detected in this image.</div>';
       }
 
       ov.addEventListener("click", function (e) {
@@ -2172,9 +2174,9 @@
           '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-file-import"></i> Import Power BI</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
           '<div style="padding:26px 24px">' +
-            '<div style="width:46px;height:46px;margin:0 auto 14px;border:3px solid #e2e8f0;border-top-color:#f97316;border-radius:50%;animation:spin 0.9s linear infinite"></div>' +
+            '<div style="width:46px;height:46px;margin:0 auto 14px;border:3px solid var(--color-border);border-top-color:var(--color-warning);border-radius:50%;animation:spin 0.9s linear infinite"></div>' +
             '<div style="font-size:13px;font-weight:700">Reading your Power BI report…</div>' +
-            '<div id="ds-pbix-step" style="font-size:11.5px;color:var(--color-content-text-secondary,#64748b);margin-top:6px">Extracting pages, visuals and theme</div>' +
+            '<div id="ds-pbix-step" style="font-size:11.5px;color:var(--color-content-text-secondary,var(--color-text-muted));margin-top:6px">Extracting pages, visuals and theme</div>' +
           '</div>' +
         '</div>';
       ov.addEventListener("click", function (e) {
@@ -2204,10 +2206,10 @@
       ov.className = "bd-gal-overlay bd-tpl-overlay";
       ov.innerHTML =
         '<div class="bd-gal-modal" style="max-width:440px">' +
-          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-triangle-exclamation" style="color:#ef4444"></i> Could not read the Power BI file</h3>' +
+          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-triangle-exclamation" style="color:var(--color-danger)"></i> Could not read the Power BI file</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:14px 18px;font-size:12.5px;color:var(--color-content-text-secondary,#64748b)">' + _esc(msg) + '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="padding:14px 18px;font-size:12.5px;color:var(--color-content-text-secondary,var(--color-text-muted))">' + _esc(msg) + '</div>' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-secondary" data-retry="1"><i class="fas fa-rotate-right"></i> Retry</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-fallback="1"><i class="fas fa-robot"></i> Use AI Auto-Build instead</button>' +
@@ -2241,43 +2243,43 @@
       ov.className = "bd-gal-overlay bd-tpl-overlay";
       ov.innerHTML =
         '<div class="bd-gal-modal" style="max-width:680px;max-height:86vh;display:flex;flex-direction:column">' +
-          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-file-import" style="color:#f97316;margin-right:6px"></i> Import Power BI Dashboard</h3>' +
+          '<div class="bd-gal-head"><h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-file-import" style="color:var(--color-warning);margin-right:6px"></i> Import Power BI Dashboard</h3>' +
             '<button type="button" class="btn btn-sm btn-ghost" data-close="1">&times;</button></div>' +
-          '<div style="padding:12px 18px;font-size:11.5px;color:var(--color-content-text-secondary,#64748b)">' +
+          '<div style="padding:12px 18px;font-size:11.5px;color:var(--color-content-text-secondary,var(--color-text-muted))">' +
             'Read <b>' + (meta.pageCount || pages.length) + ' page(s)</b> and <b>' + (meta.widgetCount || 0) + ' visual(s)</b> from <b>' + _esc(res.fileName || "report.pbix") + '</b>.' +
             ' The layout is replicated exactly and rebuilt on <b>' + _esc(((this._selectedTable || {}).table_name || (this._selectedTable || {}).name) || "") + '</b>.' +
           '</div>' +
           '<div style="padding:0 18px;overflow:auto;flex:1">' +
-            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Dashboard title</label>' +
+            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Dashboard title</label>' +
               '<input type="text" class="form-input" id="ds-pbix-title" value="' + _esc(defaultTitle) + '"></div>' +
             '<div style="display:flex;gap:12px">' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Theme</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Theme</label>' +
                 '<select class="form-input" id="ds-pbix-theme">' +
                   '<option value="light"' + (String(spec.theme) !== "dark" ? " selected" : "") + '>Light</option>' +
                   '<option value="dark"' + (String(spec.theme) === "dark" ? " selected" : "") + '>Dark</option>' +
                 '</select></div>' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Accent color</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Accent color</label>' +
                 '<input type="color" class="form-input" id="ds-pbix-accent" value="' + _esc(spec.accent || "#2563eb") + '" style="height:38px;padding:2px"></div>' +
-              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Background</label>' +
+              '<div style="flex:1;margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Background</label>' +
                 '<input type="color" class="form-input" id="ds-pbix-bg" value="' + _esc(spec.background || "#f8fafc") + '" style="height:38px;padding:2px"></div>' +
             '</div>' +
-            '<label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0 8px;padding:9px 10px;border:1px solid var(--color-card-border,#e2e8f0);border-radius:8px;cursor:pointer;background:var(--color-card-bg,#fff)">' +
+            '<label style="display:flex;align-items:flex-start;gap:8px;margin:12px 0 8px;padding:9px 10px;border:1px solid var(--color-card-border,var(--color-border));border-radius:8px;cursor:pointer;background:var(--color-card-bg,#fff)">' +
               '<input type="checkbox" id="ds-pbix-ai" checked style="margin-top:2px">' +
-              '<span style="font-size:11.5px;line-height:1.45"><b>AI smart-mapping</b><span style="display:block;color:var(--color-content-text-secondary,#64748b);font-size:10.5px">The AI binds each visual to the best-matching columns (uncheck for fast title-only matching).</span></span>' +
+              '<span style="font-size:11.5px;line-height:1.45"><b>AI smart-mapping</b><span style="display:block;color:var(--color-content-text-secondary,var(--color-text-muted));font-size:10.5px">The AI binds each visual to the best-matching columns (uncheck for fast title-only matching).</span></span>' +
             '</label>' +
-            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,#64748b)">Pages <span style="font-weight:400">(uncheck to skip)</span></label>' +
+            '<div style="margin:8px 0"><label style="font-size:11px;font-weight:700;color:var(--color-content-text-secondary,var(--color-text-muted))">Pages <span style="font-weight:400">(uncheck to skip)</span></label>' +
               '<div id="ds-pbix-pages">' +
                 pages.map(function (p, i) {
-                  return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--color-card-border,#e2e8f0);cursor:pointer">' +
+                  return '<label style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--color-card-border,var(--color-border));cursor:pointer">' +
                     '<input type="checkbox" data-idx="' + i + '" checked>' +
                     '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">' + _esc(p.name || ("Page " + (i + 1))) + '</span>' +
-                    '<span style="font-size:10px;color:var(--color-content-text-secondary,#64748b);background:#f1f5f9;border-radius:6px;padding:2px 6px;white-space:nowrap">' +
+                    '<span style="font-size:10px;color:var(--color-content-text-secondary,var(--color-text-muted));background:var(--color-surface-2);border-radius:6px;padding:2px 6px;white-space:nowrap">' +
                       (p.widgets || []).length + ' visual' + ((p.widgets || []).length === 1 ? "" : "s") + '</span>' +
                   '</label>';
                 }).join("") +
               '</div></div>' +
           '</div>' +
-          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,#e2e8f0)">' +
+          '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--color-card-border,var(--color-border))">' +
             '<button type="button" class="btn btn-sm btn-secondary" data-close="1">Cancel</button>' +
             '<button type="button" class="btn btn-sm btn-primary" data-build="1" id="ds-pbix-build"><i class="fas fa-wand-magic-sparkles"></i> Build Replica</button>' +
           '</div>' +
@@ -2568,7 +2570,7 @@
             '<div class="studio-dash-actions">' +
               '<button class="btn btn-sm btn-primary" onclick="StudioPage._openDashboard(\'' + id + '\', false)" title="Open in editor"><i class="fas fa-pen"></i> Open</button>' +
               '<button class="btn btn-sm btn-outline" title="Present" onclick="StudioPage._openDashboard(\'' + id + '\', true)"><i class="fas fa-chalkboard-user"></i></button>' +
-              '<button class="btn btn-sm btn-outline" title="Export as Power BI report (.pbix)" onclick="StudioPage._exportDashboardPbit(\'' + id + '\', this)"><i class="fas fa-chart-column" style="color:#e8a80c"></i></button>' +
+              '<button class="btn btn-sm btn-outline" title="Export as Power BI report (.pbix)" onclick="StudioPage._exportDashboardPbit(\'' + id + '\', this)"><i class="fas fa-chart-column" style="color:var(--color-warning)"></i></button>' +
               '<button class="btn btn-sm btn-outline" title="Duplicate" onclick="StudioPage._duplicateDashboard(\'' + id + '\')"><i class="fas fa-copy"></i></button>' +
               '<button class="btn btn-sm btn-outline" title="Rename" onclick="StudioPage._renameDashboard(\'' + id + '\')"><i class="fas fa-pen-to-square"></i></button>' +
               '<button class="btn btn-sm btn-ghost" title="Delete" onclick="StudioPage._deleteDashboard(\'' + id + '\')"><i class="fas fa-trash"></i></button>' +

@@ -226,7 +226,7 @@ const AutomationPage = {
         name: 'Analyze',
         icon: 'fa-microscope',
         items: [
-          ['analysis', 'Analysis', '#6366f1', 'fa-microscope'],
+          ['analysis', 'Analysis', '#2563eb', 'fa-microscope'],
           ['chart', 'Chart', '#f59e0b', 'fa-chart-bar'],
           ['insights', 'Insights', '#ec4899', 'fa-lightbulb'],
           ['anomaly', 'Anomaly Detection', '#ef4444', 'fa-exclamation-triangle'],
@@ -235,7 +235,7 @@ const AutomationPage = {
           ['regression', 'Regression', '#0ea5e9', 'fa-chart-scatter'],
           ['comparison', 'Comparison', '#f59e0b', 'fa-scale-balanced'],
           ['cohort', 'Cohort / Retention', '#ec4899', 'fa-users'],
-          ['ml_model', 'Regression Explorer', '#6366f1', 'fa-robot'],
+          ['ml_model', 'Regression Explorer', '#2563eb', 'fa-robot'],
         ],
       },
       {
@@ -1720,12 +1720,12 @@ const AutomationPage = {
       let marker = 'url(#bp-arrowhead)';
       if (failed.has(edge.to) || failed.has(edge.from) || skipped.has(edge.from)) {
         el.classList.add('error');
-        el.style.stroke = '#ef4444';
+        el.style.stroke = 'var(--color-danger)';
         el.style.strokeWidth = '2.5px';
         marker = 'url(#bp-arrowhead-error)';
       } else if (skipped.has(edge.to)) {
         el.classList.add('skipped');
-        el.style.stroke = '#f59e0b';
+        el.style.stroke = 'var(--color-warning)';
         el.style.strokeWidth = '2.5px';
       }
       el.setAttribute('marker-end', marker);

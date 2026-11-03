@@ -36,18 +36,14 @@
     });
   }
 
-  /** KPI Widget — colorful gradient card matching a professional PBI look */
-  var _KPI_GRADIENTS = [
-    "linear-gradient(135deg, #7B61FF 0%, #5B3FD4 100%)",
-    "linear-gradient(135deg, #00D4AA 0%, #00A882 100%)",
-    "linear-gradient(135deg, #FF6B6B 0%, #D44444 100%)",
-    "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
-    "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
-    "linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)",
-    "linear-gradient(135deg, #EC4899 0%, #BE185D 100%)",
-    "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)",
+  /** KPI Widget — solid card fills taken from the shared chart palette, so a
+      KPI card and a chart series of the same slot carry the same colour.
+      Flat fills, not gradients: the colour is data, the decoration is not. */
+  var _KPI_FILLS = [
+    "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)",
+    "var(--chart-5)", "var(--chart-6)", "var(--chart-7)", "var(--chart-8)",
   ];
-  function _kpiGradient(idx) { return _KPI_GRADIENTS[idx % _KPI_GRADIENTS.length]; }
+  function _kpiGradient(idx) { return _KPI_FILLS[idx % _KPI_FILLS.length]; }
 
   /** Enhanced KPI renderer — delegates to KPIStyles when available, falls back to legacy */
   _register("kpi", function(widget, container) {
@@ -64,8 +60,8 @@
     var label = c.label || "KPI";
     var trend = c.trend;
     var trendIcon = trend > 0 ? "fa-arrow-up" : trend < 0 ? "fa-arrow-down" : "fa-minus";
-    var trendColor = trend > 0 ? "var(--bd-kpi-good,#10b981)" : trend < 0 ? "var(--bd-kpi-bad,#ef4444)" : "var(--bd-kpi-muted,#94a3b8)";
-    var acc = c.color || "#3B82F6";
+    var trendColor = trend > 0 ? "var(--bd-kpi-good,var(--color-success))" : trend < 0 ? "var(--bd-kpi-bad,var(--color-danger))" : "var(--bd-kpi-muted,var(--color-text-muted))";
+    var acc = c.color || "var(--color-primary)";
     var bgCss = c.background
       ? ("background:" + c.background)
       : ("background:var(--bd-kpi-bg,#ffffff);border:1px solid var(--bd-kpi-line,rgba(15,23,42,0.08));" +
@@ -80,8 +76,8 @@
 
     container.innerHTML =
       '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:10px 18px;text-align:center;' + bgCss + ';border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,0.05);">' +
-      '<div style="font-size:calc(32px * var(--bd-scale, 1));font-weight:800;color:var(--bd-kpi-txt,#0f172a);line-height:1.2;letter-spacing:-0.02em;">' + _esc(String(displayVal)) + '</div>' +
-      '<div style="font-size:11px;color:var(--bd-kpi-txt-2,#475569);margin-top:5px;font-weight:600;letter-spacing:0.02em;">' + _esc(label) + '</div>' +
+      '<div style="font-size:calc(32px * var(--bd-scale, 1));font-weight:800;color:var(--bd-kpi-txt,var(--color-text));line-height:1.2;letter-spacing:-0.02em;">' + _esc(String(displayVal)) + '</div>' +
+      '<div style="font-size:11px;color:var(--bd-kpi-txt-2,var(--color-text-secondary));margin-top:5px;font-weight:600;letter-spacing:0.02em;">' + _esc(label) + '</div>' +
       (trend !== undefined ? '<div style="font-size:10px;color:' + trendColor + ';margin-top:7px;background:var(--bd-kpi-track,rgba(15,23,42,0.08));border-radius:12px;padding:3px 10px;display:inline-flex;align-items:center;gap:3px;"><i class="fas ' + trendIcon + '"></i>' + (Math.abs(trend)).toFixed(1) + '%</div>' : '') +
       '</div>';
     if (c.sparklineData && window.Charts && window.Charts.sparkline) {
@@ -110,7 +106,8 @@
     var out = [];
     refs.forEach(function (r) {
       if (!r || typeof r.value !== "number") return;
-      var col = r.color || "#EF4444";
+      // Chart.js dataset colour — a hex, because it is painted on a canvas.
+      var col = r.color || "#b91c1c";
       if (r.type === "band") {
         var lo = Math.min(r.value, r.bandTo != null ? r.bandTo : r.value);
         var hi = Math.max(r.value, r.bandTo != null ? r.bandTo : r.value);
@@ -205,8 +202,10 @@
     var refDs = _refLineDatasets(c, labels);
     if (refDs.length) datasets = datasets.concat(refDs);
     var chartId = "chart_" + widget.id;
-    /* Data-visualization accent (categorical blue) — deliberately NOT the UI brand purple. */
-    var accent = (window.StyleEngine && (StyleEngine.colors(c) || [])[0]) || c.color || ((window.Charts && Charts.PALETTE && Charts.PALETTE.categorical) ? Charts.PALETTE.categorical[0] : "#3B82F6");
+    /* Data-visualization accent (categorical blue) — the first slot of the
+       shared chart palette. A hex, not var(): it is handed to Chart.js, which
+       paints it on a canvas. */
+    var accent = (window.StyleEngine && (StyleEngine.colors(c) || [])[0]) || c.color || ((window.Charts && Charts.PALETTE && Charts.PALETTE.categorical) ? Charts.PALETTE.categorical[0] : "#2563eb");
     var opts = (window.StyleEngine) ? StyleEngine.opts(c) : { maintainAspectRatio: false, plugins: { legend: { display: c.showLegend !== false } } };
     if (window.StyleEngine && StyleEngine.colors(c)) opts.colors = StyleEngine.colors(c);
 
@@ -390,7 +389,7 @@
     var max = Math.max(100, Math.abs(val) * 1.25);
     var frac = Math.max(0, Math.min(1, val / max));
     var L = Math.PI * 50; // semicircle arc length (radius 50)
-    var colour = c.color || ((window.Charts && Charts.PALETTE && Charts.PALETTE.categorical) ? Charts.PALETTE.categorical[0] : "#3B82F6");
+    var colour = c.color || ((window.Charts && Charts.PALETTE && Charts.PALETTE.categorical) ? Charts.PALETTE.categorical[0] : "var(--chart-1)");
     return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:6px 10px;overflow:hidden;">' +
       '<svg viewBox="0 0 120 70" style="height:56%;width:auto;aspect-ratio:120/70;max-width:100%;flex:none;">' +
         '<path d="M10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#EEF0F2" stroke-width="12" stroke-linecap="round"/>' +
@@ -413,7 +412,7 @@
       var w = Math.round((Math.abs(v) / max) * 92) + 2; // 2%..94%
       var disp = (typeof v === "number") ? (Math.round(v * 10) / 10).toLocaleString() : v;
       return '<div style="display:flex;justify-content:center;margin:2px 0;">' +
-        '<div style="width:' + w + '%;background:linear-gradient(90deg,#3B82F6,#93C5FD);border-radius:6px;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;box-shadow:0 2px 6px rgba(59,130,246,0.2);">' +
+        '<div style="width:' + w + '%;background:linear-gradient(90deg,var(--chart-1),var(--chart-6));border-radius:6px;padding:5px 10px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:11px;white-space:nowrap;overflow:hidden;box-shadow:0 2px 6px rgba(var(--color-primary-rgb),0.2);">' +
         '<span style="overflow:hidden;text-overflow:ellipsis;">' + _esc(String(lbl)) + '</span>' +
         '<span style="font-weight:700;margin-left:6px;">' + _esc(String(disp)) + '</span>' +
         '</div></div>';
@@ -657,11 +656,11 @@
     if (pivotMode) {
       var pm = c.pivotMatrix || null;
       if (pm && pm.error) {
-        container.innerHTML = '<div style="padding:12px;font-size:12px;color:#ef4444;">' + _esc(pm.error) + '</div>';
+        container.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--color-danger);">' + _esc(pm.error) + '</div>';
         return;
       }
       if (!pm || !pm.rows) {
-        container.innerHTML = '<div style="padding:12px;font-size:12px;color:#64748b;">Pivot: no data</div>';
+        container.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--color-text-muted);">Pivot: no data</div>';
         return;
       }
       var nf = function (v) {
@@ -697,7 +696,7 @@
       }, 0);
       html += '<td class="bd-pivot-total">' + nf(grand) + '</td></tr>';
       html += '</tbody></table>';
-      html += '<div style="padding:6px 8px 0;font-size:10.5px;color:#94a3b8;">' + _esc(pm.valueCol) + ' · ' + _esc(pm.agg) + ' of ' + rows.length + ' rows</div>';
+      html += '<div style="padding:6px 8px 0;font-size:10.5px;color:var(--color-text-muted);">' + _esc(pm.valueCol) + ' · ' + _esc(pm.agg) + ' of ' + rows.length + ' rows</div>';
       container.innerHTML = '<div style="height:100%;overflow:auto;">' + html + '</div>';
       _bindDrillThrough(container);
       return;
@@ -781,7 +780,8 @@
     var st = ["position:relative;box-sizing:border-box;width:100%;height:100%"];
     if (shape === "rounded") st.push("border-radius:" + (c.shapeRadius != null ? c.shapeRadius : 16) + "px");
     else if (shape === "circle") st.push("border-radius:50%");
-    var fill = c.shapeFill || "#6366f1";
+    // Hex, not var(): _hexA() parses the fill to apply the opacity.
+    var fill = c.shapeFill || "#2563eb";
     var op = c.shapeFillOpacity != null ? Math.min(100, Math.max(0, Number(c.shapeFillOpacity))) / 100 : 1;
     if (op < 1) {
       var a = _hexA(fill, op);
@@ -798,7 +798,7 @@
 
   _register("divider", function(widget, container) {
     var c = widget.config || {};
-    var color = c.dividerColor || "#cbd5e1";
+    var color = c.dividerColor || "var(--color-border-strong)";
     var th = Math.max(1, Number(c.dividerThickness) || 2);
     var style = ["solid", "dashed", "dotted"].indexOf(c.dividerStyle) !== -1 ? c.dividerStyle : "solid";
     var vertical = c.dividerOrientation === "vertical";
@@ -849,7 +849,13 @@
       '<circle cx="' + (w - 2).toFixed(1) + '" cy="' + ly + '" r="1.8" fill="' + color + '"/></svg>';
   }
 
-  var _MCARD_PALETTE = ["#6366f1", "#0d9488", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6"];
+  /* Categorical series palette — the shared chart palette, read straight from
+     the CSS tokens so a metric card and a chart series of the same slot carry
+     the same colour. */
+  var _MCARD_PALETTE = [
+    "var(--chart-1)", "var(--chart-2)", "var(--chart-3)",
+    "var(--chart-4)", "var(--chart-5)", "var(--chart-6)",
+  ];
 
   _register("metriccard", function (widget, container) {
     var c = widget.config || {};
@@ -884,11 +890,11 @@
       var sp = byMetric[m.label];
       items.push(
         '<div class="bd-metric" style="flex:1 1 140px;min-width:150px;border-left:3px solid ' + color + ';padding:8px 12px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;overflow:hidden;">' +
-          '<div style="font-size:11px;color:var(--color-content-muted,#94a3b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(m.label != null ? m.label : "") + '</div>' +
-          '<div style="font-size:20px;font-weight:700;line-height:1.15;color:var(--color-content-text,#0f172a);white-space:nowrap;">' + _mcardFmt(value, m.format) + '</div>' +
+          '<div style="font-size:11px;color:var(--color-content-muted,var(--color-text-muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(m.label != null ? m.label : "") + '</div>' +
+          '<div style="font-size:20px;font-weight:700;line-height:1.15;color:var(--color-content-text,var(--color-text));white-space:nowrap;">' + _mcardFmt(value, m.format) + '</div>' +
           (delta != null
-            ? '<div style="font-size:11px;color:' + (delta < 0 ? "#dc2626" : "#16a34a") + ';">' + (delta < 0 ? "▼" : "▲") + ' ' + Math.abs(delta).toFixed(1) + '% <span style="color:var(--color-content-muted,#94a3b8);">vs prior</span></div>'
-            : '<div style="font-size:11px;color:var(--color-content-muted,#94a3b8);">&nbsp;</div>') +
+            ? '<div style="font-size:11px;color:' + (delta < 0 ? "var(--color-danger)" : "var(--color-success)") + ';">' + (delta < 0 ? "▼" : "▲") + ' ' + Math.abs(delta).toFixed(1) + '% <span style="color:var(--color-content-muted,var(--color-text-muted));">vs prior</span></div>'
+            : '<div style="font-size:11px;color:var(--color-content-muted,var(--color-text-muted));">&nbsp;</div>') +
           (sp && sp.length ? '<div style="margin-top:4px;">' + _mcardSpark(sp, color) + '</div>' : '') +
         '</div>'
       );

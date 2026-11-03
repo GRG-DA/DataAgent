@@ -111,7 +111,7 @@
       if (sw) {
         var on = sw.dataset.on === "1" ? "0" : "1";
         sw.dataset.on = on;
-        sw.style.borderColor = on === "1" ? "#0f172a" : "transparent";
+        sw.style.borderColor = on === "1" ? "var(--color-text)" : "transparent";
         if (on === "1") {
           var first = document.querySelector(".wed-fmt-hex[data-i='0']");
           var cp0 = document.querySelector(".wed-fmt-cpick[data-i='0']");
@@ -614,7 +614,7 @@
     var palette = _themePalette();
     var swatches = palette.map(function (c) {
       var on = colors.indexOf(c) !== -1;
-      return '<button type="button" class="wed-fmt-swatch" data-fmt-color="' + c + '" data-on="' + (on ? "1" : "0") + '" style="width:22px;height:22px;border-radius:5px;background:' + c + ';border:2px solid ' + (on ? "#0f172a" : "transparent") + ';cursor:pointer;outline:none;" title="' + c + '"></button>';
+      return '<button type="button" class="wed-fmt-swatch" data-fmt-color="' + c + '" data-on="' + (on ? "1" : "0") + '" style="width:22px;height:22px;border-radius:5px;background:' + c + ';border:2px solid ' + (on ? "var(--color-text)" : "transparent") + ';cursor:pointer;outline:none;" title="' + c + '"></button>';
     }).join("");
     var hexCell = function (i) {
       var val = colors[i] || "";
@@ -622,7 +622,7 @@
         '<div><label class="form-label">Colour ' + (i + 1) + "</label>" +
           '<input class="form-input wed-fmt-hex" data-i="' + i + '" type="text" value="' + _esc(val) + '" placeholder="#118DFF"></div>' +
         '<div class="wed-fmt-color-cell pt-1"><label class="form-label opacity-0">pick</label>' +
-          '<input type="color" class="wed-fmt-cpick" data-i="' + i + '" value="' + _esc(val || '#118DFF') + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,#e2e8f0);border-radius:6px;background:none;cursor:pointer;"></div>' +
+          '<input type="color" class="wed-fmt-cpick" data-i="' + i + '" value="' + _esc(val || '#118DFF') + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,var(--color-border));border-radius:6px;background:none;cursor:pointer;"></div>' +
       '</div>';
     };
     var posOpts = function (sel, cur, list) {
@@ -645,17 +645,17 @@
       '</select></div></div>';
     }
     if (type === "lollipop" || type === "diverging") {
-      var posDef = type === "lollipop" ? "#3B82F6" : "#10B981";
-      var negDef = type === "lollipop" ? "#F87171" : "#EF4444";
+      var posDef = type === "lollipop" ? "#2563eb" : "#10B981";
+      var negDef = type === "lollipop" ? "#F87171" : "#b91c1c";
       typeExtras += '<div class="border-t pt-3 mt-1">' +
         '<div class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Direction colours</div>' +
         '<div class="wed-fmt-color-cell mb-2"><div class="grid grid-cols-2 gap-2 items-center">' +
           '<div><label class="form-label">Positive</label><input class="form-input wed-fmt-hex" id="wed-fmt-pos" type="text" value="' + _esc(style.positiveColor || "") + '" placeholder="' + posDef + '"></div>' +
-          '<div class="pt-1"><label class="form-label opacity-0">pick</label><input type="color" class="wed-fmt-cpick" value="' + _esc(style.positiveColor || posDef) + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,#e2e8f0);border-radius:6px;background:none;cursor:pointer;"></div>' +
+          '<div class="pt-1"><label class="form-label opacity-0">pick</label><input type="color" class="wed-fmt-cpick" value="' + _esc(style.positiveColor || posDef) + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,var(--color-border));border-radius:6px;background:none;cursor:pointer;"></div>' +
         '</div></div>' +
         '<div class="wed-fmt-color-cell"><div class="grid grid-cols-2 gap-2 items-center">' +
           '<div><label class="form-label">Negative</label><input class="form-input wed-fmt-hex" id="wed-fmt-neg" type="text" value="' + _esc(style.negativeColor || "") + '" placeholder="' + negDef + '"></div>' +
-          '<div class="pt-1"><label class="form-label opacity-0">pick</label><input type="color" class="wed-fmt-cpick" value="' + _esc(style.negativeColor || negDef) + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,#e2e8f0);border-radius:6px;background:none;cursor:pointer;"></div>' +
+          '<div class="pt-1"><label class="form-label opacity-0">pick</label><input type="color" class="wed-fmt-cpick" value="' + _esc(style.negativeColor || negDef) + '" style="width:100%;height:30px;padding:0;border:1px solid var(--color-card-border,var(--color-border));border-radius:6px;background:none;cursor:pointer;"></div>' +
         '</div></div>' +
       '</div>';
     }
@@ -694,10 +694,10 @@
       '<div class="grid grid-cols-3 gap-2 items-end">' +
         '<div><label class="form-label">Background</label>' +
           '<div class="flex gap-1"><input class="form-input" id="wed-fmt-bg" type="text" value="' + _esc(bg) + '" placeholder="auto">' +
-          '<input type="color" class="wed-fmt-cpick wed-fmt-cpick-single" data-sync="wed-fmt-bg" value="' + _esc(bg || '#ffffff') + '" style="width:32px;height:30px;padding:0;border:1px solid var(--color-card-border,#e2e8f0);border-radius:6px;background:none;cursor:pointer;"></div></div>' +
+          '<input type="color" class="wed-fmt-cpick wed-fmt-cpick-single" data-sync="wed-fmt-bg" value="' + _esc(bg || '#ffffff') + '" style="width:32px;height:30px;padding:0;border:1px solid var(--color-card-border,var(--color-border));border-radius:6px;background:none;cursor:pointer;"></div></div>' +
         '<div><label class="form-label">Title colour</label>' +
           '<div class="flex gap-1"><input class="form-input" id="wed-fmt-title-color" type="text" value="' + _esc(title.color || "") + '" placeholder="auto">' +
-          '<input type="color" class="wed-fmt-cpick wed-fmt-cpick-single" data-sync="wed-fmt-title-color" value="' + _esc(title.color || '#ffffff') + '" style="width:32px;height:30px;padding:0;border:1px solid var(--color-card-border,#e2e8f0);border-radius:6px;background:none;cursor:pointer;"></div></div>' +
+          '<input type="color" class="wed-fmt-cpick wed-fmt-cpick-single" data-sync="wed-fmt-title-color" value="' + _esc(title.color || '#ffffff') + '" style="width:32px;height:30px;padding:0;border:1px solid var(--color-card-border,var(--color-border));border-radius:6px;background:none;cursor:pointer;"></div></div>' +
         '<div><label class="form-label">Title size</label><input class="form-input" id="wed-fmt-title-size" type="number" min="8" max="40" value="' + _esc(title.fontSize || "12") + '"></div>' +
       "</div>" +
       '<div class="grid grid-cols-3 gap-2 items-end">' +

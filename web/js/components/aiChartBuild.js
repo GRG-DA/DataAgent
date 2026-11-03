@@ -54,7 +54,9 @@
   const _PBI_FONT_STACK = "'Segoe UI','Segoe UI Variable',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
   const _PBI_INK = "#1c2d3e";
   const _PBI_MUTED = "#64748b";
-  const _PBI_ACCENT = "#6366f1";
+  /* Hex, not var(): _lighten() parses this value, so it must stay a literal.
+     The literal is the brand hue from the design-token contract. */
+  const _PBI_ACCENT = "#2563eb";
 
   function _fontStackCss(extra) {
     return "font-family:" + _PBI_FONT_STACK + ";" + (extra || "");
@@ -501,8 +503,11 @@
     opts = opts || {};
     var esc = function (s) { var d = document.createElement("div"); d.appendChild(document.createTextNode(String(s == null ? "" : s))); return d.innerHTML; };
     /* Image-recreated headers: no branding badge, background from the
-       screenshot's own header colors instead of the default gradient. */
-    var bg = "linear-gradient(120deg,var(--w-theme-accent,#6366f1) 0%,var(--w-theme-accent-2,#1e293b) 110%)";
+       screenshot's own header colors instead of the default. The default is a
+       FLAT brand fill — the app chrome carries no gradient. The
+       --w-theme-accent fallback stays a literal (a var() fallback that
+       resolved to a token would be self-referential inside the theme scope). */
+    var bg = "var(--w-theme-accent,#2563eb)";
     if (opts.bgStart) {
       bg = opts.bgEnd && opts.bgEnd !== opts.bgStart
         ? "linear-gradient(120deg," + opts.bgStart + " 0%," + opts.bgEnd + " 110%)"
@@ -716,11 +721,14 @@
     if (!parts.length) {
       parts.push(["AI Insights", "No narrative insights available yet for this table."]);
     }
+    /* Hex, not var(): the badge colour gets an alpha suffix appended
+       ("+ '22'"), which only works on a literal hex. The values are the
+       design-system brand / semantic hexes. */
     var colorMap = {
-      "Executive Summary": opts.execColor || "#6366f1",
-      "Key Finding": opts.findingColor || "#0ea5e9",
-      "Recommendation": opts.recColor || "#10b981",
-      "Correlation": opts.corrColor || "#f59e0b"
+      "Executive Summary": opts.execColor || "#2563eb",
+      "Key Finding": opts.findingColor || "#1d4ed8",
+      "Recommendation": opts.recColor || "#15803d",
+      "Correlation": opts.corrColor || "#b45309"
     };
     var body = parts.map(function (p) {
       var badge = '<span style="display:inline-block;min-width:126px;text-align:center;background:' + (colorMap[p[0]] || "#64748b") + '22;color:' + (colorMap[p[0]] || "#64748b") + ';font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:4px 9px;border-radius:999px;margin-top:2px">' + p[0] + "</span>";
@@ -730,7 +738,7 @@
     var html =
       '<div class="bd-insight-panel" style="height:100%;padding:16px 24px;background:var(--w-theme-card-bg,#ffffff);border:1px solid var(--w-theme-card-border,#e2e8f0);border-radius:14px;display:flex;flex-direction:column;' + _fontStackCss() + '">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex:none">' +
-          '<div style="font-weight:800;font-size:16px;color:var(--w-theme-text,#0f172a)"><i class="fas fa-robot" style="color:var(--w-theme-accent,#6366f1);margin-right:8px"></i>AI Executive Insights</div>' +
+          '<div style="font-weight:800;font-size:16px;color:var(--w-theme-text,#0f172a)"><i class="fas fa-robot" style="color:var(--w-theme-accent,#2563eb);margin-right:8px"></i>AI Executive Insights</div>' +
           '<span style="font-size:11px;color:var(--w-theme-text-2,#94a3b8);font-weight:600;letter-spacing:.5px;text-transform:uppercase">' + esc(table) +
             ' &middot; ' + _insightSourceLabel(ins) + '</span></div>' +
         '<div class="bd-insight-body" style="overflow-y:auto;flex:1;min-height:0;padding-right:6px">' + body + '</div>' +
@@ -763,8 +771,8 @@
     var widgets = [];
     var z = 1;
     var contentW = W - M * 2;
-    var accent = opts.accent || th.accent || "#6366f1";
-    var accent2 = opts.accent2 || th.accent2 || th.secondary || "#1e293b";
+    var accent = opts.accent || th.accent || "#2563eb";
+    var accent2 = opts.accent2 || th.accent2 || th.secondary || "#1e3a8a";
     var palette = opts.colors || (Array.isArray(th.palette) ? th.palette : null);
 
     // 1. Header banner
@@ -1055,8 +1063,8 @@
     var sbW = opts.sidebar ? (opts.sidebarW || 176) : 0;
     var X0 = M + sbW;
     var contentW = W - M * 2 - sbW;
-    var accent = opts.accent || th.accent || "#6366f1";
-    var accent2 = opts.accent2 || th.accent2 || "#1e293b";
+    var accent = opts.accent || th.accent || "#2563eb";
+    var accent2 = opts.accent2 || th.accent2 || "#1e3a8a";
     var palette = opts.colors || (Array.isArray(th.palette) ? th.palette : null);
     var widgets = [];
     var y = M;
@@ -1279,7 +1287,7 @@
     var nextIdx = currentIdx + 1;
     var hasNext = nextIdx < pageNames_.length;
     var nextLabel = hasNext
-      ? '<span onclick="event.stopPropagation();window.BlankDash&&BlankDash._switchPage(' + nextIdx + ')" style="display:inline-block;padding:6px 14px;margin:2px 4px;border-radius:999px;cursor:pointer;white-space:nowrap;color:' + acc + ';border:1px dashed ' + acc + ';font-size:12px;font-weight:700;letter-spacing:.3px;background:rgba(123,97,255,0.06);">' +
+      ? '<span onclick="event.stopPropagation();window.BlankDash&&BlankDash._switchPage(' + nextIdx + ')" style="display:inline-block;padding:6px 14px;margin:2px 4px;border-radius:999px;cursor:pointer;white-space:nowrap;color:' + acc + ';border:1px dashed ' + acc + ';font-size:12px;font-weight:700;letter-spacing:.3px;background:rgba(var(--color-primary-rgb),0.06);">' +
           '<i class="fas fa-arrow-right" style="font-size:10px;margin-right:6px"></i>Next:&nbsp;' + esc(pageNames_[nextIdx]) +
         '</span>'
       : '';
@@ -1339,12 +1347,15 @@
   function sidebarNavWidget(pages, currentIdx, opts) {
     opts = opts || {};
     var th = opts.theme || {};
-    var bg1 = th.cardBg || "#1e1b4b";
-    var bg2 = th.cardBg ? _lighten(th.cardBg, 0.28) : "#312e81";
-    var ink = th.text || "#c7d2fe";
-    var muted = th.textSecondary || "#a5b4fc";
+    /* Hex, not var(): _isDarkHex() / _lighten() parse these values.
+       The defaults are the slate ramp of the design-token contract — the
+       retired indigo panel is gone. */
+    var bg1 = th.cardBg || "#0f172a";
+    var bg2 = th.cardBg ? _lighten(th.cardBg, 0.28) : "#1e293b";
+    var ink = th.text || "#e2e8f0";
+    var muted = th.textSecondary || "#94a3b8";
     var accent = opts.accent || th.accent || th.primary || _PBI_ACCENT;
-    var accent2 = opts.accent2 || th.accent2 || (th.gradient && th.gradient[1]) || th.secondary || "#6366f1";
+    var accent2 = opts.accent2 || th.accent2 || (th.gradient && th.gradient[1]) || th.secondary || "#1d4ed8";
     var dark = _isDarkHex(bg1);
     var hoverBg = dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
     var hoverInk = dark ? "#ffffff" : "#0f172a";
@@ -1438,8 +1449,8 @@
     var X0 = M + sbW;
     var contentW = W - M * 2 - sbW;
     var headerH = Math.round(72 * SC);
-    var accent = opts.accent || "#6366f1";
-    var accent2 = opts.accent2 || "#1e293b";
+    var accent = opts.accent || "#2563eb";
+    var accent2 = opts.accent2 || "#1e3a8a";
     var widgets = [];
     var y = M;
     widgets.push(headerWidget(table, opts.title || "Data", "Data source: " + table + " · Raw data preview", {

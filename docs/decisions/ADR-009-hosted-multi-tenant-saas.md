@@ -99,6 +99,11 @@ one-implementation change, not a rewrite.
 `/auth/register` already enforces. On a hosted instance, "whoever registers first is
 admin" is a takeover, not a bootstrap.
 
+Amended by ADR-019: the gate is driven by the shared
+`api.bootstrap_gate.bootstrap_gate_required()` decision, so a loopback-only,
+non-production desktop install is exempt on both `/auth/register` and central
+register/login. Network-reachable and production instances keep the gate.
+
 ### D4 — Roles become a managed resource
 
 `PATCH /auth/users/{username}` changes a role, `DELETE /auth/users/{username}` removes
@@ -158,6 +163,12 @@ server-signed entitlement instead of minting one.
 
 - `tests/test_saas_tenancy.py` — cross-tenant isolation: tenant A cannot read, write,
   list or drop tenant B's table; the same logical table name coexists per tenant.
+- `tests/test_agent_tenant_isolation.py` — **end-to-end HTTP isolation for the AI
+  agent pipeline**: two tenants owning the *same* table name, asserted through
+  `POST /ask`, `POST /ask-sql`, `POST /llm/chat/stream`, `POST /sql` and
+  `GET /tables` that neither ever sees the other's rows — plus the
+  shared-connection search-path restore (a Dashboard Studio visual must not leave
+  its tenant schema on the process-wide connection).
 - `tests/test_saas_identity.py` — role management, delete cascade, bootstrap gate.
 - `tests/test_saas_ops.py` — per-user rate limiting, `/ask` limited, shared-backend
   audit, release-zip exclusion.

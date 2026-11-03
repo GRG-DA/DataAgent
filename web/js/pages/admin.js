@@ -96,7 +96,7 @@ const AdminPage = {
 
                 <!-- Pipeline Health -->
                 <div class="card lg:col-span-2">
-                    <div class="card-header"><h3><i class="fas fa-pipeline mr-2 text-cyan-500"></i>Pipeline Health</h3></div>
+                    <div class="card-header"><h3><i class="fas fa-diagram-project mr-2 text-cyan-500"></i>Pipeline Health</h3></div>
                     <div id="admin-pipeline"><div class="text-center py-4 text-secondary text-sm"><i class="fas fa-spinner fa-spin"></i> Loading...</div></div>
                 </div>
             </div>`;

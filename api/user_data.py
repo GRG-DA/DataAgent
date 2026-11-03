@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from api.middleware.auth_middleware import get_current_user, User
 from api.tenancy import DEFAULT_TENANT_ID, tenant_schema
+from warehouse.system_tables import is_system_table
 
 router = APIRouter()
 
@@ -410,26 +411,15 @@ _PERSONAL_OWNER_COLUMNS = frozenset({
 
 #: The platform's own tables.  They are never exported as "tenant data":
 #: they hold other people's rows and the platform's metadata (ADR-009 D1).
-_PLATFORM_TABLES = frozenset({
-    "account_tokens", "annotations", "api_keys", "approval_actions",
-    "budget_alerts", "business_terms", "calendar", "catalog_assets",
-    "catalog_tags", "chat_conversations", "chat_messages", "comments",
-    "consent_records", "cost_budgets", "dashboards", "data_products",
-    "masked_audit", "masking_rules", "measures", "metric_definitions",
-    "notification_preferences", "notifications", "org_departments",
-    "org_group_members", "org_groups", "org_teams", "pbi_studios",
-    "pii_inventory", "pipeline_runs", "privacy_requests",
-    "product_access_requests", "product_ratings", "query_costs",
-    "query_history", "retention_policies", "revoked_jtis", "sessions",
-    "share_links", "sla_breach_events", "sla_definitions", "sla_results",
-    "store_meta", "user_preferences", "user_subscriptions", "users",
-    "webhook_endpoints", "workflow_definitions", "workflow_instances",
-    # billing
-    "checkout_orders", "coupon_redemptions", "coupons", "invoices",
-    "payment_events", "payments", "plan_features", "plan_limits",
-    "plan_prices", "plans", "premium_settings", "subscription_events",
-    "subscriptions", "usage_events", "usage_records",
-})
+#:
+#: Classification goes through the warehouse's single platform-table registry
+#: (``warehouse.system_tables.is_system_table``), not a private copy.  This
+#: module used to keep its own list, and it drifted: tables added to the
+#: registry (``api_keys_legacy``, ``catalog_assets_new``,
+#: ``_dataagent_health_probe``) were still exported because only one of the
+#: two lists was updated.  The registry also recognises the derived helper
+#: names (``DateTable_*``, ``*__npk``) that no fixed list can enumerate.
+
 
 #: The platform tables a user's export covers: section -> (table, owner column).
 _EXPORT_TABLES: Dict[str, Tuple[str, str]] = {
@@ -686,7 +676,7 @@ def _tenant_data(con, tenant_id: str, limit: int) -> Dict[str, Any]:
         out["error"] = str(exc)
         return out
     for (name,) in names:
-        if not _safe_ident(name) or name in _PLATFORM_TABLES:
+        if not _safe_ident(name) or is_system_table(name):
             continue
         try:
             if _has_personal_owner(con, schema, name):
